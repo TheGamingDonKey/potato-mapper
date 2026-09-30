@@ -16,7 +16,7 @@ Canvas::Canvas(Scene *s,bool editing,QWidget *parent):QOpenGLWidget(parent),scen
 Canvas::~Canvas(){cleanup();}
 void Canvas::cleanup(){
     if(!context())return;makeCurrent();
-    for(auto &t:textures)if(t.id)glDeleteTextures(1,&t.id);
+    for(auto &t:textures){if(t.id)glDeleteTextures(1,&t.id);if(t.chroma)glDeleteTextures(1,&t.chroma);}
     textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();doneCurrent();graphicsReady=false;
 }
 void Canvas::initializeGL(){
@@ -33,6 +33,10 @@ void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2
     const char *fragment=R"GLSL(#version 330 core
 in vec2 uv;
 uniform sampler2D picture;
+uniform sampler2D chromaPicture;
+uniform bool yuvVideo;
+uniform mat3 yuvToRgb;
+uniform vec3 yuvOffset;
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
 uniform int pattern;
@@ -52,7 +56,9 @@ void main(){
         vec3 tint=mix(vec3(.18,.75,1.0),vec3(.9,1.0,1.0),wave);
         color=vec4(tint,alpha);return;
     }
-    vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;color=texture(picture,p);
+    vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;
+    if(yuvVideo){vec3 yuv=vec3(texture(picture,p).r,texture(chromaPicture,p).rg);color=vec4(clamp(yuvToRgb*(yuv-yuvOffset),0.0,1.0),1.0);}
+    else color=texture(picture,p);
 }
 )GLSL";
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment)||!program.link()){
@@ -85,6 +91,7 @@ int Canvas::hitSurface(const QPointF &pos)const{
     return -1;
 }
 void Canvas::paintGL(){
+    ++paintedFrames;
     if(!graphicsReady){QPainter p(this);p.fillRect(rect(),Qt::black);p.setPen(Qt::white);if(editor)p.drawText(rect(),Qt::AlignCenter,graphicsError);return;}
     QPainter p(this);
     p.beginNativePainting();
@@ -98,19 +105,46 @@ void Canvas::paintGL(){
     program.enableAttributeArray(0);program.enableAttributeArray(1);
     program.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));program.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
     program.setUniformValue("picture",0);
+    program.setUniformValue("chromaPicture",1);
     if(editor||!scene->blackout)for(const auto &s:scene->surfaces){
         if(!s.visible)continue;
-        auto *media=scene->source(s.media);const auto &img=media->image;if(img.isNull())continue;
+        auto *media=scene->source(s.media);const auto &img=media->image;const auto frameSize=media->frameSize();if(frameSize.isEmpty())continue;
+        const bool yuv=media->mappedVideo.isValid();program.setUniformValue("yuvVideo",yuv);
         auto &tex=textures[s.media];if(!tex.id){glGenTextures(1,&tex.id);}
         glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,tex.id);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,s.media.isEmpty()?GL_LINEAR_MIPMAP_LINEAR:GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-        if(tex.revision!=media->revision){
+        if(yuv){
+            const auto &frame=media->mappedVideo;const auto format=frame.surfaceFormat();
+            if(!tex.chroma)glGenTextures(1,&tex.chroma);
+            const bool allocate=tex.size!=frameSize||!tex.yuv;
+            for(int plane=0;plane<2;++plane){
+                glActiveTexture(GL_TEXTURE0+plane);glBindTexture(GL_TEXTURE_2D,plane?tex.chroma:tex.id);
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+                if(tex.revision!=media->revision){
+                    const int w=plane?(frame.width()+1)/2:frame.width(),h=plane?(frame.height()+1)/2:frame.height();
+                    glPixelStorei(GL_UNPACK_ALIGNMENT,1);glPixelStorei(GL_UNPACK_ROW_LENGTH,frame.bytesPerLine(plane)/(plane?2:1));
+                    if(allocate)glTexImage2D(GL_TEXTURE_2D,0,plane?GL_RG8:GL_R8,w,h,0,plane?GL_RG:GL_RED,GL_UNSIGNED_BYTE,frame.bits(plane));
+                    else glTexSubImage2D(GL_TEXTURE_2D,0,0,0,w,h,plane?GL_RG:GL_RED,GL_UNSIGNED_BYTE,frame.bits(plane));
+                }
+            }
+            glPixelStorei(GL_UNPACK_ROW_LENGTH,0);glPixelStorei(GL_UNPACK_ALIGNMENT,4);glActiveTexture(GL_TEXTURE0);
+            tex.size=frameSize;tex.yuv=true;tex.revision=media->revision;
+            double kr=.2126,kb=.0722;
+            if(format.colorSpace()==QVideoFrameFormat::ColorSpace_BT601){kr=.299;kb=.114;}
+            const double kg=1-kr-kb;const bool full=format.colorRange()==QVideoFrameFormat::ColorRange_Full;
+            const float ys=full?1.f:255.f/219.f,cs=full?1.f:255.f/224.f;
+            QMatrix3x3 colorMatrix;colorMatrix(0,0)=ys;colorMatrix(0,1)=0;colorMatrix(0,2)=float(2*(1-kr))*cs;
+            colorMatrix(1,0)=ys;colorMatrix(1,1)=float(-2*kb*(1-kb)/kg)*cs;colorMatrix(1,2)=float(-2*kr*(1-kr)/kg)*cs;
+            colorMatrix(2,0)=ys;colorMatrix(2,1)=float(2*(1-kb))*cs;colorMatrix(2,2)=0;
+            program.setUniformValue("yuvToRgb",colorMatrix);program.setUniformValue("yuvOffset",QVector3D(full?0.f:16.f/255.f,128.f/255.f,128.f/255.f));
+        }else if(tex.revision!=media->revision){
             glPixelStorei(GL_UNPACK_ALIGNMENT,4);glPixelStorei(GL_UNPACK_ROW_LENGTH,img.bytesPerLine()/4);
-            if(tex.size!=img.size()){glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,img.width(),img.height(),0,GL_RGBA,GL_UNSIGNED_BYTE,img.constBits());tex.size=img.size();}
+            if(tex.size!=img.size()||tex.yuv){glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,img.width(),img.height(),0,GL_RGBA,GL_UNSIGNED_BYTE,img.constBits());tex.size=img.size();}
             else glTexSubImage2D(GL_TEXTURE_2D,0,0,0,img.width(),img.height(),GL_RGBA,GL_UNSIGNED_BYTE,img.constBits());
             if(s.media.isEmpty())glGenerateMipmap(GL_TEXTURE_2D);
-            glPixelStorei(GL_UNPACK_ROW_LENGTH,0);tex.revision=media->revision;
+            glPixelStorei(GL_UNPACK_ROW_LENGTH,0);tex.revision=media->revision;tex.yuv=false;
         }
         const auto t=s.transform();QMatrix3x3 m;
         m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());
@@ -124,7 +158,7 @@ void Canvas::paintGL(){
             double sh=(QLineF(pixel(s.corners[0]),pixel(s.corners[3])).length()+QLineF(pixel(s.corners[1]),pixel(s.corners[2])).length())/2;
             program.setUniformValue("surfaceAspect",float(std::clamp(sw/std::max(sh,.0001),.05,20.0)));
             if(s.fit&&!s.pattern){
-            double ratio=(double(img.width())/img.height())/(sw/std::max(sh,.0001));
+            double ratio=(double(frameSize.width())/frameSize.height())/(sw/std::max(sh,.0001));
             if(s.fit==1){if(ratio>1)uvScale.setY(float(ratio));else uvScale.setX(float(1/ratio));}
             else {if(ratio>1)uvScale.setX(float(1/ratio));else uvScale.setY(float(ratio));}
             uvOffset=(QVector2D(1,1)-uvScale)*.5f;
@@ -136,7 +170,7 @@ void Canvas::paintGL(){
         for(int y=0;y<s.cells;y++)for(int x=0;x<s.cells;x++){int a=y*(s.cells+1)+x,b=a+1,c=a+s.cells+1,d=c+1;add(a);add(b);add(d);add(a);add(d);add(c);}
         buffer.allocate(vertices.constData(),int(vertices.size()*sizeof(float)));glDrawArrays(GL_TRIANGLES,0,int(vertices.size()/4));
     }
-    buffer.release();vao.release();program.release();glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
+    buffer.release();vao.release();program.release();glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,0);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
     glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
     p.endNativePainting();
     if(!editor)return;

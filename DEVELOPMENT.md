@@ -14,7 +14,7 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 
 The editor and projector use separate Canvas instances with the same Scene. Surface corners are normalized output coordinates. A projective transform maps the unit square to the four corners, and a triangulated mesh provides local deformation. Keep editor overlays out of the output Canvas.
 
-Qt Multimedia decodes video through QVideoSink into QImage frames, which are uploaded as textures. This is a straightforward initial pipeline; it is not a fully GPU-native video decoder pipeline. Media sources are shared by path.
+Qt Multimedia decodes video through QVideoSink. Common unrotated SDR NV12 frames (BT.709, or BT.601 video range) retain one mapped frame per source. The renderer uploads the Y and UV planes and converts to RGB in its shader, avoiding a full RGB image conversion on the UI thread. Row strides and colour range are respected. Other formats, rotated/cropped frames, HDR and full-range BT.601 use Qt's image conversion fallback. This is not zero-copy decoding: native frame mapping and texture uploads still cost time. Media sources are shared by path.
 
 Dots are procedural fragment-shader output, with per-surface phase advanced by Scene's timer. Both canvases read the same phase. Animation frames emit repaint notifications without marking the project dirty. Speed, size, and pause are serialized; animation phase restarts on project load. Pattern `0` selects media/grid and `1` selects dots.
 
@@ -33,6 +33,10 @@ Get-Content .\app\mapper.log -Tail 5
 ```
 
 Existing general checks use `--smoke` (corner interaction, serialization, and rendering), optionally with `--media "C:\path\clip.mp4"`. These are diagnostic modes, not a comprehensive test suite. Do not run them against the user's actual project: they deliberately change their in-memory scene and use temporary project files.
+
+`--smoke-video-colour` checks native NV12 rendering against Qt's converted colours, padded row strides, colour ranges, and switching back to an RGB image. `--profile-media "C:\path\one.mp4" "C:\path\two.mp4" "C:\path\three.mp4"` runs a separate temporary scene and output window, then logs per-source frame rate, frame preparation time, and output repaint rate after warmup. It does not save or change the user's mapping.
+
+On the original Radeon 840M development PC, three 1280x720 Grok clips in that profiling window improved from about 12 to 27 output repaints per second after the NV12 change. Frame preparation fell from about 8.4 ms to 1.6-2.0 ms per frame. These are local measurements, not a guaranteed frame rate for other hardware, codecs, or projector configurations.
 
 To reopen a mapping normally:
 

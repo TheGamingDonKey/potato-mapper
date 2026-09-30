@@ -9,6 +9,7 @@
 #include <QSaveFile>
 #include <QFile>
 #include <QTimer>
+#include <QCoreApplication>
 #include <cmath>
 #include <algorithm>
 
@@ -32,21 +33,45 @@ MediaSource::MediaSource(const QString &path, QObject *parent) : QObject(parent)
     auto *sink=new QVideoSink(this);
     player->setAudioOutput(audio); player->setVideoSink(sink);
     player->setLoops(QMediaPlayer::Infinite);
-    connect(sink,&QVideoSink::videoFrameChanged,this,[this](const QVideoFrame &frame){
-        if(!frame.isValid()) return;
-        auto decoded=frame.toImage();
-        if(decoded.isNull()) return;
-        QTransform orientation;
-        orientation.rotate(static_cast<int>(frame.rotation()));
-        if(frame.mirrored()) orientation.scale(-1,1);
-        if(!orientation.isIdentity()) decoded=decoded.transformed(orientation);
-        image=decoded.convertToFormat(QImage::Format_RGBA8888);
-        ++revision; emit frameChanged();
-    });
+    connect(sink,&QVideoSink::videoFrameChanged,this,&MediaSource::presentFrame);
     connect(player,&QMediaPlayer::errorOccurred,this,[this,path](QMediaPlayer::Error,const QString &detail){
         emit error(QFileInfo(path).fileName()+": "+detail);
     });
     player->setSource(QUrl::fromLocalFile(path)); player->play();
+}
+
+MediaSource::~MediaSource(){if(mappedVideo.isMapped())mappedVideo.unmap();}
+void MediaSource::presentFrame(const QVideoFrame &frame){
+    if(!frame.isValid())return;
+    QElapsedTimer conversion;conversion.start();
+    if(revision==1&&QCoreApplication::arguments().contains("--profile-media"))qInfo()<<"VIDEO FORMAT"<<frame.size()<<frame.pixelFormat()<<frame.handleType()<<frame.surfaceFormat().colorSpace()<<frame.surfaceFormat().colorRange();
+    const auto format=frame.surfaceFormat();
+    // Keep one mapped native frame; the shader converts its Y/UV planes to RGB.
+    // Qt's image conversion remains the fallback for rotated, HDR or other formats.
+    const bool native=frame.pixelFormat()==QVideoFrameFormat::Format_NV12
+        &&(format.colorSpace()==QVideoFrameFormat::ColorSpace_BT709
+           ||(format.colorSpace()==QVideoFrameFormat::ColorSpace_BT601&&format.colorRange()!=QVideoFrameFormat::ColorRange_Full))
+        &&frame.rotation()==QtVideo::Rotation::None&&!frame.mirrored()
+        &&format.rotation()==QtVideo::Rotation::None&&!format.isMirrored()
+        &&format.scanLineDirection()==QVideoFrameFormat::TopToBottom
+        &&format.viewport()==QRect(QPoint(0,0),frame.size())
+        &&format.colorTransfer()!=QVideoFrameFormat::ColorTransfer_ST2084
+        &&format.colorTransfer()!=QVideoFrameFormat::ColorTransfer_STD_B67;
+    QVideoFrame next=frame;
+    if(native&&next.map(QVideoFrame::ReadOnly)){
+        if(next.planeCount()==2&&next.bytesPerLine(1)%2==0){
+            if(mappedVideo.isMapped())mappedVideo.unmap();mappedVideo=next;
+            conversionNs+=conversion.nsecsElapsed();++revision;emit frameChanged();return;
+        }
+        next.unmap();
+    }
+    auto decoded=frame.toImage();if(decoded.isNull())return;
+    QTransform orientation;orientation.rotate(static_cast<int>(frame.rotation()));
+    if(frame.mirrored())orientation.scale(-1,1);
+    if(!orientation.isIdentity())decoded=decoded.transformed(orientation);
+    if(mappedVideo.isMapped())mappedVideo.unmap();mappedVideo={};
+    image=decoded.convertToFormat(QImage::Format_RGBA8888);
+    conversionNs+=conversion.nsecsElapsed();++revision;emit frameChanged();
 }
 
 static double cross(const QPointF &a,const QPointF &b) {return a.x()*b.y()-a.y()*b.x();}
