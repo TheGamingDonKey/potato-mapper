@@ -11,6 +11,8 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | `src/canvas.h`, `src/canvas.cpp` | Shared editor/output renderer, shaders, mesh interaction, drag-and-drop |
 | `assets/` | Potato logo, Windows icon and resource metadata |
 | `build.ps1` | Configure, build Release, and deploy runtime DLLs locally |
+| `package.ps1` | Package the built executable and runtime dependencies into a portable Windows x64 ZIP |
+| `packaging/` | Quick-start instructions and runtime license notices |
 
 The editor and projector use separate Canvas instances with the same Scene. Surface corners are normalized output coordinates. A projective transform maps the unit square to the four corners, and a triangulated mesh provides local deformation. Keep editor overlays out of the output Canvas.
 
@@ -54,6 +56,6 @@ For visual work, run the app and inspect the changed behavior once. For output c
 - Sidebar controls may require scrolling on shorter displays.
 - Project files reference media; there is no pack-and-collect feature.
 - Existing video controls act on sources shared by path. Review resource cleanup and decoder performance before scaling to many videos.
-- No automated CI or packaged release exists yet. Runtime redistribution needs the corresponding dependency notices and license terms.
+- Releases contain a portable Windows x64 ZIP. There is no installer, automatic updater, or automated CI yet. When updating runtime libraries, update their notices and publish matching sources alongside the ZIP.
 
 Keep changes small and runnable. Preserve backward compatibility with the existing version-1 JSON format and earlier `HomeMapper` format tag. A new feature should be reachable in the actual UI and render through the same output path.

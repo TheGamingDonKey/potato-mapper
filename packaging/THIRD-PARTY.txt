@@ -1,0 +1,39 @@
+Potato Mapper 0.2.0 - third-party runtime notices
+
+Potato Mapper's own source is MIT licensed; see LICENSE.
+
+Qt 6.10.3 (Qt Base, Qt Multimedia, Qt SVG)
+Copyright (C) The Qt Company Ltd. and other contributors.
+The Qt runtime libraries are used under LGPL-3.0-only. See licenses/LGPL-3.0-only.txt
+and licenses/GPL-3.0-only.txt. Qt is dynamically linked. You may replace these
+libraries with compatible modified versions, and reverse engineer this application
+for debugging modifications to those libraries as allowed by their licenses.
+Potato Mapper imposes no additional restriction on those rights.
+
+FFmpeg 7.1.3
+Copyright (c) 2000-2023 the FFmpeg developers.
+This software uses libraries from the FFmpeg project under LGPLv2.1 or later.
+See licenses/LGPL-2.1-or-later.txt and licenses/FFMPEG-BUILD.txt.
+https://ffmpeg.org/
+
+Corresponding library sources are provided alongside the application at:
+https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.2.0
+  qtbase-everywhere-src-6.10.3.tar.xz
+  qtmultimedia-everywhere-src-6.10.3.tar.xz
+  qtsvg-everywhere-src-6.10.3.tar.xz
+  ffmpeg-7.1.3.tar.xz
+  qt5-6.10.3.tar.gz (Qt provisioning/build scripts, including FFmpeg)
+The libraries were supplied by the Qt online distribution and have not been
+modified by Potato Mapper. The application source and CMake build instructions
+are available in the same repository and the v0.2.0 source archives.
+
+Additional library copyright notices, license texts, and Qt's module inventories
+are in licenses/. The upstream inventories also describe optional components and
+development tools that are not included in the application ZIP.
+
+Microsoft Visual C++ Runtime (app-local x64 redistributable DLLs)
+Copyright Microsoft Corporation. All rights reserved.
+These files are redistributed from Visual Studio's designated REDIST directory
+under the Visual Studio license. They are not covered by Potato Mapper's MIT
+license or by the LGPL licenses of Qt/FFmpeg.
+https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution
