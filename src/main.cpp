@@ -35,6 +35,7 @@
 #include <QSettings>
 #include <QIcon>
 #include <functional>
+#include <memory>
 
 class MainWindow : public QMainWindow {
 public:
@@ -241,6 +242,47 @@ int main(int argc,char **argv){
     if(projectArgument>=0&&projectArgument+1<args.size()){QString error;if(!window.scene.load(args[projectArgument+1],error))window.statusBar()->showMessage(error);}
     const int mediaArgument=args.indexOf("--media");
     if(mediaArgument>=0&&mediaArgument+1<args.size())window.scene.assignMedia(0,args[mediaArgument+1]);
+    if(args.contains("--profile-media")){
+        window.smoke=true;window.scene.newProject();
+        for(int i=args.indexOf("--profile-media")+1;i<args.size();++i){if(i>args.indexOf("--profile-media")+1)window.scene.add();window.scene.assignMedia(window.scene.selected,args[i]);}
+        window.output->resize(1280,720);window.output->show();
+        QTimer::singleShot(3000,&window,[&window,&app]{
+            auto elapsed=std::make_shared<QElapsedTimer>();elapsed->start();
+            QVector<quint64> frames;QVector<qint64> costs;
+            for(const auto &s:window.scene.surfaces){auto *m=window.scene.source(s.media);frames<<m->revision;costs<<m->conversionNs;}
+            const auto paints=window.output->paintedFrames;
+            QTimer::singleShot(6000,&window,[&window,&app,elapsed,frames,costs,paints]{
+                const double seconds=elapsed->elapsed()/1000.0;bool ok=window.output->graphicsReady;
+                for(int i=0;i<frames.size();++i){auto *m=window.scene.source(window.scene.surfaces[i].media);const auto n=m->revision-frames[i];qInfo()<<"PROFILE clip"<<i<<"fps"<<n/seconds<<"frame preparation ms/frame"<<(n?(m->conversionNs-costs[i])/1e6/n:0)<<"size"<<m->frameSize();ok=ok&&n>0;}
+                qInfo()<<"PROFILE output fps"<<(window.output->paintedFrames-paints)/seconds<<"seconds"<<seconds;app.exit(ok?0:2);
+            });
+        });
+    }
+    if(args.contains("--smoke-video-colour")){
+        window.smoke=true;window.scene.newProject();
+        window.scene.surfaces[0].corners={QPointF(0,0),QPointF(1,0),QPointF(1,1),QPointF(0,1)};
+        window.output->resize(640,360);window.output->show();
+        QTimer::singleShot(500,&window,[&window,&app]{
+            auto *source=window.scene.source("");bool ok=true;
+            auto check=[&](const QVideoFrame &frame,bool native){
+                const auto reference=frame.toImage();source->presentFrame(frame);
+                const auto rendered=window.output->grabFramebuffer();
+                const auto expected=reference.pixelColor(reference.width()/2,reference.height()/2),actual=rendered.pixelColor(rendered.width()/2,rendered.height()/2);
+                const int difference=std::max({std::abs(expected.red()-actual.red()),std::abs(expected.green()-actual.green()),std::abs(expected.blue()-actual.blue())});
+                const bool pass=source->mappedVideo.isValid()==native&&difference<=5;ok=ok&&pass;
+                qInfo()<<"VIDEO COLOUR"<<pass<<"native"<<native<<"channel error"<<difference<<"expected"<<expected<<"actual"<<actual;
+            };
+            for(auto space:{QVideoFrameFormat::ColorSpace_BT601,QVideoFrameFormat::ColorSpace_BT709})for(auto range:{QVideoFrameFormat::ColorRange_Video,QVideoFrameFormat::ColorRange_Full}){
+                QVideoFrameFormat format(QSize(66,34),QVideoFrameFormat::Format_NV12);format.setColorSpace(space);format.setColorRange(range);
+                QVideoFrame frame(format);if(!frame.map(QVideoFrame::WriteOnly)){ok=false;continue;}
+                for(int y=0;y<34;y++)std::fill_n(frame.bits(0)+y*frame.bytesPerLine(0),66,uchar(110));
+                for(int y=0;y<17;y++)for(int x=0;x<33;x++){auto *uv=frame.bits(1)+y*frame.bytesPerLine(1)+x*2;uv[0]=90;uv[1]=190;}
+                frame.unmap();check(frame,space==QVideoFrameFormat::ColorSpace_BT709||range!=QVideoFrameFormat::ColorRange_Full);
+            }
+            QImage image(66,34,QImage::Format_RGBA8888);image.fill(QColor(30,180,80));check(QVideoFrame(image),false);
+            app.exit(ok?0:2);
+        });
+    }
     if(args.contains("--smoke-dots")){
         window.smoke=true;auto &s=window.scene.surfaces[0];s.pattern=1;s.patternSpeed=140;s.patternSize=24;window.scene.touch(true);
         window.output->resize(640,360);window.output->show();
@@ -273,7 +315,7 @@ int main(int argc,char **argv){
             auto event=[&](QEvent::Type type,QPointF pos,Qt::MouseButton button,Qt::MouseButtons buttons){QMouseEvent e(type,pos,window.canvas->mapToGlobal(pos),button,buttons,Qt::NoModifier);QApplication::sendEvent(window.canvas,&e);};
             event(QEvent::MouseButtonPress,press,Qt::LeftButton,Qt::LeftButton);event(QEvent::MouseMove,release,Qt::NoButton,Qt::LeftButton);event(QEvent::MouseButtonRelease,release,Qt::LeftButton,Qt::NoButton);
             auto &surface=window.scene.surfaces[0];if(surface.corners[1]==oldCorner)failures<<"corner drag";ok=ok&&surface.corners[1]!=oldCorner;surface.mesh[4]=QPointF(.56,.42);ok=ok&&surface.valid();window.canvas->meshMode=true;window.canvas->repaint();
-            if(app.arguments().contains("--media")){auto *source=window.scene.source(surface.media);ok=ok&&(!source->player||source->revision>2);qInfo()<<"MEDIA frames"<<source->revision<<"size"<<source->image.size();}
+            if(app.arguments().contains("--media")){auto *source=window.scene.source(surface.media);ok=ok&&(!source->player||source->revision>2);qInfo()<<"MEDIA frames"<<source->revision<<"size"<<source->frameSize();}
             QTemporaryDir temp;QString error;const auto before=window.scene.json();
             const bool roundtrip=window.scene.save(temp.filePath("roundtrip.hmap"),error)&&window.scene.load(temp.filePath("roundtrip.hmap"),error)&&before==window.scene.json();if(!roundtrip)failures<<"project roundtrip";ok=ok&&roundtrip;
             auto shot=window.canvas->grabFramebuffer();auto rect=window.canvas->canvasRect();const double dpi=window.canvas->devicePixelRatioF();

@@ -3,6 +3,7 @@
 #include <QImage>
 #include <QMediaPlayer>
 #include <QVideoSink>
+#include <QVideoFrame>
 #include <QAudioOutput>
 #include <QPolygonF>
 #include <QTransform>
@@ -15,8 +16,13 @@ class MediaSource : public QObject {
     Q_OBJECT
 public:
     explicit MediaSource(const QString &path, QObject *parent = nullptr);
+    ~MediaSource() override;
+    void presentFrame(const QVideoFrame &frame);
+    QVideoFrame mappedVideo;
+    QSize frameSize() const { return mappedVideo.isValid()?mappedVideo.size():image.size(); }
     QImage image;
     quint64 revision = 1;
+    qint64 conversionNs = 0;
     QMediaPlayer *player = nullptr;
     QAudioOutput *audio = nullptr;
 signals:

@@ -16,6 +16,7 @@ public:
     ~Canvas() override;
     bool meshMode=false;
     bool graphicsReady=false;
+    quint64 paintedFrames=0;
     QString graphicsError;
     QString graphicsDescription;
     QRectF canvasRect() const;
@@ -38,7 +39,7 @@ private:
     QOpenGLShaderProgram program;
     QOpenGLBuffer buffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject vao;
-    struct Texture {GLuint id=0;quint64 revision=0;QSize size;};
+    struct Texture {GLuint id=0,chroma=0;quint64 revision=0;QSize size;bool yuv=false;};
     QHash<QString,Texture> textures;
     double zoom=1;
     QPointF pan,lastMouse,dragStart;
