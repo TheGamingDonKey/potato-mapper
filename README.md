@@ -4,6 +4,18 @@
 
 A small Windows projection mapper for one projector. Put images, videos, or animated dots on a surface, drag its corners or mesh points into place, and send clean output to your projector. No watermark.
 
+## Download and run
+
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.2.0/PotatoMapper-0.2.0-windows-x64.zip)**
+
+1. Download the app ZIP above, right-click it, and choose **Extract All**.
+2. Open the extracted folder and double-click **PotatoMapper.exe**.
+3. Keep the included DLL files and folders beside the executable.
+
+No installation, Visual Studio, Qt setup, or GitHub account is required. This build targets **64-bit Intel/AMD Windows 10 (22H2) or Windows 11**, with an **OpenGL 3.3 Core** graphics driver. It has been checked locally on Windows 11; testing on other computers is still limited. It is not a macOS or Linux build.
+
+Use the app ZIP under [Releases](https://github.com/TheGamingDonKey/potato-mapper/releases). GitHub's **Code → Download ZIP** and **Source code** downloads contain programming files, not the ready-to-run app. The other release archives provide library source code for developers; you only need the Windows app ZIP to run it.
+
 ## Why it exists
 
 Because MadMapper's demo watermark pissed me off.
@@ -41,7 +53,9 @@ Clone this repository and run in PowerShell, substituting your Qt installation p
 
 The script builds Release and uses `windeployqt` to copy runtime dependencies into `app`. It accepts `-CMakePath` and `-BuildDirectory` overrides. `QT_ROOT_DIR` or `QTDIR` can supply the Qt path. The original development machine's cached tools remain a fallback.
 
-No Qt libraries, media files, or compiled binaries are committed. The application requires a graphics driver that supports OpenGL 3.3 Core. There is no installer or prebuilt release yet.
+No Qt libraries, media files, or compiled binaries are committed to the source tree. Ready-to-run binaries and library sources are distributed through GitHub Releases.
+
+To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.3\msvc2022_64'`. Pass the same `-BuildDirectory` if you overrode it during the build. The packager finds the installed Visual C++ x64 redistributable DLLs, deploys Qt into a fresh folder, and includes the runtime notices. Output goes under `out/releases`. The current notices and source archives correspond to Qt 6.10.3 and FFmpeg 7.1.3; update them when upgrading dependencies.
 
 ## Use it
 
@@ -64,4 +78,4 @@ Useful next additions include Screen/Add blending for black-background videos, m
 
 [MIT](LICENSE). You can use, modify, and redistribute the project under those terms.
 
-The potato logo was generated with AI. Qt and the media libraries used at runtime have their own licenses; this source repository does not bundle those dependencies.
+The potato logo was generated with AI. Bundled Qt, FFmpeg, and Microsoft runtime libraries have their own terms; see [runtime notices](packaging/THIRD-PARTY.txt). Library sources accompany the binary release.

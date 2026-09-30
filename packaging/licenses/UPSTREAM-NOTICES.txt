@@ -1,0 +1,1221 @@
+These upstream module inventories also describe optional components and development tools that are not shipped in the application ZIP.
+
+=== qtbase 6.10.3: upstream component attributions ===
+
+qtbase
+7ddbc87d+HEAD
+Copyright (C) The Qt Company Ltd. and other contributors.
+NOASSERTION
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+syncqt
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Bootstrap_Attribution_pcre2
+10.47
+Copyright (c) 1997-2007 University of Cambridge
+Copyright (c) 2007-2024 Philip Hazel
+Copyright (c) 2010-2024 Zoltan Herczeg
+LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception
+https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+Bootstrap_Attribution_pcre2-sljit
+10.47
+Copyright Zoltan Herczeg
+BSD-2-Clause
+https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+Bootstrap
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+moc
+6.10.3
+Copyright (C) 2013 Olivier Goffart <ogoffart@woboq.com>
+Copyright (C) 2014 Olivier Goffart <ogoffart@woboq.org>
+Copyright (C) 2016 Intel Corporation.
+Copyright (C) 2018 Intel Corporation.
+Copyright (C) 2018 The Qt Company Ltd.
+Copyright (C) 2019 Olivier Goffart <ogoffart@woboq.com>
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+rcc
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+tracepointgen
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+tracegen
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+cmake_automoc_parser
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+EntryPointPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR BSD-3-Clause
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+BundledPcre2_Attribution_pcre2-sljit
+10.47
+Copyright Zoltan Herczeg
+BSD-2-Clause
+https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+BundledPcre2
+10.47
+Copyright (c) 1997-2007 University of Cambridge
+Copyright (c) 2007-2024 Philip Hazel
+Copyright (c) 2010-2024 Zoltan Herczeg
+LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception
+https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+BundledZLIB
+1.3.2
+(C) 1995-2026 Jean-loup Gailly and Mark Adler
+Zlib
+https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+
+ZlibPrivate
+1.3.2
+(C) 1995-2026 Jean-loup Gailly and Mark Adler
+Zlib
+https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+
+Core_Attribution_unicode-character-database
+36
+Copyright (C) 1991-2025 Unicode, Inc.
+Unicode-3.0
+https://www.unicode.org/ucd/
+
+Core_Attribution_unicode-cldr
+v48.1
+Copyright (C) 2004-2025 Unicode, Inc.
+Unicode-3.0
+https://cldr.unicode.org/
+
+Core_Attribution_tlexpected
+41d3e1f48d682992a2230b2a715bca38b848b269
+To the extent possible under law, Sy Brand has waived all copyright and related or neighboring rights to the expected library. This work is published from: United Kingdom.
+CC0-1.0
+https://github.com/TartanLlama/expected/blob/41d3e1f48d682992a2230b2a715bca38b848b269/include/tl/expected.hpp
+
+Core_Attribution_siphash
+unknown
+Copyright (C) 2012-2014 Jean-Philippe Aumasson
+Copyright (C) 2012-2014 Daniel J. Bernstein <djb@cr.yp.to>
+Copyright (C) 2016 Intel Corporation
+CC0-1.0
+https://raw.githubusercontent.com/veorq/SipHash/adcbf09b1684a718f594faa650ffc56bacdb0777/siphash24.c
+
+Core_Attribution_blake2
+ed1974ea83433eba7b2d95c5dcd9ac33cb847913
+Copyright 2012, Samuel Neves <sneves@dei.uc.pt>
+CC0-1.0 OR Apache-2.0
+https://github.com/BLAKE2/BLAKE2/tree/ed1974ea83433eba7b2d95c5dcd9ac33cb847913
+
+Core_Attribution_md4
+unknown
+Written by Alexander Peslyak - better known as Solar Designer <solar@openwall.com> - in 2001, and placed in the public domain. There's absolutely no warranty.
+CC0-1.0
+NOASSERTION
+
+Core_Attribution_md5
+unknown
+Written by Colin Plumb in 1993, no copyright is claimed. Ian Jackson <ian@chiark.greenend.org.uk>.
+CC0-1.0
+NOASSERTION
+
+Core_Attribution_sha1
+unknown
+Copyright (C) Dominik Reichl <dominik.reichl@t-online.de>
+Copyright (C) 2016 The Qt Company Ltd
+LicenseRef-SHA1-Public-Domain
+http://www.dominik-reichl.de/projects/csha1/
+
+Core_Attribution_sha3_endian
+1.0.0
+Copyright (c) 1998-2013, Brian Gladman, Worcester, UK. All rights reserved.
+BSD-2-Clause
+NOASSERTION
+
+Core_Attribution_sha3_keccak
+3.2
+Guido Bertoni, Joan Daemen, Michaël Peeters and Gilles Van Assche.
+To the extent possible under law, the implementers have waived all copyright
+and related or neighboring rights to the source code in this file.
+CC0-1.0
+NOASSERTION
+
+Core_Attribution_rfc6234
+unknown
+Copyright (c) 2011 IETF Trust and the persons identified as authors of the code.
+BSD-3-Clause
+NOASSERTION
+
+Core_Attribution_tinycbor
+7.0
+Copyright (C) 2015-2025 Intel Corporation
+MIT
+https://github.com/intel/tinycbor/archive/v7.0/tinycbor-7.0.tar.gz
+
+Core_Attribution_doubleconversion
+3.4.0
+Copyright 2006-2012, the V8 project authors
+BSD-3-Clause
+https://github.com/google/double-conversion/releases/tag/v3.4.0
+
+Core_Attribution_easing
+unknown
+Copyright (c) 2001 Robert Penner
+BSD-3-Clause
+http://robertpenner.com/easing/
+
+Core_Attribution_tika-mimetypes
+408c26e1e03e018a623e732dff6fb047a2fb8e19
+Copyright 2026 The Apache Software Foundation
+Apache-2.0
+https://github.com/apache/tika/blob/408c26e1e03e018a623e732dff6fb047a2fb8e19/tika-core/src/main/resources/org/apache/tika/mime/tika-mimetypes.xml
+
+Core
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+BundledLibpng
+1.6.56
+Copyright (c) 1995-2026 The PNG Reference Library Authors
+Copyright (c) 2000-2026 Cosmin Truta
+Copyright (c) 1998-2018 Glenn Randers-Pehrson
+Copyright (c) 1996-1997 Andreas Dilger
+Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
+Copyright (c) 2000-2017 Simon-Pierre Cadieux
+Copyright (c) 2000-2017 Eric S. Raymond
+Copyright (c) 2000-2017 Mans Rullgard
+Copyright (c) 2000-2017 Gilles Vollant
+Copyright (c) 2000-2017 James Yu
+Copyright (c) 2000-2017 Mandar Sahastrabuddhe
+Copyright (c) 1998-2000 Tom Lane
+Copyright (c) 1998-2000 Willem van Schaik
+Copyright (c) 1996-1997 John Bowler
+Copyright (c) 1996-1997 Kevin Bracey
+Copyright (c) 1996-1997 Sam Bushell
+Copyright (c) 1996-1997 Magnus Holmgren
+Copyright (c) 1996-1997 Greg Roelofs
+Copyright (c) 1996-1997 Tom Tanner
+Copyright (c) 1995-1996 Dave Martindale
+Copyright (c) 1995-1996 Paul Schmidt
+Copyright (c) 1995-1996 Tim Wegner
+Libpng AND libpng-2.0
+https://download.sourceforge.net/libpng/libpng-1.6.56.tar.xz
+
+PngPrivate
+1.6.56
+Copyright (c) 1995-2026 The PNG Reference Library Authors
+Copyright (c) 2000-2026 Cosmin Truta
+Copyright (c) 1998-2018 Glenn Randers-Pehrson
+Copyright (c) 1996-1997 Andreas Dilger
+Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
+Copyright (c) 2000-2017 Simon-Pierre Cadieux
+Copyright (c) 2000-2017 Eric S. Raymond
+Copyright (c) 2000-2017 Mans Rullgard
+Copyright (c) 2000-2017 Gilles Vollant
+Copyright (c) 2000-2017 James Yu
+Copyright (c) 2000-2017 Mandar Sahastrabuddhe
+Copyright (c) 1998-2000 Tom Lane
+Copyright (c) 1998-2000 Willem van Schaik
+Copyright (c) 1996-1997 John Bowler
+Copyright (c) 1996-1997 Kevin Bracey
+Copyright (c) 1996-1997 Sam Bushell
+Copyright (c) 1996-1997 Magnus Holmgren
+Copyright (c) 1996-1997 Greg Roelofs
+Copyright (c) 1996-1997 Tom Tanner
+Copyright (c) 1995-1996 Dave Martindale
+Copyright (c) 1995-1996 Paul Schmidt
+Copyright (c) 1995-1996 Tim Wegner
+Libpng AND libpng-2.0
+https://download.sourceforge.net/libpng/libpng-1.6.56.tar.xz
+
+BundledLibjpeg16bits
+3.1.4
+Copyright (C) 2009-2026 D. R. Commander
+Copyright (C) 2015-2016, 2018, 2022 Matthieu Darbois
+Copyright (C) 2019-2021 Arm Limited
+Copyright (C) 2015, 2020 Google, Inc.
+Copyright (C) 2011, 2014, 2016 Siarhei Siamashka
+Copyright (C) 2015 Intel Corporation
+Copyright (C) 2013-2014 Linaro Limited
+Copyright (C) 2013-2014 MIPS Technologies, Inc.
+Copyright (C) 2009, 2012 Pierre Ossman for Cendio AB
+Copyright (C) 2009-2011 Nokia Corporation and/or its subsidiary(-ies)
+Copyright (C) 1999-2006 MIYASAKA Masaru
+Copyright (C) 1999 Ken Murchison
+Copyright (C) 1991-2020 Thomas G. Lane, Guido Vollbeding
+
+IJG AND BSD-3-Clause
+https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4/libjpeg-turbo-3.1.4.tar.gz
+
+BundledLibjpeg12bits
+3.1.4
+Copyright (C) 2009-2026 D. R. Commander
+Copyright (C) 2015-2016, 2018, 2022 Matthieu Darbois
+Copyright (C) 2019-2021 Arm Limited
+Copyright (C) 2015, 2020 Google, Inc.
+Copyright (C) 2011, 2014, 2016 Siarhei Siamashka
+Copyright (C) 2015 Intel Corporation
+Copyright (C) 2013-2014 Linaro Limited
+Copyright (C) 2013-2014 MIPS Technologies, Inc.
+Copyright (C) 2009, 2012 Pierre Ossman for Cendio AB
+Copyright (C) 2009-2011 Nokia Corporation and/or its subsidiary(-ies)
+Copyright (C) 1999-2006 MIYASAKA Masaru
+Copyright (C) 1999 Ken Murchison
+Copyright (C) 1991-2020 Thomas G. Lane, Guido Vollbeding
+
+IJG AND BSD-3-Clause
+https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4/libjpeg-turbo-3.1.4.tar.gz
+
+BundledLibjpeg
+3.1.4
+Copyright (C) 2009-2026 D. R. Commander
+Copyright (C) 2015-2016, 2018, 2022 Matthieu Darbois
+Copyright (C) 2019-2021 Arm Limited
+Copyright (C) 2015, 2020 Google, Inc.
+Copyright (C) 2011, 2014, 2016 Siarhei Siamashka
+Copyright (C) 2015 Intel Corporation
+Copyright (C) 2013-2014 Linaro Limited
+Copyright (C) 2013-2014 MIPS Technologies, Inc.
+Copyright (C) 2009, 2012 Pierre Ossman for Cendio AB
+Copyright (C) 2009-2011 Nokia Corporation and/or its subsidiary(-ies)
+Copyright (C) 1999-2006 MIYASAKA Masaru
+Copyright (C) 1999 Ken Murchison
+Copyright (C) 1991-2020 Thomas G. Lane, Guido Vollbeding
+
+IJG AND BSD-3-Clause
+https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4/libjpeg-turbo-3.1.4.tar.gz
+
+JpegPrivate
+3.1.4
+Copyright (C) 2009-2026 D. R. Commander
+Copyright (C) 2015-2016, 2018, 2022 Matthieu Darbois
+Copyright (C) 2019-2021 Arm Limited
+Copyright (C) 2015, 2020 Google, Inc.
+Copyright (C) 2011, 2014, 2016 Siarhei Siamashka
+Copyright (C) 2015 Intel Corporation
+Copyright (C) 2013-2014 Linaro Limited
+Copyright (C) 2013-2014 MIPS Technologies, Inc.
+Copyright (C) 2009, 2012 Pierre Ossman for Cendio AB
+Copyright (C) 2009-2011 Nokia Corporation and/or its subsidiary(-ies)
+Copyright (C) 1999-2006 MIYASAKA Masaru
+Copyright (C) 1999 Ken Murchison
+Copyright (C) 1991-2020 Thomas G. Lane, Guido Vollbeding
+
+IJG AND BSD-3-Clause
+https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4/libjpeg-turbo-3.1.4.tar.gz
+
+BundledFreetype_Attribution_freetype-zlib
+2.14.3
+Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+Zlib
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+BundledFreetype_Attribution_freetype-bdf
+2.14.3
+Copyright (c) 2000 Computing Research Labs, New Mexico State University
+Copyright (c) 2001-2014 Francesco Zappa Nardelli
+MIT
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+BundledFreetype_Attribution_freetype-pcf
+2.14.3
+Copyright (c) 2001, 2012 David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2000-2014 Francesco Zappa Nardelli
+Copyright (c) 1990, 1994, 1998 The Open Group
+MIT AND MIT-open-group
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+BundledFreetype
+2.14.3
+Copyright (c) 2007-2014 Adobe Systems Incorporated
+Copyright (c) 2004-2026 Albert Chin-A-Young
+Copyright (c) 2018-2026 Armin Hasitzka, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2000 Computing Research Labs, New Mexico State University
+Copyright (c) 1996-2026 David Turner, Robert Wilhelm, Dominik Röttsches, and Werner Lemberg
+Copyright (c) 2004-2026 David Turner, Robert Wilhelm, Werner Lemberg and George Williams
+Copyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, and Moazin Khatti
+Copyright (c) 2008-2026 David Turner, Robert Wilhelm, Werner Lemberg, and suzuki toshiya
+Copyright (c) 2003-2026 David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2005-2026 David Turner
+Copyright (c) 2007-2026 Derek Clegg and Michael Toftdal
+Copyright (c) 2007 Dmitry Timoshkov for Codeweavers
+Copyright (c) 2001-2015 Francesco Zappa Nardelli
+Copyright (c) 2005, 2007, 2008, 2013 George Williams
+Copyright (c) 2013-2026 Google, Inc. Google Author(s) Behdad Esfahbod and Stuart Gill
+Copyright (c) 2013-2022 Google, Inc.
+Copyright (c) 2003 Huw D M Davies for Codeweavers
+Copyright (c) 2010-2026 Joel Klinghed
+Copyright (c) 1996-2026 Just van Rossum, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2003-2026 Masatake YAMATO and Redhat K.K.
+Copyright (c) 2004-2026 Masatake YAMATO, Redhat K.K, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2019-2026 Nikhil Ramakrishnan, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2009-2026 Oran Agra and Mickey Gabel
+Copyright (c) 2007-2026 Rahul Bhalerao <rahul.bhalerao@redhat.com>
+Copyright (c) 2002-2026 Roberto Alameda
+Copyright (c) 2015-2026 Werner Lemberg
+Copyright (c) 2004-2026 suzuki toshiya, Masatake YAMATO, Red Hat K.K., David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2019 nyorain
+Copyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, George Williams, and Dominik Röttsches
+Copyright (C) 2009, 2023  Red Hat, Inc.
+FTL OR GPL-2.0-only
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+FreetypePrivate_Attribution_freetype-zlib
+2.14.3
+Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+Zlib
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+FreetypePrivate_Attribution_freetype-bdf
+2.14.3
+Copyright (c) 2000 Computing Research Labs, New Mexico State University
+Copyright (c) 2001-2014 Francesco Zappa Nardelli
+MIT
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+FreetypePrivate_Attribution_freetype-pcf
+2.14.3
+Copyright (c) 2001, 2012 David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2000-2014 Francesco Zappa Nardelli
+Copyright (c) 1990, 1994, 1998 The Open Group
+MIT AND MIT-open-group
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+FreetypePrivate
+2.14.3
+Copyright (c) 2007-2014 Adobe Systems Incorporated
+Copyright (c) 2004-2026 Albert Chin-A-Young
+Copyright (c) 2018-2026 Armin Hasitzka, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2000 Computing Research Labs, New Mexico State University
+Copyright (c) 1996-2026 David Turner, Robert Wilhelm, Dominik Röttsches, and Werner Lemberg
+Copyright (c) 2004-2026 David Turner, Robert Wilhelm, Werner Lemberg and George Williams
+Copyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, and Moazin Khatti
+Copyright (c) 2008-2026 David Turner, Robert Wilhelm, Werner Lemberg, and suzuki toshiya
+Copyright (c) 2003-2026 David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2005-2026 David Turner
+Copyright (c) 2007-2026 Derek Clegg and Michael Toftdal
+Copyright (c) 2007 Dmitry Timoshkov for Codeweavers
+Copyright (c) 2001-2015 Francesco Zappa Nardelli
+Copyright (c) 2005, 2007, 2008, 2013 George Williams
+Copyright (c) 2013-2026 Google, Inc. Google Author(s) Behdad Esfahbod and Stuart Gill
+Copyright (c) 2013-2022 Google, Inc.
+Copyright (c) 2003 Huw D M Davies for Codeweavers
+Copyright (c) 2010-2026 Joel Klinghed
+Copyright (c) 1996-2026 Just van Rossum, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2003-2026 Masatake YAMATO and Redhat K.K.
+Copyright (c) 2004-2026 Masatake YAMATO, Redhat K.K, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2019-2026 Nikhil Ramakrishnan, David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2009-2026 Oran Agra and Mickey Gabel
+Copyright (c) 2007-2026 Rahul Bhalerao <rahul.bhalerao@redhat.com>
+Copyright (c) 2002-2026 Roberto Alameda
+Copyright (c) 2015-2026 Werner Lemberg
+Copyright (c) 2004-2026 suzuki toshiya, Masatake YAMATO, Red Hat K.K., David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2019 nyorain
+Copyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, George Williams, and Dominik Röttsches
+Copyright (C) 2009, 2023  Red Hat, Inc.
+FTL OR GPL-2.0-only
+https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+BundledHarfbuzz
+13.2.1
+Copyright © 2010-2022  Google, Inc.
+Copyright © 2015-2020  Ebrahim Byagowi
+Copyright © 2019,2020  Facebook, Inc.
+Copyright © 2012,2015  Mozilla Foundation
+Copyright © 2011  Codethink Limited
+Copyright © 2008,2010  Nokia Corporation and/or its subsidiary(-ies)
+Copyright © 2009  Keith Stribley
+Copyright © 2011  Martin Hosken and SIL International
+Copyright © 2007  Chris Wilson
+Copyright © 2005,2006,2020,2021,2022,2023  Behdad Esfahbod
+Copyright © 2004,2007,2008,2009,2010,2013,2021,2022,2023  Red Hat, Inc.
+Copyright © 1998-2005  David Turner and Werner Lemberg
+Copyright © 2016  Igalia S.L.
+Copyright © 2022  Matthias Clasen
+Copyright © 2018,2021  Khaled Hosny
+Copyright © 2018,2019,2020  Adobe, Inc
+Copyright © 2013-2015  Alexei Podtelezhnikov
+MIT
+https://github.com/harfbuzz/harfbuzz/releases/tag/13.2.1
+
+HarfbuzzPrivate
+13.2.1
+Copyright © 2010-2022  Google, Inc.
+Copyright © 2015-2020  Ebrahim Byagowi
+Copyright © 2019,2020  Facebook, Inc.
+Copyright © 2012,2015  Mozilla Foundation
+Copyright © 2011  Codethink Limited
+Copyright © 2008,2010  Nokia Corporation and/or its subsidiary(-ies)
+Copyright © 2009  Keith Stribley
+Copyright © 2011  Martin Hosken and SIL International
+Copyright © 2007  Chris Wilson
+Copyright © 2005,2006,2020,2021,2022,2023  Behdad Esfahbod
+Copyright © 2004,2007,2008,2009,2010,2013,2021,2022,2023  Red Hat, Inc.
+Copyright © 1998-2005  David Turner and Werner Lemberg
+Copyright © 2016  Igalia S.L.
+Copyright © 2022  Matthias Clasen
+Copyright © 2018,2021  Khaled Hosny
+Copyright © 2018,2019,2020  Adobe, Inc
+Copyright © 2013-2015  Alexei Podtelezhnikov
+MIT
+https://github.com/harfbuzz/harfbuzz/releases/tag/13.2.1
+
+Concurrent
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Sql
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Network_Attribution_zlib
+1.3.2
+(C) 1995-2026 Jean-loup Gailly and Mark Adler
+Zlib
+https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+
+Network_Attribution_psl-data
+2026-01-16_13-11-47_UTC
+The list was originally provided by Jo Hermans <jo.hermans@gmail.com>.
+It is now maintained on github (https://github.com/publicsuffix/list).
+MPL-2.0
+https://publicsuffix.org/list/public_suffix_list.dat
+
+Network_Attribution_libpsl
+664f3dc85259ec65e30248a61fa1c45b7b0e4c3f
+Copyright 2014-2016 The Chromium Authors. All rights reserved.
+BSD-3-Clause
+https://github.com/rockdaboot/libpsl
+
+Network
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Xml
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+DBus_Attribution_libdbus-1-headers
+1.13.12
+Copyright (C) 2002, 2003 CodeFactory AB
+Copyright (C) 2004, 2005 Red Hat, Inc.
+AFL-2.1 OR GPL-2.0-or-later
+https://www.freedesktop.org/wiki/Software/dbus/
+
+DBus
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+uic
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qdbuscpp2xml
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qdbusxml2cpp
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qlalr
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qvkgen
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qtpaths
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+androiddeployqt
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+androidtestrunner
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+windeployqt
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Gui_Attribution_rhi-miniengine-d3d12-mipmap
+0aa79bad78992da0b6a8279ddb9002c1753cb849
+Copyright (c) 2015 Microsoft
+MIT
+https://github.com/microsoft/DirectX-Graphics-Samples
+
+Gui_Attribution_opengl-headers
+Revision 27684
+Copyright (c) 2013-2014 The Khronos Group Inc.
+MIT
+https://www.khronos.org/
+
+Gui_Attribution_opengl-es2-headers
+Revision 27673
+Copyright (c) 2013-2014 The Khronos Group Inc.
+MIT
+https://www.khronos.org/
+
+Gui_Attribution_grayraster
+unknown
+Copyright 2000-2016 by David Turner, Robert Wilhelm, and Werner Lemberg.
+FTL OR GPL-2.0-only
+http://www.freetype.org
+
+Gui_Attribution_smooth-scaling-algorithm
+unknown
+Copyright (C) 2004, 2005 Daniel M. Duley.
+(C) Carsten Haitzler and various contributors.
+(C) Willem Monsuwe <willem@stack.nl>
+BSD-2-Clause AND Imlib2
+NOASSERTION
+
+Gui_Attribution_xserverhelper
+unknown
+Copyright (c) 1987, 1988 X Consortium
+Copyright 1987, 1988 by Digital Equipment Corporation, Maynard, Massachusetts.
+X11 AND HPND
+https://www.x.org/
+
+Gui_Attribution_aglfn
+1.7
+Copyright 2002, 2003, 2005, 2006, 2008, 2010, 2015 Adobe Systems
+BSD-3-Clause
+https://github.com/adobe-type-tools/agl-aglfn
+
+Gui_Attribution_vulkanmemoryallocator
+3.2.1
+Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
+MIT
+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+
+Gui_Attribution_emoji-segmenter
+0.4.0
+Copyright 2019 Google LLC
+Apache-2.0
+https://github.com/google/emoji-segmenter/releases/tag/0.4.0
+
+Gui_Attribution_webgradients
+unknown
+Copyright (c) 2017 itmeo
+MIT
+https://webgradients.com/
+
+Gui_Attribution_icc-srgb-color-profile
+unknown
+Copyright International Color Consortium, 2015
+LicenseRef-ICC-License
+http://www.color.org/
+
+Gui_Attribution_d3d12memoryallocator
+f128d39b7a95b4235bd228d231646278dc6c24b2
+Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+MIT
+https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+
+Gui_Attribution_md4c
+0.5.2
+Copyright © 2016-2024 Martin Mitáš
+MIT
+https://github.com/mity/md4c/releases/tag/release-0.5.2
+
+Gui_Attribution_zlib
+1.3.2
+(C) 1995-2026 Jean-loup Gailly and Mark Adler
+Zlib
+https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+
+Gui_Attribution_vulkan-xml-spec
+1.4.308
+Copyright (c) 2015-2025 The Khronos Group Inc.
+Apache-2.0 OR MIT
+https://www.khronos.org/
+
+Gui
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+ExampleIconsPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+ExamplesAssetDownloaderPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+OpenGL
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Widgets
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+OpenGLWidgets
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+DeviceDiscoverySupportPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+FbSupportPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+TestInternalsPrivate_Attribution_cmake-runcmake-test-modules
+3.31.5
+Copyright © 2000-2024 Kitware, Inc. and Contributors
+BSD-3-Clause
+https://cmake.org/
+
+TestInternalsPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Test_Attribution_catch2
+2.13.10
+Copyright (c) 2022 Two Blue Cubes Ltd. All rights reserved.
+BSL-1.0
+https://github.com/catchorg/Catch2
+
+Test_Attribution_cycle
+3.3.10
+Copyright (c) 2003, 2007-14 Matteo Frigo
+Copyright (c) 2003, 2007-14 Massachusetts Institute of Technology
+MIT
+http://fftw.org/
+
+Test_Attribution_linuxperf
+6.13
+Copyright (C) 2008-2009, Thomas Gleixner <tglx@linutronix.de>
+Copyright (C) 2008-2011, Red Hat, Inc., Ingo Molnar
+Copyright (C) 2008-2011, Red Hat, Inc., Peter Zijlstra
+GPL-2.0-only WITH Linux-syscall-note
+https://www.kernel.org
+
+Test_Attribution_valgrind
+3.25.1
+Copyright (C) 2000-2017 Julian Seward
+Copyright (C) 2003-2017 Josef Weidendorfer.
+BSD-4-Clause
+http://valgrind.org/
+
+Test
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PrintSupport
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QPSQLDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QODBCDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QOCIDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QSQLiteDriverPlugin_Attribution_sqlite
+3.51.3
+The authors disclaim copyright to the source code. However, a license can be obtained if needed.
+blessing
+https://www.sqlite.org/2026/sqlite-amalgamation-3510300.zip
+
+QSQLiteDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QIBaseDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QMimerSQLDriverPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QMinimalIntegrationPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QOffscreenIntegrationPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QWindowsIntegrationPlugin_Attribution_wintab
+unknown
+Copyright 1991-1998 by LCS/Telegraphics.
+LicenseRef-Lcs-Telegraphics
+NOASSERTION
+
+QWindowsIntegrationPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QWindowsDirect2DIntegrationPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QICOPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QJpegPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QGifPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QTuioTouchPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QModernWindowsStylePlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QNLMNIPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QTlsBackendOpenSSLPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QSchannelBackendPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QTlsBackendCertOnlyPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+QtLibraryInfo
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+qmake
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only WITH Qt-GPL-exception-1.0
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+GlobalConfig
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+GlobalConfigPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+Platform_Attribution_extra-cmake-modules
+5.84.0
+Copyright © 2011-2018 The KDE community
+BSD-3-Clause
+https://api.kde.org/ecm/
+
+Platform_Attribution_kwin
+5.13.4
+Copyright 2014 Alex Merry <alex.merry@kde.org>
+Copyright 2014 Martin Gräßlin <mgraesslin@kde.org>
+Copyright (c) 2006,2007 Laurent Montel, <montel@kde.org>
+BSD-3-Clause
+https://www.kde.org/
+
+Platform
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformCommonInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformModuleInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformPluginInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformAppInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformToolInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+PlatformExampleInternal
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtbase.git@7ddbc87d8e14ce51d2957ea72d0a6077593d5ff4
+
+
+=== qtmultimedia 6.10.3: upstream component attributions ===
+
+qtmultimedia
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+NOASSERTION
+git://code.qt.io/qt/qtmultimedia.git
+
+BundledTLSF_Attribution_tlfs
+v3.1
+Copyright (c) 2006-2016, Matthew Conte
+BSD-3-Clause
+https://github.com/mattconte/tlsf.git
+
+BundledTLSF
+v3.1
+Copyright (c) 2006-2016, Matthew Conte
+BSD-3-Clause
+https://github.com/mattconte/tlsf.git
+
+Multimedia
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+BundledResonanceAudio_Attribution_pffft
+02fe7715a5bf8bfd914681c53429600f94e0f536
+Copyright (c) 2013 Julien Pommier <pommier@modartt.com>
+Copyright (c) 2004 the University Corporation for Atmospheric Research 'UCAR'
+
+BSD-3-Clause
+https://bitbucket.org/jpommier/pffft/get/02fe7715a5bf.zip
+
+BundledResonanceAudio_Attribution_eigen
+3.4.0
+Copyright (c) 2012 Alexey Korepanov <kaikaikai@yandex.ru>
+Copyright (c) 2020 Antonio Sanchez <cantonios@google.com>
+Copyright (c) 2020 Arm Limited and Contributors
+Copyright (c) 2006-2011 Benoit Jacob <jacob.benoit.1@gmail.com>
+Copyright (c) 2014-2016 Benoit Steiner (benoit.steiner.goog@gmail.com)
+Copyright (c) 16 BfToF32Even (c) Packet4f
+Copyright (c) 16 BfToF32Odd (c) Packet4f
+Copyright (c) 2021 C. Antonio Sanchez <cantonios@google.com>
+Copyright (c) 2021 Chip Kerchner (chip.kerchner@ibm.com)
+Copyright (c) 2009 Claire Maurice
+Copyright (c) 2017 Codeplay Software Limited
+Copyright (c) 2016 Eugene Brevdo <ebrevdo@gmail.com>
+Copyright (c) 2020 Everton Constantino (everton.constantino@ibm.com)
+Copyright (c) 2016 Fabian Giesen
+Copyright (c) 2008-2019 Gael Guennebaud <gael.guennebaud@inria.fr>
+Copyright (c) 2013 Gauthier Brun <brun.gauthier@gmail.com>
+Copyright (c) 2010-2013 Hauke Heibel <hauke.heibel@gmail.com>
+Copyright (c) 2009 Hauke Heibel <hauke.heibel@gmail.com>
+Copyright (c) 2001, 2010, 2011 Intel Corporation
+Copyright (c) 2013 Jean Ceccato <jean.ceccato@ensimag.fr>
+Copyright (c) 2010-2012 Jitse Niesen <jitse@maths.leeds.ac.uk>
+Copyright (c) 2013 Jitse Niesen <jitse@maths.leeds.ac.uk>
+Copyright (c) 2007 Julien Pommier
+Copyright (c) 2009 Keir Mierle <mierle@gmail.com>
+Copyright (c) 2009 Kenneth Riddile <kfriddile@yahoo.com>
+Copyright (c) 2008-2016 Konstantinos Margaritis <markos@freevec.org>
+Copyright (c) 2009 Mathieu Gautier <mathieu.gautier@cea.fr>
+Copyright (c) 2007 Michael Olbrich <michael.olbrich@gmx.net>
+Copyright (c) 2021 NVIDIA CORPORATION.
+Copyright (c) 2013 Nicolas Carre <nicolas.carre@ensimag.fr>
+Copyright (c) 2014-2015 Open Source Robotics Foundation
+Copyright (c) 2013 Pavel Holoborodko <pavel@holoborodko.com>
+Copyright (c) 2014, 2016 Pedro Gonnet (pedro.gonnet@gmail.com)
+Copyright (c) 2013 Pierre Zoppitelli <pierre.zoppitelli@ensimag.fr>
+Copyright (c) 2016, 2018, 2019 Rasmus Munk Larsen (rmlarsen@google.com)
+Copyright (c) 2009 Ricard Marxer <email@ricardmarxer.com>
+Copyright (c) 2009 Rohit Garg <rpg.314@gmail.com>
+Copyright (c) 2017 The TensorFlow Authors
+Copyright (c) 2010 Thomas Capricelli <orzel@freehackers.org>
+Copyright (c) 2011 Timothy E. Holy tim.holy@gmail.com
+Copyright (c) 2016 Tobias Wood <tobias@spinicist.org.uk>
+Copyright (c) 2010 Vincent Lejeune
+Copyright (c) 2018 Wave Computing, Inc.
+Copyright (c) 2011-2014 Willow Garage, Inc.
+Copyright (c) 2014 yoco <peter.xiau@gmail.com>
+
+MPL-2.0 AND BSD-3-Clause
+https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
+
+BundledResonanceAudio
+e225aedb5ec76ca6a0fe7079c0b84dbcbb490553
+Copyright (c) 2015, 2017, 2018 Google Inc.
+
+Apache-2.0
+https://github.com/resonance-audio/resonance-audio/tree/e225aedb5ec76ca6a0fe7079c0b84dbcbb490553
+
+SpatialAudio
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+MultimediaQuickPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+quickmultimedia
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+Quick3DSpatialAudioPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+quick3dspatialaudio
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+MultimediaWidgets
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+FFmpegMediaPluginImplPrivate_Attribution_signalsmith-stretch
+1.0.0
+Copyright (c) 2022 Geraint Luff / Signalsmith Audio Ltd.
+MIT
+https://signalsmith-audio.co.uk/code/stretch.git
+
+FFmpegMediaPluginImplPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+QFFmpegMediaPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+QWindowsMediaPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+MultimediaTestLibPrivate
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR GPL-3.0-only
+git://code.qt.io/qt/qtmultimedia.git
+
+FFmpeg__avformat_Attribution_ffmpeg-libjpeg
+7.1.3
+Copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
+IJG
+https://libjpeg.sourceforge.net/
+
+FFmpeg__avformat_Attribution_ffmpeg-zlib
+7.1.3
+Copyright (C) 1995-2022 Jean-loup Gailly and Mark Adler.
+Zlib
+https://www.zlib.net/
+
+FFmpeg__avformat_Attribution_ffmpeg-boost
+7.1.3
+(C) Copyright John Maddock 2006. Copyright (c) 2006 Xiaogang Zhang
+BSL-1.0
+https://www.boost.org/
+
+FFmpeg
+7.1.3
+Copyright (c) 2000-2023 the FFmpeg developers
+LGPL-2.1-or-later AND BSD-3-Clause AND BSD-2-Clause AND BSD-Source-Code AND ISC AND MIT AND MPL-2.0
+https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.1.3.tar.gz
+
+
+=== qtsvg 6.10.3: upstream component attributions ===
+
+qtsvg
+77765f9+HEAD
+Copyright (C) The Qt Company Ltd. and other contributors.
+NOASSERTION
+git://code.qt.io/qt/qtsvg.git@77765f981c067cec8f250e13688e5be75ee94a1b
+
+Svg_Attribution_xsvg
+unknown
+Copyright 2002 USC/Information Sciences Institute
+HPND-sell-variant
+NOASSERTION
+
+Svg
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtsvg.git@77765f981c067cec8f250e13688e5be75ee94a1b
+
+QSvgIconPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtsvg.git@77765f981c067cec8f250e13688e5be75ee94a1b
+
+QSvgPlugin
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtsvg.git@77765f981c067cec8f250e13688e5be75ee94a1b
+
+SvgWidgets
+6.10.3
+Copyright (C) The Qt Company Ltd. and other contributors.
+LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+git://code.qt.io/qt/qtsvg.git@77765f981c067cec8f250e13688e5be75ee94a1b

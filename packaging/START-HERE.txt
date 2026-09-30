@@ -1,0 +1,22 @@
+POTATO MAPPER
+
+1. Extract the whole ZIP to a folder on your computer.
+2. Open PotatoMapper.exe inside that folder.
+3. Connect your projector. Press Windows + P and choose Extend.
+4. Add a surface, drop in an image/video, and move its corners or mesh points.
+5. Select your projector under PROJECTOR OUTPUT and click Start output.
+
+Keep the DLL files and plugin folders beside the executable.
+You do not need Visual Studio, Qt, Python, or a GitHub account to run this build.
+
+For 64-bit Intel/AMD Windows 10 (22H2) or Windows 11 with an OpenGL 3.3 Core
+graphics driver. This is not a macOS, Linux, or native Windows ARM build.
+
+Save mappings using the app's Save command. Images and videos are linked files,
+not stored inside the mapping. Copy them too when moving to another computer;
+use Load media to reconnect any paths that changed.
+
+Help, updates, source code, and bug reports:
+https://github.com/TheGamingDonKey/potato-mapper
+
+Third-party notices and library source downloads: see THIRD-PARTY.txt.
