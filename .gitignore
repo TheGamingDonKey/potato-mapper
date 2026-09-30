@@ -1,0 +1,8 @@
+/build/
+/app/
+/out/
+*.pmap
+*.hmap
+*.log
+/.vs/
+/CMakeUserPresets.json

@@ -1,0 +1,192 @@
+#include "canvas.h"
+#include <QPainter>
+#include <QMimeData>
+#include <QMatrix3x3>
+#include <QLineF>
+#include <QTimer>
+#include <algorithm>
+#include <cmath>
+
+Canvas::Canvas(Scene *s,bool editing,QWidget *parent):QOpenGLWidget(parent),scene(s),editor(editing){
+    setMinimumSize(320,180);setFocusPolicy(Qt::StrongFocus);setAcceptDrops(editor);
+    connect(scene,&Scene::changed,this,qOverload<>(&Canvas::update));
+    if(editor)setToolTip("Drag handles to map. Drag inside a surface to move it. Middle-drag to pan; wheel to zoom.");
+    else setCursor(Qt::BlankCursor);
+}
+Canvas::~Canvas(){cleanup();}
+void Canvas::cleanup(){
+    if(!context())return;makeCurrent();
+    for(auto &t:textures)if(t.id)glDeleteTextures(1,&t.id);
+    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();doneCurrent();graphicsReady=false;
+}
+void Canvas::initializeGL(){
+    if(!initializeOpenGLFunctions()){graphicsError="OpenGL 3.3 could not be initialized.";emit graphicsInitialized(graphicsError);return;}
+    connect(context(),&QOpenGLContext::aboutToBeDestroyed,this,&Canvas::cleanup,Qt::DirectConnection);
+    graphicsDescription=QString::fromLatin1(reinterpret_cast<const char*>(glGetString(GL_RENDERER)))+" / "+QString::fromLatin1(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    const char *vertex=R"GLSL(#version 330 core
+layout(location=0) in vec2 position;
+layout(location=1) in vec2 texturePosition;
+uniform mat3 mapping;
+out vec2 uv;
+void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2.0*p.y,0.0,p.z);uv=texturePosition;}
+)GLSL";
+    const char *fragment=R"GLSL(#version 330 core
+in vec2 uv;
+uniform sampler2D picture;
+uniform vec2 uvScale;
+uniform vec2 uvOffset;
+uniform int pattern;
+uniform float phase;
+uniform float dotRadius;
+uniform float surfaceAspect;
+out vec4 color;
+void main(){
+    if(pattern==1){
+        vec2 field=uv*vec2(12.0,12.0/surfaceAspect)+vec2(-phase*.8,phase*.4);
+        vec2 cell=floor(field);
+        float wave=.5+.5*sin(cell.x*.65+cell.y*.5-phase*2.0);
+        float radius=dotRadius*(.65+.35*wave);
+        float distanceToDot=length(fract(field)-.5);
+        float aa=max(fwidth(distanceToDot),.002);
+        float alpha=1.0-smoothstep(radius-aa,radius+aa,distanceToDot);
+        vec3 tint=mix(vec3(.18,.75,1.0),vec3(.9,1.0,1.0),wave);
+        color=vec4(tint,alpha);return;
+    }
+    vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;color=texture(picture,p);
+}
+)GLSL";
+    if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment)||!program.link()){
+        graphicsError=program.log();emit graphicsInitialized(graphicsError);return;
+    }
+    vao.create();buffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
+}
+QRectF Canvas::canvasRect() const {
+    const double margin=editor?28:0;
+    const double scale=std::min(std::max(1.0,width()-2*margin)/scene->outputSize.width(),std::max(1.0,height()-2*margin)/scene->outputSize.height())*(editor?zoom:1);
+    QSizeF size(scene->outputSize.width()*scale,scene->outputSize.height()*scale);
+    return QRectF(QPointF((width()-size.width())/2,(height()-size.height())/2)+(editor?pan:QPointF()),size);
+}
+QPointF Canvas::normalized(const QPointF &p)const{auto r=canvasRect();return {(p.x()-r.x())/r.width(),(p.y()-r.y())/r.height()};}
+QPointF Canvas::screenPoint(const QPointF &p)const{auto r=canvasRect();return {r.x()+p.x()*r.width(),r.y()+p.y()*r.height()};}
+void Canvas::resetView(){zoom=1;pan={};update();}
+QVector<QPointF> Canvas::handles(const Surface &s)const{
+    if(!meshMode)return s.corners;
+    QVector<QPointF> result;const auto t=s.transform();for(auto p:s.mesh)result.append(t.map(p));return result;
+}
+int Canvas::hitSurface(const QPointF &pos)const{
+    const auto p=normalized(pos);
+    for(int i=int(scene->surfaces.size())-1;i>=0;i--){
+        const auto &s=scene->surfaces[i];if(!s.visible)continue;const auto t=s.transform();
+        for(int y=0;y<s.cells;y++)for(int x=0;x<s.cells;x++){
+            int a=y*(s.cells+1)+x;QPolygonF cell{t.map(s.mesh[a]),t.map(s.mesh[a+1]),t.map(s.mesh[a+s.cells+2]),t.map(s.mesh[a+s.cells+1])};
+            if(cell.containsPoint(p,Qt::OddEvenFill))return i;
+        }
+    }
+    return -1;
+}
+void Canvas::paintGL(){
+    if(!graphicsReady){QPainter p(this);p.fillRect(rect(),Qt::black);p.setPen(Qt::white);if(editor)p.drawText(rect(),Qt::AlignCenter,graphicsError);return;}
+    QPainter p(this);
+    p.beginNativePainting();
+    glDisable(GL_SCISSOR_TEST);glDisable(GL_DEPTH_TEST);glDisable(GL_CULL_FACE);
+    glClearColor(editor?.065f:0,editor?.078f:0,editor?.095f:0,1);glClear(GL_COLOR_BUFFER_BIT);
+    const auto r=canvasRect();const double dpi=devicePixelRatioF();
+    const int vx=qRound(r.x()*dpi),vy=qRound((height()-r.bottom())*dpi),vw=qRound(r.width()*dpi),vh=qRound(r.height()*dpi);
+    glViewport(vx,vy,vw,vh);glEnable(GL_SCISSOR_TEST);glScissor(vx,vy,vw,vh);glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    program.bind();vao.bind();buffer.bind();
+    program.enableAttributeArray(0);program.enableAttributeArray(1);
+    program.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));program.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
+    program.setUniformValue("picture",0);
+    if(editor||!scene->blackout)for(const auto &s:scene->surfaces){
+        if(!s.visible)continue;
+        auto *media=scene->source(s.media);const auto &img=media->image;if(img.isNull())continue;
+        auto &tex=textures[s.media];if(!tex.id){glGenTextures(1,&tex.id);}
+        glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,tex.id);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,s.media.isEmpty()?GL_LINEAR_MIPMAP_LINEAR:GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+        if(tex.revision!=media->revision){
+            glPixelStorei(GL_UNPACK_ALIGNMENT,4);glPixelStorei(GL_UNPACK_ROW_LENGTH,img.bytesPerLine()/4);
+            if(tex.size!=img.size()){glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,img.width(),img.height(),0,GL_RGBA,GL_UNSIGNED_BYTE,img.constBits());tex.size=img.size();}
+            else glTexSubImage2D(GL_TEXTURE_2D,0,0,0,img.width(),img.height(),GL_RGBA,GL_UNSIGNED_BYTE,img.constBits());
+            if(s.media.isEmpty())glGenerateMipmap(GL_TEXTURE_2D);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH,0);tex.revision=media->revision;
+        }
+        const auto t=s.transform();QMatrix3x3 m;
+        m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());
+        m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());
+        m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());program.setUniformValue("mapping",m);
+        QVector2D uvScale(1,1),uvOffset(0,0);
+        program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
+        {
+            const auto pixel=[this](QPointF p){return QPointF(p.x()*scene->outputSize.width(),p.y()*scene->outputSize.height());};
+            double sw=(QLineF(pixel(s.corners[0]),pixel(s.corners[1])).length()+QLineF(pixel(s.corners[3]),pixel(s.corners[2])).length())/2;
+            double sh=(QLineF(pixel(s.corners[0]),pixel(s.corners[3])).length()+QLineF(pixel(s.corners[1]),pixel(s.corners[2])).length())/2;
+            program.setUniformValue("surfaceAspect",float(std::clamp(sw/std::max(sh,.0001),.05,20.0)));
+            if(s.fit&&!s.pattern){
+            double ratio=(double(img.width())/img.height())/(sw/std::max(sh,.0001));
+            if(s.fit==1){if(ratio>1)uvScale.setY(float(ratio));else uvScale.setX(float(1/ratio));}
+            else {if(ratio>1)uvScale.setX(float(1/ratio));else uvScale.setY(float(ratio));}
+            uvOffset=(QVector2D(1,1)-uvScale)*.5f;
+            }
+        }
+        program.setUniformValue("uvScale",uvScale);program.setUniformValue("uvOffset",uvOffset);
+        QVector<float> vertices;vertices.reserve(s.cells*s.cells*24);
+        auto add=[&](int index){auto p=s.mesh[index];vertices<<float(p.x())<<float(p.y())<<float(index%(s.cells+1))/s.cells<<float(index/(s.cells+1))/s.cells;};
+        for(int y=0;y<s.cells;y++)for(int x=0;x<s.cells;x++){int a=y*(s.cells+1)+x,b=a+1,c=a+s.cells+1,d=c+1;add(a);add(b);add(d);add(a);add(d);add(c);}
+        buffer.allocate(vertices.constData(),int(vertices.size()*sizeof(float)));glDrawArrays(GL_TRIANGLES,0,int(vertices.size()/4));
+    }
+    buffer.release();vao.release();program.release();glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
+    glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
+    p.endNativePainting();
+    if(!editor)return;
+    p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#566171"),1));p.drawRect(r);
+    for(int i=0;i<scene->surfaces.size();i++){
+        const auto &s=scene->surfaces[i];if(!s.visible)continue;const auto t=s.transform();bool selected=i==scene->selected;
+        p.setPen(QPen(selected?QColor("#78efce"):QColor("#718090"),selected?1.5:1));
+        if(selected&&meshMode){for(int y=0;y<=s.cells;y++)for(int x=0;x<=s.cells;x++){int a=y*(s.cells+1)+x;if(x<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+1])));if(y<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+s.cells+1])));}}
+        QPolygonF boundary;for(auto c:s.corners)boundary<<screenPoint(c);p.setBrush(Qt::NoBrush);p.drawPolygon(boundary);
+        p.setPen(selected?QColor("#bbffeb"):QColor("#c1cad4"));p.drawText(screenPoint(s.corners[0])+QPointF(0,-12),s.name+(s.locked?"  [locked]":""));
+        if(selected&&!s.locked){auto points=handles(s);for(int j=0;j<points.size();j++){p.setPen(QPen(QColor("#11201d"),2));p.setBrush(j==activeHandle?QColor("#ffffff"):QColor("#78efce"));p.drawEllipse(screenPoint(points[j]),5.5,5.5);}}
+    }
+    if(scene->blackout){p.setPen(QColor("#ffcc86"));p.drawText(12,21,"PROJECTOR BLACKOUT");}
+}
+void Canvas::mousePressEvent(QMouseEvent *e){
+    if(!editor)return;setFocus();lastMouse=e->position();
+    if(e->button()==Qt::MiddleButton){panning=true;return;}if(e->button()!=Qt::LeftButton)return;
+    activeHandle=-1;
+    if(auto *s=scene->current();s&&s->visible&&!s->locked){auto points=handles(*s);for(int i=0;i<points.size();i++)if(QLineF(screenPoint(points[i]),e->position()).length()<12){activeHandle=i;break;}}
+    if(activeHandle<0)scene->select(hitSurface(e->position()));
+    if(auto *s=scene->current();s&&!s->locked){scene->checkpoint();dragOriginal=*s;dragStart=normalized(e->position());dragging=true;}
+    update();
+}
+void Canvas::mouseMoveEvent(QMouseEvent *e){
+    if(panning){pan+=e->position()-lastMouse;lastMouse=e->position();update();return;}
+    if(!dragging)return;auto *s=scene->current();if(!s)return;
+    Surface candidate=dragOriginal;auto pos=normalized(e->position());
+    if(activeHandle>=0){if(meshMode)candidate.mesh[activeHandle]=candidate.transform().inverted().map(pos);else candidate.corners[activeHandle]=pos;}
+    else for(auto &point:candidate.corners)point+=pos-dragStart;
+    if(candidate.valid()){*s=candidate;scene->touch();}
+}
+void Canvas::mouseReleaseEvent(QMouseEvent *){dragging=false;panning=false;}
+void Canvas::wheelEvent(QWheelEvent *e){
+    if(!editor)return;auto anchor=normalized(e->position());zoom=std::clamp(zoom*std::pow(1.0015,e->angleDelta().y()),.25,8.0);pan+=e->position()-screenPoint(anchor);update();e->accept();
+}
+void Canvas::keyPressEvent(QKeyEvent *e){
+    if(!editor){if(e->key()==Qt::Key_Escape)hide();return;}
+    if(e->key()==Qt::Key_F){resetView();return;}
+    auto *s=scene->current();if(!s||s->locked)return;
+    QPointF delta;double step=e->modifiers().testFlag(Qt::ShiftModifier)?10:1;
+    switch(e->key()){case Qt::Key_Left:delta.setX(-step/scene->outputSize.width());break;case Qt::Key_Right:delta.setX(step/scene->outputSize.width());break;case Qt::Key_Up:delta.setY(-step/scene->outputSize.height());break;case Qt::Key_Down:delta.setY(step/scene->outputSize.height());break;default:QOpenGLWidget::keyPressEvent(e);return;}
+    Surface candidate=*s;
+    if(activeHandle>=0&&activeHandle<handles(candidate).size()){
+        if(meshMode){auto t=candidate.transform();candidate.mesh[activeHandle]=t.inverted().map(t.map(candidate.mesh[activeHandle])+delta);}else candidate.corners[activeHandle]+=delta;
+    }else for(auto &p:candidate.corners)p+=delta;
+    if(candidate.valid()){scene->checkpoint();*s=candidate;scene->touch();}e->accept();
+}
+void Canvas::dragEnterEvent(QDragEnterEvent *e){if(editor&&e->mimeData()->hasUrls())e->acceptProposedAction();}
+void Canvas::dropEvent(QDropEvent *e){
+    if(!editor||!e->mimeData()->hasUrls())return;int target=hitSurface(e->position());
+    for(const auto &url:e->mimeData()->urls()){if(!url.isLocalFile())continue;if(target<0){scene->add();target=scene->selected;}scene->assignMedia(target,url.toLocalFile());scene->select(target);target=-1;}
+    e->acceptProposedAction();
+}
