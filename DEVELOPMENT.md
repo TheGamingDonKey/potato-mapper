@@ -1,5 +1,7 @@
 # Development handoff
 
+Read [ROADMAP.md](ROADMAP.md) for current progress and proposed work. Keep its checklist and release status current as described in [AGENTS.md](AGENTS.md).
+
 ## Stack and source map
 
 C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a native Windows desktop app. No server or account is required to run it.

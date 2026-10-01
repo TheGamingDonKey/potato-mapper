@@ -1,6 +1,6 @@
 # Potato Mapper
 
-Read README.md and DEVELOPMENT.md before changing the app. The goal is a practical, watermark-free mapper for a home setup with one projector.
+Read README.md, DEVELOPMENT.md, and ROADMAP.md before changing the app. The goal is a practical, watermark-free mapper for a home setup with one projector.
 
 - Use C++17 and the existing Qt/OpenGL stack. Extend the working app rather than replacing its framework.
 - Prioritize an executable the user can try. Build, run the relevant behavior, fix actual failures, and continue in manageable steps.
@@ -10,3 +10,4 @@ Read README.md and DEVELOPMENT.md before changing the app. The goal is a practic
 - Animation updates should not create undo records or mark a project dirty; user setting changes should.
 - Explain what changed, how to try it, and what was actually checked. Do not claim physical-projector testing based only on rendering to a local output window.
 - Use branches prefixed `codex/` for future feature work unless the user specifies otherwise.
+- Keep ROADMAP.md current in the same change as feature/fix work: record the active task, implementation link, relevant verification, and any remaining work. Check completed items only with evidence; label implemented changes as unreleased until an app release includes them. Update release links and the handoff when publishing. Roadmap ideas do not authorize implementing the whole backlog.
