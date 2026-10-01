@@ -6,8 +6,9 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 - Latest published app: [v0.2.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.2.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
-- No feature implementation is currently in progress. The foundation improvements below are proposals, not completed work.
-- Suggested next task: collect a mapping and its media into a portable project folder. Keep the current release available while developing changes.
+- No feature implementation is currently in progress. Splash, clear-content, and updater designs are being discussed; they are not implemented.
+- Current priorities from Shane: a branded startup splash, an obvious way to clear the selected surface, and convenient GitHub updates that preserve local projects/media. Keep the existing editor layout broadly intact.
+- Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
 ## How to keep this useful
 
@@ -31,11 +32,17 @@ These features are in the [published release](https://github.com/TheGamingDonKey
 - [x] Reduce common NV12 video-frame conversion costs. Colour/fallback diagnostics and local multi-video profiling completed; see [PR #1](https://github.com/TheGamingDonKey/potato-mapper/pull/1). Performance still depends on hardware and media.
 - [x] Portable Windows x64 download with Qt/FFmpeg and Visual C++ runtime dependencies. Extracted-package mapping, animation, colour, and MP4 checks passed; see [PR #2](https://github.com/TheGamingDonKey/potato-mapper/pull/2). Shane subsequently reported a successful launch on another computer.
 
-## Next: make projects easier to move and changes easier to maintain
+## Current requested features
+
+- [ ] **Branded startup splash.** Show the potato logo, app name, and actual version centred on the editor's desktop screen, with a brief dismissible presentation. Close it when entering the editor; it must not be rendered into projector output or slow diagnostic runs. Inspect normal launch and a scaled display.
+- [ ] **Clear selected surface content.** Add an obvious Clear media action in the Media section. Remove image/video or generated content and return to the existing white alignment grid while retaining the surface, corners, mesh, order, and visibility. Support undo/redo and saved state; leave other surfaces and original files untouched. Existing Back to white grid performs this action but is only shown for animated-pattern surfaces.
+- [ ] **Check and install GitHub updates (Windows first).** Proposed flow: Check for updates, show the available release, download with progress, save/cancel unsaved work, close the app, apply the update, and reopen. Proposed storage: a small launcher with separate version folders and a retained previous version; user projects/media stay outside update-managed folders and existing paths remain valid. Define the one-time transition from v0.2.0 before implementation. Completion requires a real packaged upgrade plus interrupted-download, failed-install/recovery, unsaved-project cancellation, and unchanged-project/media checks. Never interrupt active projection automatically. The updater architecture still needs design agreement.
+
+## Supporting improvements
 
 Take one item at a time. Each line includes the behaviour needed before checking it off.
 
-- [ ] **Collect project and media.** Export a new folder containing the mapping and referenced files, handle duplicate filenames, and save portable relative paths. Reopen it after moving the folder with the original media unavailable; leave the original project untouched.
+- [ ] **Collect project and media (lower priority).** Export a new folder containing the mapping and referenced files, handle duplicate filenames, and save portable relative paths. Reopen it after moving the folder with the original media unavailable; leave the original project untouched.
 - [ ] **Find missing media.** Show which files are missing and allow them to be relinked without losing surface geometry. Check reopening a moved project and saving corrected paths.
 - [ ] **Protect saved projects.** Add a recoverable backup when replacing an existing mapping and retain safe behaviour if saving fails. Keep a small set of earlier-format examples that must still load; preserve project media separately.
 - [ ] **Centralise editing actions.** Move surface changes out of individual button callbacks into shared operations that handle validation, undo, dirty state, and view updates. Start with existing actions; check their behaviour stays the same.
@@ -60,7 +67,7 @@ Take one item at a time. Each line includes the behaviour needed before checking
 - Audio-reactive patterns: requires audio input/analysis, timing, and device handling.
 - Multiple projector outputs and edge blending: requires multiple-display hardware and a larger rendering/output design.
 - Automatic calibration and 3D model workflows: larger research projects, outside the current home-mapper scope.
-- Installer, signing, and automatic updates if distribution needs justify them.
+- Installer and signing if distribution needs justify them. User-requested GitHub updates are tracked in Current requested features above.
 
 These are possibilities, not an approved implementation queue. Preserve the useful small application while deciding what to add.
 
