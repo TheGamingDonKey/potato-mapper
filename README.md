@@ -70,9 +70,7 @@ Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected ha
 
 ## Continue development
 
-Read [DEVELOPMENT.md](DEVELOPMENT.md) for the architecture, focused checks, and next steps. [AGENTS.md](AGENTS.md) gives coding agents the same working conventions.
-
-Useful next additions include Screen/Add blending for black-background videos, more animated sources, colour controls, and a clearer media panel. Audio-reactive patterns, automatic calibration, 3D model import, edge blending, and multiple projector outputs are future work.
+See the [roadmap checklist](ROADMAP.md) for completed features, sensible next steps, and where development stopped. Read [DEVELOPMENT.md](DEVELOPMENT.md) for the architecture and focused checks. [AGENTS.md](AGENTS.md) gives coding agents the same working conventions.
 
 ## License
 
