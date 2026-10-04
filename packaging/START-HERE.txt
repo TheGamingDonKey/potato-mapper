@@ -6,7 +6,8 @@ POTATO MAPPER
 4. Add a surface, drop in an image/video, and move its corners or mesh points.
 5. Select your projector under PROJECTOR OUTPUT and click Start output.
 
-Keep the DLL files and plugin folders beside the executable.
+Keep PotatoMapper.exe, installation.txt, current.txt and the versions folder
+together. The versions folder contains the editor and its runtime libraries.
 You do not need Visual Studio, Qt, Python, or a GitHub account to run this build.
 
 For 64-bit Intel/AMD Windows 10 (22H2) or Windows 11 with an OpenGL 3.3 Core
@@ -15,6 +16,23 @@ graphics driver. This is not a macOS, Linux, or native Windows ARM build.
 Save mappings using the app's Save command. Images and videos are linked files,
 not stored inside the mapping. Copy them too when moving to another computer;
 use Load media to reconnect any paths that changed.
+
+Right-click a surface (or its list entry) and choose Clear media to return it
+to the white grid. Its mesh stays in place. Ctrl+Z restores the media.
+Double-click its list entry to rename it. Help has a quick guide and About.
+
+UPDATES
+Use Help > Check for updates to download a newer stable Windows release.
+Save your work when asked, then let the launcher install and reopen the app.
+The previous app version remains available under Help > Use previous version.
+Updates preserve projects/media outside versions and .updates. Do not save
+personal files inside those two managed folders. Media remains linked.
+
+IF YOU ALREADY HAVE VERSION 0.2.0
+Close Potato Mapper. Extract this ZIP, then copy its contents into your existing
+app folder, replacing PotatoMapper.exe when Windows asks. Keep your existing
+mapping files and media. Do not delete the old folder. Open PotatoMapper.exe.
+This one-time upgrade adds the launcher; future updates can use the Help menu.
 
 Help, updates, source code, and bug reports:
 https://github.com/TheGamingDonKey/potato-mapper

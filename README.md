@@ -6,11 +6,11 @@ A small Windows projection mapper for one projector. Put images, videos, or anim
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.2.0/PotatoMapper-0.2.0-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.3.0/PotatoMapper-0.3.0-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
-3. Keep the included DLL files and folders beside the executable.
+3. Keep `PotatoMapper.exe`, `installation.txt`, `current.txt`, and the `versions` folder together.
 
 No installation, Visual Studio, Qt setup, or GitHub account is required. This build targets **64-bit Intel/AMD Windows 10 (22H2) or Windows 11**, with an **OpenGL 3.3 Core** graphics driver. It has been checked locally on Windows 11; testing on other computers is still limited. It is not a macOS or Linux build.
 
@@ -33,6 +33,9 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
+- Right-click a surface to load/clear media or rename it. Clearing keeps the mesh and supports Undo.
+- Branded startup splash, surface content labels, File/Edit/Help menus, and an About/version display.
+- **Help → Check for updates** downloads and installs newer stable Windows releases, then reopens your saved mapping. The previous app version is retained for recovery.
 
 Early prototype: expect rough edges. It has been run on Windows 11 with an AMD Radeon 840M. Automated checks cover animated editor/output rendering, pause, and saved pattern settings. A user has tried the basic mapping workflow; broad hardware and projector compatibility has not been established.
 
@@ -48,10 +51,10 @@ Clone this repository and run in PowerShell, substituting your Qt installation p
 
 ```powershell
 .\build.ps1 -QtPath 'C:\Qt\6.10.3\msvc2022_64'
-.\app\PotatoMapper.exe
+# Open PotatoMapper.exe at the "Ready to run" path printed by the script.
 ```
 
-The script builds Release and uses `windeployqt` to copy runtime dependencies into `app`. It accepts `-CMakePath` and `-BuildDirectory` overrides. `QT_ROOT_DIR` or `QTDIR` can supply the Qt path. The original development machine's cached tools remain a fallback.
+The script builds Release and deploys a fresh runnable folder under `out/dev-app-<timestamp>`. Existing app folders and personal files are preserved. Use `-AppDirectory` to choose a new destination; it must not already exist. It also accepts `-CMakePath` and `-BuildDirectory` overrides. `QT_ROOT_DIR` or `QTDIR` can supply the Qt path. The original development machine's cached tools remain a fallback.
 
 No Qt libraries, media files, or compiled binaries are committed to the source tree. Ready-to-run binaries and library sources are distributed through GitHub Releases.
 
@@ -66,7 +69,15 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 5. Use **Stop**, or Escape while the output window has focus. **B** toggles blackout while a mapper window has focus.
 6. Save your mapping. Media is referenced by file path, not embedded; keep those files available when moving a project.
 
-Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on a dots surface switches it back to media playback. **Back to white grid** removes the dots source.
+Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on a dots surface switches it back to media playback. **Clear media** returns an image, video, or dots surface to the white grid. Double-click a surface's list entry to rename it.
+
+## Updating an existing copy
+
+**From v0.2.0:** close the old app, extract the new ZIP, then copy the new package's contents into your existing app folder. Replace `PotatoMapper.exe` when asked and keep your mapping files and media. This one-time upgrade adds the launcher. You can also extract into a fresh folder and open existing mappings from there.
+
+**From v0.3.0 onward:** use **Help → Check for updates**. Downloads show progress and can be cancelled. Before restarting, the app asks you to save/discard/cancel unsaved changes and stop any active projection. Your saved mapping reopens after installation. **Help → Use previous app version** switches back to the retained version; it does not undo edits to saved projects.
+
+Save personal files outside `versions` and `.updates`, which are managed app folders. Updates replace the selected runtime rather than the whole app folder. Projects and linked media can remain in the app root or anywhere else you choose. Updates require an internet connection and a writable app folder; mapping still works offline. There is no automatic update check during projection.
 
 ## Continue development
 

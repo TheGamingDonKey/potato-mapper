@@ -23,7 +23,9 @@ public:
     void resetView();
 signals:
     void graphicsInitialized(const QString &description);
+    void surfaceContextMenuRequested(int index, const QPoint &globalPosition);
 protected:
+    void contextMenuEvent(QContextMenuEvent *) override;
     void initializeGL() override;
     void paintGL() override;
     void mousePressEvent(QMouseEvent *) override;

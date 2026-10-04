@@ -1,7 +1,8 @@
 param(
     [string]$QtPath = $env:QT_ROOT_DIR,
     [string]$CMakePath,
-    [string]$BuildDirectory = (Join-Path $PSScriptRoot 'out\build')
+    [string]$BuildDirectory = (Join-Path $PSScriptRoot 'out\build'),
+    [string]$AppDirectory
 )
 $ErrorActionPreference = 'Stop'
 if (-not $QtPath) { $QtPath = $env:QTDIR }
@@ -18,13 +19,9 @@ if (-not (Test-Path -LiteralPath $CMakePath)) { throw 'CMake not found. Install 
 $mapperCmake = $CMakePath
 $mapperQt = $QtPath
 $mapperBuild = $BuildDirectory
-$mapperApp = Join-Path $PSScriptRoot 'app'
 & $mapperCmake -S $PSScriptRoot -B $mapperBuild -G 'Visual Studio 17 2022' -A x64 "-DCMAKE_PREFIX_PATH=$mapperQt"
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
 & $mapperCmake --build $mapperBuild --config Release --parallel 4
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed.' }
-New-Item -ItemType Directory -Path $mapperApp -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $mapperBuild 'Release\PotatoMapper.exe') -Destination $mapperApp -Force
-& (Join-Path $mapperQt 'bin\windeployqt.exe') --release --no-translations --compiler-runtime (Join-Path $mapperApp 'PotatoMapper.exe')
-if ($LASTEXITCODE -ne 0) { throw 'Runtime deployment failed.' }
-Write-Output "Ready: $mapperApp\PotatoMapper.exe"
+if (-not $AppDirectory) { $AppDirectory = Join-Path $PSScriptRoot ('out\dev-app-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
+& (Join-Path $PSScriptRoot 'package.ps1') -QtPath $mapperQt -BuildDirectory $mapperBuild -DestinationDirectory $AppDirectory -SkipZip
