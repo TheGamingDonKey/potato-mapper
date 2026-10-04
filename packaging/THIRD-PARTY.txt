@@ -1,4 +1,4 @@
-Potato Mapper 0.2.0 - third-party runtime notices
+Potato Mapper - third-party runtime notices
 
 Potato Mapper's own source is MIT licensed; see LICENSE.
 
@@ -25,10 +25,11 @@ https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.2.0
   qt5-6.10.3.tar.gz (Qt provisioning/build scripts, including FFmpeg)
 The libraries were supplied by the Qt online distribution and have not been
 modified by Potato Mapper. The application source and CMake build instructions
-are available in the same repository and the v0.2.0 source archives.
+are available in the same repository and each application release's source
+archives. These library versions are unchanged from v0.2.0.
 
 Additional library copyright notices, license texts, and Qt's module inventories
-are in licenses/. The upstream inventories also describe optional components and
+are in versions/<version>/licenses/. The upstream inventories also describe optional components and
 development tools that are not included in the application ZIP.
 
 Microsoft Visual C++ Runtime (app-local x64 redistributable DLLs)

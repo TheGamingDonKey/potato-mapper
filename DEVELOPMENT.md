@@ -11,6 +11,9 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | `src/main.cpp` | Application setup, toolbars, media controls, display selection, project actions, diagnostic CLI modes |
 | `src/model.h`, `src/model.cpp` | Surfaces, JSON persistence, undo/redo snapshots, media decoding, animation timing |
 | `src/canvas.h`, `src/canvas.cpp` | Shared editor/output renderer, shaders, mesh interaction, drag-and-drop |
+| `src/updates.h`, `src/updates.cpp` | GitHub release checks, streamed download, verification, extraction and restart handoff |
+| `src/launcher.cpp` | Small Windows launcher, version selection, update installation, rollback and startup recovery |
+| `src/branding.h` | Startup splash drawn with the existing potato logo |
 | `assets/` | Potato logo, Windows icon and resource metadata |
 | `build.ps1` | Configure, build Release, and deploy runtime DLLs locally |
 | `package.ps1` | Package the built executable and runtime dependencies into a portable Windows x64 ZIP |
@@ -26,7 +29,7 @@ The white grid uses a transparent texture with mipmaps. QPainter overlays coexis
 
 ## Build and focused checks
 
-See the README for prerequisites. Close the running executable before building into `app` on Windows. Save the user's mapping first.
+See the README for prerequisites. Builds deploy into fresh folders under `out`; they do not replace a running app or saved mappings. Always use the root launcher, `PotatoMapper.exe`, when trying updates. Its editor and libraries live under `versions/<version>`.
 
 The dots integration check opens temporary editor/output windows, compares frames while moving and paused, and round-trips settings through a temporary project:
 
@@ -50,6 +53,24 @@ To reopen a mapping normally:
 
 For visual work, run the app and inspect the changed behavior once. For output changes, check display selection and fullscreen output; distinguish an output-window test from testing a connected physical projector. Avoid repeated broad checks without a specific failure to investigate.
 
+### Desktop/update checks
+
+`--smoke-clear` checks the actual Clear media button, retained geometry, another surface, Undo/Redo, saved state, and original-file preservation. `--test-restart` exercises the real unsaved-work Cancel/Save prompts and active-output cancellation. `--test-splash --snapshot <temporary.png>` captures the actual splash widget; `QT_SCALE_FACTOR=1.5` allows a focused scaling check without changing Windows display settings.
+
+The optional `PotatoUpdateChecks` build target runs the actual update dialog against deterministic release responses and the real release ZIP/extractor. Supply `<release.zip> <extracted-package> --install-root <new-disposable-folder>`. It checks the packaged manifest, missing payload/digest handling, an interrupted download, cancelled restart, unchanged personal files, and staging cleanup. With `--handoff`, it uses the real launcher and editor process lock, exits after preparation, and reopens a sample mapping in the installed editor. Close that disposable editor afterwards. The fixture network is injected only by this test executable; the application's Help command always uses the public repository endpoint.
+
+Run `pwsh ./tests/launcher.ps1 -PackageDirectory <extracted-package>` for a packaged upgrade, rollback, repeat update after rollback, incomplete installation, and startup-failure recovery. These checks use a disposable installation under `out` and synthetic personal files; the retained old-version sentinel is not claimed as a run of an older editor. The current runtime is installed and launched for real, including reopening the sample mapping after recovery. The script requires PowerShell 7 for `ProcessStartInfo.ArgumentList`.
+
+The desktop changes were checked locally on Windows 11, including the real GitHub update dialog and packaged mapping/dots/video-colour checks. Real projector hardware and a subsequent update on the user's other computer remain untested.
+
+### Update layout and ownership
+
+Layout protocol 1 is marked by `installation.txt` (`PotatoMapper/1` followed by LF). `current.txt` names the selected numeric version; `previous.txt` retains the prior selection. Both point into `versions`. `update-manifest.json` contains the format, protocol, version and SHA256 of every runtime file. GitHub's release-asset digest is checked before extraction. The helper waits for the editor PID and runtime lock, installs into a new version folder, switches pointers and reopens the saved project. Preparation failures leave the selection unchanged; caught selection/startup failures restore both original pointers. Owned staging is cleaned on success and caught failure. Retained version folders are reused only if they match the verified download byte for byte.
+
+The launcher is statically linked to the C++ runtime and does not use Qt. Ordinary updates never replace the running launcher. A different layout protocol requires a manual full-package upgrade. The Windows updater uses system PowerShell for ZIP extraction; see `packaging/extract-update.ps1`. Projects/media stay outside `versions` and `.updates`; no updater operation scans or deletes personal files elsewhere. Crashing or losing power during download may leave a staging folder, and old version folders are retained rather than automatically pruned.
+
+Release packaging is always fresh. Do not zip the developer's `app` folder or include private mappings, logs or media. The same Qt 6.10.3/FFmpeg 7.1.3 library sources remain available with v0.2.0 and are linked by the notices. See [desktop implementation plan](docs/desktop-update-plan.md).
+
 ## Known limits and next work
 
 - One projector output. Manual mapping only; no camera calibration or 3D object reconstruction.
@@ -58,6 +79,6 @@ For visual work, run the app and inspect the changed behavior once. For output c
 - Sidebar controls may require scrolling on shorter displays.
 - Project files reference media; there is no pack-and-collect feature.
 - Existing video controls act on sources shared by path. Review resource cleanup and decoder performance before scaling to many videos.
-- Releases contain a portable Windows x64 ZIP. There is no installer, automatic updater, or automated CI yet. When updating runtime libraries, update their notices and publish matching sources alongside the ZIP.
+- Releases contain a portable Windows x64 ZIP with a manual GitHub update command. There is no installer or automated CI yet. When updating runtime libraries, update their notices and publish matching sources alongside the ZIP. Retaining earlier runtimes consumes disk space; there is no version-cleanup UI yet.
 
 Keep changes small and runnable. Preserve backward compatibility with the existing version-1 JSON format and earlier `HomeMapper` format tag. A new feature should be reachable in the actual UI and render through the same output path.

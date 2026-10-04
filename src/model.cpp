@@ -167,6 +167,16 @@ void Scene::assignMedia(int i,const QString &path){
     if(i<0||i>=surfaces.size()||!QFileInfo::exists(path))return;
     checkpoint();surfaces[i].pattern=0;surfaces[i].media=QFileInfo(path).absoluteFilePath();source(surfaces[i].media);touch(true);
 }
+void Scene::clearMedia(int i){
+    if(i<0||i>=surfaces.size())return;
+    auto &s=surfaces[i];if(s.media.isEmpty()&&!s.pattern)return;
+    checkpoint();s.media.clear();s.pattern=0;s.patternPhase=0;touch(true);
+}
+void Scene::renameSurface(int i,const QString &name){
+    const auto clean=name.trimmed().left(80);
+    if(i<0||i>=surfaces.size()||clean.isEmpty()||surfaces[i].name==clean)return;
+    checkpoint();surfaces[i].name=clean;touch(true);
+}
 QJsonObject Scene::json(const QString &base) const {
     QJsonArray items;for(const auto &s:surfaces)items.append(s.json(base));
     return {{"format","PotatoMapper"},{"version",1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items}};

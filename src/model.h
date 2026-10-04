@@ -70,6 +70,8 @@ public:
     void add();
     void newProject();
     void assignMedia(int index, const QString &path);
+    void clearMedia(int index);
+    void renameSurface(int index, const QString &name);
     void select(int index);
     void touch(bool structure = false);
     void checkpoint();

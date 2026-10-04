@@ -4,6 +4,7 @@
 #include <QMatrix3x3>
 #include <QLineF>
 #include <QTimer>
+#include <QContextMenuEvent>
 #include <algorithm>
 #include <cmath>
 
@@ -193,6 +194,12 @@ void Canvas::mousePressEvent(QMouseEvent *e){
     if(activeHandle<0)scene->select(hitSurface(e->position()));
     if(auto *s=scene->current();s&&!s->locked){scene->checkpoint();dragOriginal=*s;dragStart=normalized(e->position());dragging=true;}
     update();
+}
+void Canvas::contextMenuEvent(QContextMenuEvent *e){
+    if(!editor){e->ignore();return;}
+    const int index=hitSurface(e->pos());
+    if(index<0){e->ignore();return;}
+    scene->select(index);emit surfaceContextMenuRequested(index,e->globalPos());e->accept();
 }
 void Canvas::mouseMoveEvent(QMouseEvent *e){
     if(panning){pan+=e->position()-lastMouse;lastMouse=e->position();update();return;}
