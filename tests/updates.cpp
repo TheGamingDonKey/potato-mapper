@@ -57,7 +57,8 @@ int main(int argc,char **argv){
     auto check=[](bool pass,const char *label){std::cout<<(pass?"PASS ":"FAIL ")<<label<<std::endl;if(!pass)throw std::runtime_error(label);};
     try{
         const auto zip=bytes(args[1]);check(!zip.isEmpty(),"read packaged ZIP");
-        const auto version=QString::fromUtf8(bytes(QDir(args[2]).filePath("current.txt"))).trimmed();
+        const auto package=QFileInfo(args[2]).absoluteFilePath();
+        const auto version=QString::fromUtf8(bytes(QDir(package).filePath("current.txt"))).trimmed();
         const auto current=app.applicationVersion();const auto currentBytes=current.toUtf8()+"\n";
         const auto name="PotatoMapper-"+version+"-windows-x64.zip";
         QJsonObject asset{{"name",name},{"state","uploaded"},{"size",double(zip.size())},{"digest","sha256:"+QString(QCryptographicHash::hash(zip,QCryptographicHash::Sha256).toHex())},{"browser_download_url","https://github.com/TheGamingDonKey/potato-mapper/releases/download/v"+version+"/"+name}};
@@ -66,7 +67,8 @@ int main(int argc,char **argv){
         check(parsePotatoRelease(release,version,parsed,error)&&!parsed.newer,"current version needs no install");
         auto broken=release;broken["assets"]=QJsonArray{};check(!parsePotatoRelease(broken,current,parsed,error),"missing platform download rejected");
         asset["digest"]="";broken["assets"]=QJsonArray{asset};check(!parsePotatoRelease(broken,current,parsed,error),"missing download digest rejected");
-        check(validatePotatoPayload(args[2],version,error),"actual packaged runtime manifest and hashes");
+        const bool validPackage=validatePotatoPayload(package,version,error);if(!validPackage)std::cerr<<error.toStdString()<<std::endl;
+        check(validPackage,"actual packaged runtime manifest and hashes");
         QTemporaryDir invalid;write(invalid.filePath("update-manifest.json"),bytes(QDir(args[2]).filePath("update-manifest.json")));
         check(!validatePotatoPayload(invalid.path(),version,error),"incomplete installation rejected");
         const auto root=potatoInstallRoot();check(root!=QCoreApplication::applicationDirPath(),"disposable install root supplied");

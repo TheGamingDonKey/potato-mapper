@@ -58,7 +58,8 @@ public:
     Canvas *canvas,*output;
     bool smoke=false;
     explicit MainWindow(){
-        setWindowTitle("Potato Mapper");resize(1280,800);setMinimumSize(760,540);
+        setWindowTitle("Potato Mapper");setMinimumSize(760,540);
+        const auto desktop=screen()->availableGeometry().size();resize(qMin(1280,desktop.width()-48),qMin(800,desktop.height()-48));
         canvas=new Canvas(&scene,true);output=new Canvas(&scene,false);
         output->setWindowTitle("Potato Mapper — Projector");output->setWindowFlag(Qt::FramelessWindowHint);
         output->installEventFilter(this);
@@ -298,7 +299,10 @@ private:
     }
     void refresh(){
         QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity);
-        const int listScroll=list->verticalScrollBar()->value();list->clear();for(const auto &s:scene.surfaces){const auto content=s.pattern?QString("Potato FX · Dots"):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);list->verticalScrollBar()->setValue(listScroll);
+        const int listScroll=list->verticalScrollBar()->value();const auto previousId=list->currentItem()?list->currentItem()->data(Qt::UserRole).toString():QString();
+        QStringList previousOrder,nextOrder;for(int i=0;i<list->count();++i)previousOrder<<list->item(i)->data(Qt::UserRole).toString();
+        list->clear();for(const auto &s:scene.surfaces){const auto content=s.pattern?QString("Potato FX · Dots"):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setData(Qt::UserRole,s.id);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);
+        if(list->currentItem()){if(previousId==list->currentItem()->data(Qt::UserRole).toString()&&previousOrder==nextOrder)list->verticalScrollBar()->setValue(listScroll);else list->scrollToItem(list->currentItem());}
         auto *s=scene.current();clearButton->setEnabled(s&&(!s->media.isEmpty()||s->pattern));visible->setEnabled(s);locked->setEnabled(s);subdivisions->setEnabled(s&&!s->locked);fit->setEnabled(s);
         patternPicker->setEnabled(s);if(s&&s->pattern&&patternPicker->currentIndex()!=s->pattern)fxSection->heading->setChecked(true);patternPicker->setCurrentIndex(s?s->pattern:0);patternControls->setVisible(s&&s->pattern);
         brightness->setEnabled(s);opacity->setEnabled(s);resetAppearance->setEnabled(s&&(s->brightness!=100||s->opacity!=100));

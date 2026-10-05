@@ -64,6 +64,11 @@ template<class Window> void runAppearanceChecks(Window &window,QApplication &app
         scene.assignMedia(0,media);scene.setAppearance(0,100,100);auto *split=window.template findChild<QSplitter*>("editorSplitter");
         const auto sizes=split->sizes();split->setSizes({420,860});require(split->sizes()[0]>sizes[0],"resizable sidebar");split->setSizes({310,970});
         auto *list=window.template findChild<QListWidget*>("surfaceList");require(list&&list->horizontalScrollBarPolicy()==Qt::ScrollBarAlwaysOff&&!list->item(0)->toolTip().isEmpty(),"filename tooltip and no horizontal scroll");
+        const auto preview=scene.json();for(int i=0;i<12;++i)scene.add();app.processEvents();
+        require(list->visualItemRect(list->currentItem()).intersects(list->viewport()->rect()),"added surface scrolls into view");
+        scene.select(0);app.processEvents();require(list->visualItemRect(list->currentItem()).intersects(list->viewport()->rect()),"selected surface scrolls into view");
+        list->verticalScrollBar()->setValue(list->verticalScrollBar()->maximum());const int retainedScroll=list->verticalScrollBar()->value();brightness->setValue(80);
+        require(list->verticalScrollBar()->value()==retainedScroll,"appearance edit preserves list scroll");scene.restore(preview,{},error);
         scene.dirty=false;window.resize(1024,640);app.processEvents();
         auto *scroll=window.template findChild<QScrollArea*>("surfaceInspector");require(scroll&&scroll->horizontalScrollBar()->maximum()==0&&list->isVisible(),"compact inspector layout");
         const int snapshot=args.indexOf("--snapshot");if(snapshot>=0&&snapshot+1<args.size())require(window.grab().save(args[snapshot+1]),"UI snapshot");
