@@ -7,7 +7,7 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - Latest published app: [v0.4.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.4.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
 - On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
-- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. **In progress:** Screen/Add blending and three more Potato FX patterns on `codex/blending-potato-fx`, targeting v0.5.0. Raspberry Pi remains deferred.
+- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. **Implemented — unreleased:** Screen/Add blending and three more Potato FX patterns on `codex/blending-potato-fx`, targeting v0.5.0. Source review and focused developer/portable checks passed; publication is pending. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
@@ -73,9 +73,9 @@ Implemented in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6),
 
 ## Next visual features
 
-- [ ] **Screen and Add blending.** Let a surface choose normal, Screen, or Add blending so suitable black-background videos can overlay other surfaces. Check overlapping media in editor/output, undo, and save/reopen. This is not general background removal.
+- [x] **Screen and Add blending — implemented, unreleased (v0.5.0).** Selected-surface Normal/Screen/Add, Undo/Redo/reset and saved settings. Numerical editor/output checks cover opacity, image alpha, black overlays, native NV12 and patterns over a midtone layer. Normal is the default for older mappings. This is not general background removal.
 - [x] **Brightness and opacity per surface — shipped in v0.4.0.** Images, videos and dots share the controls; old-project defaults, Undo/Redo, save/reopen, overlap pixels and matching output checked. See PR #6 and the v0.4.0 checklist above.
-- [ ] **One more procedural pattern.** Start with diagonal moving lines, then consider rings or square waves. Share timing and settings handling with dots; verify animation, pause, and saved controls in editor/output. A real audio spectrum or waveform is separate work.
+- [x] **Three more procedural patterns — implemented, unreleased (v0.5.0).** Diagonal stripes, expanding rings and square waves, plus existing dots. Actual UI speed/width/pause, motion in both canvases, unchanged project state during ticks, saved settings and Clear/Undo checked. Actual output contact sheet and editor inspected. Four further patterns and colour/direction/spacing controls remain planned; audio-reactive effects are separate.
 
 ## Builds and releases
 
@@ -94,3 +94,10 @@ Implemented in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6),
 These are possibilities, not an approved implementation queue. Preserve the useful small application while deciding what to add.
 
 </details>
+
+## v0.5.0 release handoff — publication pending
+
+- Release build and source review passed. `--smoke-fx`, appearance, mapping, video-colour and clear checks passed locally. The strengthened pattern Screen check uses a midtone underlay.
+- Fresh portable package FX/appearance and real MP4 checks passed with only Windows system directories on PATH. An earlier FX check hung after its assertions; it did not recur in the fresh checked package. No persistent cause was established.
+- Real ZIP extraction, interrupted download and cancelled restart checks passed. The actual v0.4.0 launcher installed v0.5.0 and reopened `My mapping.pmap` in a disposable installation. Project/media bytes and the retained old runtime were unchanged.
+- Physical-projector testing and this update on Shane's other laptop remain untested. The existing user app/mappings/media were preserved.
