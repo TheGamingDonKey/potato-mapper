@@ -5,6 +5,8 @@
 #include <QJsonArray>
 #include <QPainter>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QToolButton>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -26,7 +28,13 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         auto *speed=window.template findChild<QSpinBox*>("patternSpeed");
         auto *size=window.template findChild<QSpinBox*>("patternSize");
         auto *pause=window.template findChild<QCheckBox*>("patternPause");
-        if(!blend||!picker||!speed||!size||!pause){qInfo()<<"FX FAIL controls missing";app.exit(2);return;}
+        auto *density=window.template findChild<QSpinBox*>("patternDensity");
+        auto *flow=window.template findChild<QSpinBox*>("patternFlow");
+        auto *angle=window.template findChild<QSpinBox*>("patternAngle");
+        auto *palette=window.template findChild<QComboBox*>("patternPalette");
+        auto *edge=window.template findChild<QSpinBox*>("patternEdge");
+        auto *reverse=window.template findChild<QCheckBox*>("patternReverse");
+        if(!blend||!picker||!speed||!size||!pause||!density||!flow||!angle||!palette||!edge||!reverse){qInfo()<<"FX FAIL controls missing";app.exit(2);return;}
         auto sample=[](Canvas *canvas){auto image=canvas->grabFramebuffer();return image.pixelColor(image.width()/2,image.height()/2);};
         auto near=[](QColor a,QColor b){return std::max({std::abs(a.red()-b.red()),std::abs(a.green()-b.green()),std::abs(a.blue()-b.blue())})<=4;};
         auto fixture=[&](const QString &name,QColor colour){QImage img(32,32,QImage::Format_RGBA8888);img.fill(colour);const auto path=state->temp.filePath(name);require(img.save(path),"write "+name);return path;};
@@ -62,6 +70,20 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         auto legacy=scene.json();auto items=legacy["surfaces"].toArray();for(int i=0;i<items.size();++i){auto item=items[i].toObject();item.remove("blend");items[i]=item;}legacy["surfaces"]=items;legacy["format"]="HomeMapper";QString error;
         require(scene.restore(legacy,{},error)&&scene.surfaces[1].blend==0,"old project defaults Normal");
         scene.select(1);scene.setAppearance(1,100,100);scene.surfaces[0].visible=false;
+        picker->setCurrentIndex(5);pause->setChecked(true);
+        const auto originalLook=scene.surfaces[1].fx;const auto otherSurface=scene.surfaces[0].json();
+        density->setValue(22);require(scene.surfaces[1].fx.density==22&&scene.surfaces[0].json()==otherSurface,"density scoped to selected surface");
+        scene.undo();require(scene.surfaces[1].fx==originalLook,"density Undo");scene.redo();require(scene.surfaces[1].fx.density==22,"density Redo");scene.select(1);
+        const auto originalFrame=window.output->grabFramebuffer();
+        flow->setValue(15);angle->setValue(37);palette->setCurrentIndex(2);edge->setValue(12);reverse->setChecked(true);
+        require(scene.surfaces[1].fx.flow==15&&scene.surfaces[1].fx.angle==37&&scene.surfaces[1].fx.palette==2&&scene.surfaces[1].fx.edge==12&&scene.surfaces[1].fx.reverse,"FX controls update model");
+        require(window.output->grabFramebuffer()!=originalFrame,"FX controls affect output");
+        const auto controlled=scene.json();require(scene.save(state->temp.filePath("look.pmap"),error)&&scene.load(state->temp.filePath("look.pmap"),error)&&scene.json()==controlled,"all FX controls save/reopen");scene.select(1);
+        auto oldSurface=scene.surfaces[1].json();oldSurface["pattern"]=1;
+        for(const auto *key:{"fxDensity","fxFlow","fxAngle","fxPalette","fxEdge","fxReverse"})oldSurface.remove(key);
+        Surface restored;require(Surface::fromJson(oldSurface,{},restored)&&restored.fx.density==12&&restored.fx.palette==0&&restored.fx.angle==0&&restored.fx.edge==0&&!restored.fx.reverse,"legacy dots retain appearance defaults");
+        for(int pattern=2;pattern<=4;++pattern){oldSurface["pattern"]=pattern;require(Surface::fromJson(oldSurface,{},restored)&&restored.fx.density==8&&restored.fx.palette==0,"legacy pattern defaults");}
+        scene.setFxLook(1,FxLook{});
         // Iterate each generator with real elapsed time, then pause and round-trip.
         auto step=std::make_shared<std::function<void()>>();
         std::weak_ptr<std::function<void()>> weakStep=step;
@@ -69,9 +91,9 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
             auto step=weakStep.lock();
             auto &scene=window.scene;const int pattern=state->pattern;
             if(pattern>=potatoPatterns().size()){
-                picker->setCurrentIndex(0);require(!scene.current()->pattern&&scene.current()->media.isEmpty(),"return to alignment grid");scene.undo();require(scene.surfaces[1].pattern==4,"clear FX Undo");scene.select(1);
+                picker->setCurrentIndex(0);require(!scene.current()->pattern&&scene.current()->media.isEmpty(),"return to alignment grid");scene.undo();require(scene.surfaces[1].pattern==potatoPatterns().size()-1,"clear FX Undo");scene.select(1);
                 const int preview=args.indexOf("--preview");if(preview>=0&&preview+1<args.size())require(state->sheet.save(args[preview+1]),"pattern preview");
-                const int snapshot=args.indexOf("--snapshot");if(snapshot>=0&&snapshot+1<args.size()){window.resize(1024,700);app.processEvents();require(window.grab().save(args[snapshot+1]),"UI snapshot");}
+                const int snapshot=args.indexOf("--snapshot");if(snapshot>=0&&snapshot+1<args.size()){window.resize(1024,700);for(auto *h:window.template findChildren<QToolButton*>("sectionHeading"))h->setChecked(h->text()=="Potato FX");app.processEvents();if(auto *scroll=window.template findChild<QScrollArea*>("surfaceInspector"))scroll->ensureWidgetVisible(picker);app.processEvents();require(window.grab().save(args[snapshot+1]),"UI snapshot");}
                 qInfo().noquote()<<"FX"<<(state->failures.isEmpty()?"PASS":"FAIL")<<state->failures.join(", ");app.exit(state->failures.isEmpty()?0:2);return;
             }
             picker->setCurrentIndex(pattern);speed->setValue(130);size->setValue(18);pause->setChecked(true);scene.setBlend(1,0);scene.current()->patternPhase=.37;
@@ -84,7 +106,7 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
             }
             require(correct,"Screen respects pattern alpha "+potatoPatterns()[pattern]);scene.surfaces[0].visible=false;scene.setBlend(1,0);scene.setAppearance(1,100,100);
             size->setValue(32);const auto wide=window.output->grabFramebuffer();require(wide!=still&&energy(wide)>energy(still),"width control "+potatoPatterns()[pattern]);size->setValue(18);
-            {QPainter painter(&state->sheet);const int x=((pattern-1)%2)*640,y=((pattern-1)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),still);}
+            if(pattern>=5){size->setValue(pattern==6?12:38);const auto preview=window.output->grabFramebuffer();size->setValue(18);QPainter painter(&state->sheet);const int x=((pattern-5)%2)*640,y=((pattern-5)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),preview);}
             pause->setChecked(false);scene.dirty=false;const auto saved=scene.json();const double phase=scene.current()->patternPhase;const auto editor=window.canvas->grabFramebuffer();
             QTimer::singleShot(260,&window,[&window,&app,state,require,pause,step,still,editor,phase,saved,pattern]{
                 auto &scene=window.scene;require(scene.current()->patternPhase>phase&&window.output->grabFramebuffer()!=still&&window.canvas->grabFramebuffer()!=editor,"motion in both canvases "+potatoPatterns()[pattern]);
@@ -97,5 +119,27 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
             });
         };
         (*step)();
+    });
+}
+
+// An opt-in preview rendered by the same four mapped surfaces as live output.
+// Deterministic phase steps make the exported frames easy to compare visually.
+template<class Window> void renderFxMotion(Window &window,QApplication &app,const QString &directory){
+    if(directory.isEmpty()||!QDir().mkpath(directory)){app.exit(2);return;}
+    auto &scene=window.scene;scene.newProject();
+    for(int i=0;i<4;++i){
+        if(i)scene.add();scene.setPattern(i,i+5);
+        auto &s=scene.surfaces[i];const double x=(i%2)*.5,y=(i/2)*.5;
+        s.corners={QPointF(x,y),QPointF(x+.5,y),QPointF(x+.5,y+.5),QPointF(x,y+.5)};s.patternPlaying=false;
+    }
+    scene.select(0);window.output->resize(960,540);window.output->show();
+    QTimer::singleShot(650,&window,[&window,&app,directory]{
+        bool ok=true;
+        for(int frame=0;frame<48;++frame){
+            for(auto &s:window.scene.surfaces)s.patternPhase=frame*.12;
+            const auto image=window.output->grabFramebuffer();
+            ok=ok&&!image.isNull()&&image.save(QDir(directory).filePath(QString("%1.png").arg(frame,3,10,QChar('0'))));
+        }
+        qInfo()<<"FX MOTION"<<ok;app.exit(ok?0:2);
     });
 }

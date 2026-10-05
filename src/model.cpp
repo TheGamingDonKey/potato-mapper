@@ -103,9 +103,9 @@ bool Surface::valid() const {
 QPointF Surface::sample(double u,double v) const {
     const double xx=std::clamp(u,0.0,1.0)*cells, yy=std::clamp(v,0.0,1.0)*cells;
     const int x=std::min(int(xx),cells-1),y=std::min(int(yy),cells-1),a=y*(cells+1)+x;
-    const double fx=xx-x,fy=yy-y;
+    const double cellX=xx-x,fy=yy-y;
     const QPointF p=mesh[a], b=mesh[a+1],c=mesh[a+cells+1],d=mesh[a+cells+2];
-    return fx>=fy ? p*(1-fx)+b*(fx-fy)+d*fy : p*(1-fy)+d*fx+c*(fy-fx);
+    return cellX>=fy ? p*(1-cellX)+b*(cellX-fy)+d*fy : p*(1-fy)+d*cellX+c*(fy-cellX);
 }
 void Surface::subdivide(int count){
     count=std::clamp(count,1,16);
@@ -118,7 +118,7 @@ QJsonObject Surface::json(const QString &base) const {
     QJsonArray cs,ms; for(auto p:corners)cs.append(pointJson(p));for(auto p:mesh)ms.append(pointJson(p));
     QString path=media;
     if(!path.isEmpty()&&!base.isEmpty())path=QDir(base).relativeFilePath(path);
-    return {{"id",id},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"brightness",brightness},{"opacity",opacity},{"blend",blend},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
+    return {{"id",id},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"fxDensity",fx.density},{"fxFlow",fx.flow},{"fxAngle",fx.angle},{"fxPalette",fx.palette},{"fxEdge",fx.edge},{"fxReverse",fx.reverse},{"brightness",brightness},{"opacity",opacity},{"blend",blend},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
 }
 bool Surface::fromJson(const QJsonObject &j,const QString &base,Surface &s){
     s.id=j["id"].toString(s.id);s.name=j["name"].toString("Surface");s.media=j["media"].toString();
@@ -126,6 +126,8 @@ bool Surface::fromJson(const QJsonObject &j,const QString &base,Surface &s){
     s.cells=j["cells"].toInt(2);s.visible=j["visible"].toBool(true);s.locked=j["locked"].toBool();s.fit=std::clamp(j["fit"].toInt(),0,2);
     s.pattern=std::clamp(j["pattern"].toInt(),0,int(potatoPatterns().size())-1);s.patternSpeed=std::clamp(j["patternSpeed"].toInt(100),0,300);s.patternSize=std::clamp(j["patternSize"].toInt(18),5,45);s.patternPlaying=j["patternPlaying"].toBool(true);
     s.blend=std::clamp(j["blend"].toInt(),0,2);
+    s.fx.density=std::clamp(j["fxDensity"].toInt(potatoPatternDensity(s.pattern)),4,80);s.fx.flow=std::clamp(j["fxFlow"].toInt(70),0,100);s.fx.angle=std::clamp(j["fxAngle"].toInt(),-180,180);
+    s.fx.palette=std::clamp(j["fxPalette"].toInt(s.pattern>=5?1:0),0,5);s.fx.edge=std::clamp(j["fxEdge"].toInt(),0,25);s.fx.reverse=j["fxReverse"].toBool();
     s.brightness=std::clamp(j["brightness"].toInt(100),0,100);s.opacity=std::clamp(j["opacity"].toInt(100),0,100);
     auto readPoints=[](const QJsonArray &a,QPolygonF &pts){pts.clear();for(auto value:a){const auto p=value.toArray();if(p.size()!=2||!p[0].isDouble()||!p[1].isDouble())return false;pts.append({p[0].toDouble(),p[1].toDouble()});}return true;};
     QPolygonF points;
@@ -199,7 +201,15 @@ void Scene::setPattern(int i,int pattern){
     if(i<0||i>=surfaces.size())return;
     pattern=std::clamp(pattern,0,int(potatoPatterns().size())-1);auto &s=surfaces[i];if(s.pattern==pattern)return;
     if(!pattern){clearMedia(i);return;}
-    checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;touch(true);
+    checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;
+    s.fx.density=potatoPatternDensity(pattern);s.fx.palette=pattern>=5?1:0;
+    if(pattern>=5)s.patternSize=pattern==6?12:38;
+    touch(true);
+}
+void Scene::setFxLook(int i,FxLook look){
+    if(i<0||i>=surfaces.size()||!surfaces[i].pattern)return;
+    look.density=std::clamp(look.density,4,80);look.flow=std::clamp(look.flow,0,100);look.angle=std::clamp(look.angle,-180,180);look.palette=std::clamp(look.palette,0,5);look.edge=std::clamp(look.edge,0,25);
+    if(surfaces[i].fx==look)return;checkpoint();surfaces[i].fx=look;touch(true);
 }
 QJsonObject Scene::json(const QString &base) const {
     QJsonArray items;for(const auto &s:surfaces)items.append(s.json(base));

@@ -1,5 +1,6 @@
 #include "canvas.h"
 #include <QPainter>
+#include <QFile>
 #include <QMimeData>
 #include <QMatrix3x3>
 #include <QLineF>
@@ -31,76 +32,10 @@ uniform mat3 mapping;
 out vec2 uv;
 void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2.0*p.y,0.0,p.z);uv=texturePosition;}
 )GLSL";
-    const char *fragment=R"GLSL(#version 330 core
-in vec2 uv;
-uniform sampler2D picture;
-uniform sampler2D chromaPicture;
-uniform bool yuvVideo;
-uniform mat3 yuvToRgb;
-uniform vec3 yuvOffset;
-uniform vec2 uvScale;
-uniform vec2 uvOffset;
-uniform int pattern;
-uniform int blendMode;
-uniform float phase;
-uniform float dotRadius;
-uniform float surfaceAspect;
-uniform float brightness;
-uniform float opacity;
-out vec4 color;
-void finishColor(){
-    color.rgb*=brightness;color.a*=opacity;
-    // Screen uses the effective (alpha-weighted) source colour. Transparent
-    // pixels must neither brighten nor darken the layer below.
-    if(blendMode==1)color.rgb*=color.a;
-}
-void main(){
-    if(pattern==1){
-        vec2 field=uv*vec2(12.0,12.0/surfaceAspect)+vec2(-phase*.8,phase*.4);
-        vec2 cell=floor(field);
-        float wave=.5+.5*sin(cell.x*.65+cell.y*.5-phase*2.0);
-        float radius=dotRadius*(.65+.35*wave);
-        float distanceToDot=length(fract(field)-.5);
-        float aa=max(fwidth(distanceToDot),.002);
-        float alpha=1.0-smoothstep(radius-aa,radius+aa,distanceToDot);
-        vec3 tint=mix(vec3(.18,.75,1.0),vec3(.9,1.0,1.0),wave);
-        color=vec4(tint,alpha);finishColor();return;
-    }
-    if(pattern>1){
-        vec2 field=uv*vec2(8.0,8.0/surfaceAspect);
-        float distanceToLine;
-        vec3 tint;
-        if(pattern==2){
-            distanceToLine=abs(fract(field.x+field.y-phase*.8)-.5);
-            tint=mix(vec3(.15,.65,1.0),vec3(.7,1.0,1.0),.5+.5*sin((field.x-field.y)*.3-phase));
-        }else if(pattern==3){
-            vec2 centred=(uv-.5)*vec2(8.0,8.0/surfaceAspect);
-            float radius=length(centred);
-            distanceToLine=abs(fract(radius-phase*.8)-.5);
-            tint=mix(vec3(.45,.22,1.0),vec3(1.0,.5,.85),.5+.5*sin(radius-phase));
-        }else{
-            // Distance to a repeating stepped polyline: horizontal plateaus
-            // and vertical rises are joined, rather than disconnected bars.
-            float x=mod(field.x-phase*.7,2.0);
-            float y=mod(field.y+1.0,3.0)-1.0;
-            float upperX=min(max(x-1.0,0.0),2.0-x);
-            float lowerX=min(max(1.0-x,0.0),x);
-            float horizontal=min(length(vec2(upperX,y)),length(vec2(lowerX,y-1.0)));
-            float vertical=length(vec2(min(min(x,2.0-x),abs(x-1.0)),y-clamp(y,0.0,1.0)));
-            distanceToLine=min(horizontal,vertical);
-            tint=mix(vec3(.1,1.0,.65),vec3(.8,1.0,.2),.5+.5*sin(field.y*.4-phase));
-        }
-        float aa=max(fwidth(distanceToLine),.002);
-        float alpha=1.0-smoothstep(dotRadius-aa,dotRadius+aa,distanceToLine);
-        color=vec4(tint,alpha);finishColor();return;
-    }
-    vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;
-    if(yuvVideo){vec3 yuv=vec3(texture(picture,p).r,texture(chromaPicture,p).rg);color=vec4(clamp(yuvToRgb*(yuv-yuvOffset),0.0,1.0),1.0);}
-    else color=texture(picture,p);
-    finishColor();
-}
-)GLSL";
-    if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment)||!program.link()){
+    QFile shaderFile(":/assets/patterns.frag");
+    if(!shaderFile.open(QIODevice::ReadOnly)){graphicsError="The built-in pattern shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
+    const auto fragment=shaderFile.readAll();
+    if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment.constData())||!program.link()){
         graphicsError=program.log();emit graphicsInitialized(graphicsError);return;
     }
     vao.create();buffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
@@ -195,7 +130,8 @@ void Canvas::paintGL(){
         m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());
         m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());program.setUniformValue("mapping",m);
         QVector2D uvScale(1,1),uvOffset(0,0);
-        program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
+        program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0))*(s.fx.reverse?-1.f:1.f));program.setUniformValue("dotRadius",s.patternSize/100.0f);
+        program.setUniformValue("density",float(s.fx.density));program.setUniformValue("flow",s.fx.flow/100.0f);program.setUniformValue("angle",s.fx.angle*float(3.141592653589793/180.0));program.setUniformValue("palette",s.fx.palette);program.setUniformValue("edgeFade",s.fx.edge/100.0f);
         program.setUniformValue("brightness",s.brightness/100.0f);program.setUniformValue("opacity",s.opacity/100.0f);
         {
             const auto pixel=[this](QPointF p){return QPointF(p.x()*scene->outputSize.width(),p.y()*scene->outputSize.height());};

@@ -40,6 +40,7 @@ struct Surface {
     int patternSize = 18;
     bool patternPlaying = true;
     double patternPhase = 0;
+    FxLook fx;
     int brightness = 100;
     int opacity = 100;
     int blend = 0; // 0 Normal, 1 Screen, 2 Add
@@ -80,6 +81,7 @@ public:
     void setBlend(int index, int blend);
     void resetAppearance(int index);
     void setPattern(int index, int pattern);
+    void setFxLook(int index, FxLook look);
     void select(int index);
     void touch(bool structure = false);
     void checkpoint();

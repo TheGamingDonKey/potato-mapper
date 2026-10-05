@@ -7,7 +7,7 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - Latest published app: [v0.5.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.5.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
 - On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
-- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. Screen/Add blending and three more Potato FX patterns are merged in [PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7) and shipped in v0.5.0. No implementation is currently active. Next approved work: the remaining pattern collection/controls, then missing-media repair. Raspberry Pi remains deferred.
+- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. Screen/Add blending and three more Potato FX patterns are merged in [PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7) and shipped in v0.5.0. Current work: `codex/flowing-potato-fx`, four reference-inspired cell effects and shared controls for v0.6.0. Missing-media repair follows this increment. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
@@ -47,7 +47,7 @@ Shane approved these increments in chat. Work proceeds in this order, with a run
 
 1. **UI polish and appearance controls — shipped in v0.4.0.** See the completed checklist below. Dots remain the only generator in this first increment.
 2. **Screen/Add blending — shipped in v0.5.0.** Overlay suitable black-background media. This does not remove arbitrary video backgrounds.
-3. **Potato FX pattern collection.** Diagonal stripes, rings and square waves shipped in v0.5.0. Next consider checkerboard, sine waves, colour wash and pulsing squares. Target eight patterns including existing dots; add shared colour/direction/spacing controls where each pattern supports them. Check motion, pause, saved settings and output performance as patterns are added.
+3. **Potato FX pattern collection.** Diagonal stripes, rings and square waves shipped in v0.5.0. The next increment prioritizes the inspected SquareWave, Diagonals, CubicCircles and SquareArray: smaller elements, coordinated motion and shared colour/direction/density controls. This brings the collection to eight animations including the retained old effects. Check motion, pause, saved settings and output performance as patterns are added.
 4. **Missing-media repair and project collection.** Relink files while retaining geometry; export a project with its media for another computer.
 5. **Recovery and performance display.** Recover recent work after interruption, retain recoverable project backups and show useful output frame-rate information.
 
@@ -103,3 +103,10 @@ Merged in [PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7) and p
 - Fresh portable package FX/appearance and real MP4 checks passed with only Windows system directories on PATH. An earlier FX check hung after its assertions; it did not recur in the fresh checked package. No persistent cause was established.
 - Real ZIP extraction, interrupted download and cancelled restart checks passed. The actual v0.4.0 launcher installed v0.5.0 and reopened `My mapping.pmap` in a disposable installation. Project/media bytes and the retained old runtime were unchanged.
 - Physical-projector testing and this update on Shane's other laptop remain untested. The existing user app/mappings/media were preserved.
+
+## Flowing effects — implemented, unreleased v0.6.0
+
+- [x] Four new cell effects with coordinated movement: SquareWave, Diagonals, CubicCircles and SquareArray. Existing IDs/renderers retained; the old square-wave effect is labelled Stepped waves. Defaults use smaller white elements without a fixed boundary fade. Actual output inspected at multiple phases against MadMapper.
+- [x] Per-surface density, flow, angle, colour presets, reverse and optional soft edge; size/speed/pause retained. Actual controls, Undo/Redo, save/reopen, legacy defaults, motion and blending passed locally. Appearance and video-colour regression checks passed.
+- [ ] Publish v0.6.0 after the focused source review, fresh portable-package checks and v0.5.0 update rehearsal. Physical-projector and other-laptop checks remain separate.
+- Later visual research: flowing Truchet tiles, ripple fields and caustic-like light. Investigate one at a time after feedback on these four effects; these are not implemented. [Pattern techniques](https://thebookofshaders.com/09/) and [wave modulation](https://thebookofshaders.com/13/) provide a starting point.
