@@ -19,7 +19,9 @@ template<class Window> void profileFx(Window &window,QApplication &app,const QSt
     const int first=args.indexOf("--first-pattern"),last=args.indexOf("--last-pattern");
     if(first>=0&&first+1<args.size())state->pattern=args[first+1].toInt();
     if(last>=0&&last+1<args.size())state->last=args[last+1].toInt();
-    if(state->pattern<0||state->last<state->pattern||state->last>=potatoPatterns().size()){app.exit(2);return;}
+    if(state->pattern<0||state->last<state->pattern||state->last>=potatoPatterns().size()){
+        QTimer::singleShot(0,&app,[&app]{qInfo()<<"FX PROFILE FAIL invalid pattern range";app.exit(2);});return;
+    }
     auto step=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weak=step;
     *step=[&window,&app,state,weak,preview]{
         auto keep=weak.lock();if(state->pattern>state->last){app.exit(0);return;}
@@ -32,6 +34,7 @@ template<class Window> void profileFx(Window &window,QApplication &app,const QSt
             auto elapsed=std::make_shared<QElapsedTimer>();elapsed->start();
             QTimer::singleShot(2000,&window,[&window,&app,state,keep,preview,pulse,out,editor,elapsed]{
                 pulse->stop();pulse->deleteLater();
+                if(!window.output->graphicsReady||!preview->graphicsReady){qInfo()<<"FX PROFILE FAIL a renderer could not initialize graphics";app.exit(2);return;}
                 const auto seconds=elapsed->elapsed()/1000.0;
                 qInfo().noquote()<<QString("FX PROFILE %1 layers=%2 output=%3x%4 output-repaints/s=%5 editor-repaints/s=%6")
                     .arg(potatoPatterns()[state->pattern]).arg(state->layers)
