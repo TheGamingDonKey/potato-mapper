@@ -10,6 +10,7 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - UI polish and appearance shipped in v0.4.0 ([PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6)); Screen/Add and more patterns in v0.5.0 ([PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7)); flowing cell effects and controls in v0.6.0 ([PR #8](https://github.com/TheGamingDonKey/potato-mapper/pull/8)). Waterlight, Contour Flow, Curve Maze and Depth Tunnel shipped in v0.7.0 ([PR #9](https://github.com/TheGamingDonKey/potato-mapper/pull/9)). Direct editor update-folder detection is fixed in v0.7.1 ([PR #10](https://github.com/TheGamingDonKey/potato-mapper/pull/10)); Shane's precise other-laptop launch path and recovery result remain unconfirmed. No active implementation branch remains. Missing-media repair is the next approved feature; simultaneous preview/output performance and long-run phase continuity need follow-up. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
+- October 5 priority correction: Shane wants recovery from a broken launcher/updater without asking users to delete their installation or manually rescue projects. Project protection and repair take priority over further animation work. The proposed storage/repair design below is pending agreement; v0.7.1 does not implement it.
 
 ## How to keep this useful
 
@@ -64,7 +65,17 @@ Implemented in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6),
 
 ## Project and editing improvements
 
-- [ ] **Collect project and media (lower priority).** Export a new folder containing the mapping and referenced files, handle duplicate filenames, and save portable relative paths. Reopen it after moving the folder with the original media unavailable; leave the original project untouched.
+### Requested priority: project protection and application repair
+
+Current protection: updates stage new runtimes and retain the previous version; saves use QSaveFile. Current gap: a new project's default folder is the app root, and media is linked rather than collected. Deleting that folder can therefore remove user work. Recovery currently depends on a working launcher or manual extraction.
+
+- [ ] **Agree the storage and repair design before implementation.** Proposed default: an accessible user project folder outside the program folder; retain an explicit portable workflow. Existing project locations remain valid. Storage changes and the independent repair flow need a reviewed design.
+- [ ] **Preserve existing work during adoption.** Offer to copy mappings and referenced media into a chosen project folder, keep originals, resolve filename collisions and rewrite references only in the new mapping. Verify the copied mapping opens with original media unavailable before treating it as protected.
+- [ ] **Recoverable project saves.** Add a previous-save backup alongside existing atomic writes. A failed save or backup must leave the original mapping usable and report what happened.
+- [ ] **Repair a broken installation.** A recovery entry point must work when the editor cannot start, and have a downloadable replacement when the launcher itself is broken. Repair program files in the existing location, retain user data, restore a valid selected runtime and reopen the saved mapping. Show the affected locations before making changes; failures leave existing data and a recoverable runtime in place.
+- [ ] **Demonstrate the complete recovery.** In a disposable installation with real mapping/media files, exercise a damaged editor, missing launcher/layout file, interrupted repair and reinstall of program files. Check project/media bytes and successful reopening. A normal update handoff alone does not prove this recovery flow.
+
+- [ ] **Collect project and media.** Export a new folder containing the mapping and referenced files, handle duplicate filenames, and save portable relative paths. Reopen it after moving the folder with the original media unavailable; leave the original project untouched. This is now part of protecting projects during repair/reinstall, rather than only a transfer convenience.
 - [ ] **Find missing media.** Show which files are missing and allow them to be relinked without losing surface geometry. Check reopening a moved project and saving corrected paths.
 - [ ] **Protect saved projects.** Add a recoverable backup when replacing an existing mapping and retain safe behaviour if saving fails. Keep a small set of earlier-format examples that must still load; preserve project media separately.
 - [ ] **Centralise editing actions (started with clear and rename).** Move surface changes out of individual button callbacks into shared operations that handle validation, undo, dirty state, and view updates. Start with existing actions; check their behaviour stays the same.
