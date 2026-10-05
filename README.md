@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or anim
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.3.0/PotatoMapper-0.3.0-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.4.0/PotatoMapper-0.4.0-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -35,13 +35,12 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Separate fullscreen projector output, display selection, and blackout.
 - Right-click a surface to load/clear media or rename it. Clearing keeps the mesh and supports Undo.
 - Branded startup splash, surface content labels, File/Edit/Help menus, and an About/version display.
+- Resizable sidebar, persistent surface list, collapsible settings, themed scrollbars and full-path filename tooltips.
+- Per-surface brightness and opacity, with live preview, one Undo per slider drag and saved settings. Older mappings default to 100%.
+- **Potato FX** animation picker with the existing dots generator; playback controls appear for video surfaces.
 - **Help → Check for updates** downloads and installs newer stable Windows releases, then reopens your saved mapping. The previous app version is retained for recovery.
 
 Early prototype: expect rough edges. It has been run on Windows 11 with an AMD Radeon 840M. Automated checks cover animated editor/output rendering, pause, and saved pattern settings. A user has tried the basic mapping workflow; broad hardware and projector compatibility has not been established.
-
-### Next release: v0.4.0 (implemented, not yet published)
-
-The next increment adds a resizable sidebar with a persistent surface list, collapsible settings, themed scrollbars and filename tooltips. Appearance controls dim/fade each surface with Undo and saved settings. Potato FX introduces the animation picker with the existing dots generator. New animation patterns and blending follow as separate increments. The download above remains v0.3.0 until packaging and release checks finish.
 
 ## Build on Windows
 
@@ -67,13 +66,15 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 ## Use it
 
 1. Connect your projector and choose **Windows + P → Extend**.
-2. Add a surface. Drop an image/video onto it, use **Load media**, or select **Animated dots**.
+2. Add a surface. Drop an image/video onto it, use **Load media**, or open **Potato FX** and choose **Animated dots**.
 3. Drag corner handles; switch **Edit** to **Mesh points** for finer adjustments. Drag inside a surface to move it.
 4. Choose the projector under **PROJECTOR OUTPUT** and click **Start output**.
 5. Use **Stop**, or Escape while the output window has focus. **B** toggles blackout while a mapper window has focus.
 6. Save your mapping. Media is referenced by file path, not embedded; keep those files available when moving a project.
 
 Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on a dots surface switches it back to media playback. **Clear media** returns an image, video, or dots surface to the white grid. Double-click a surface's list entry to rename it.
+
+Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100%. Potato FX currently provides dots; additional patterns and blending are the next increments. Earlier app versions ignore the new appearance settings and do not retain them when saving.
 
 ## Updating an existing copy
 

@@ -4,9 +4,10 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
-- Latest published app: [v0.3.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.3.0).
+- Latest published app: [v0.4.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.4.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
-- Desktop usability/update work is merged in [PR #5](https://github.com/TheGamingDonKey/potato-mapper/pull/5) and published in v0.3.0. **In progress:** UI polish, Potato FX naming/picker and per-surface brightness/opacity on `codex/ui-appearance`, targeting v0.4.0. Raspberry Pi remains deferred.
+- On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
+- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. No feature implementation is currently in progress. Next approved increments: Screen/Add blending, then additional Potato FX patterns. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
@@ -44,13 +45,22 @@ These desktop improvements are in [v0.3.0](https://github.com/TheGamingDonKey/po
 
 Shane approved these increments in chat. Work proceeds in this order, with a runnable release between useful milestones. The current increment extends the existing editor and renderer; it does not introduce another framework.
 
-1. **UI polish and appearance controls (implemented — unreleased, targeting v0.4.0).** Rounded themed scrollbars, resizable sidebar, persistent surface list, collapsible inspector sections, shortened filenames with full-path tooltips, relevant playback controls, and brightness/opacity with Undo and saved settings. Potato FX names the animation picker; dots remain the only generator in this first increment. Release build and packaged appearance/mapping/dots/colour/clear/MP4 checks passed without developer libraries on PATH; real editor inspected at a 1024 × 640 logical window size. Download/extraction/cancellation checks passed. A real v0.3.0 launcher installed v0.4.0 and reopened a saved fixture mapping; project/media bytes and the retained v0.3.0 runtime were unchanged. Physical-projector hardware and this new update on Shane's other laptop remain untested.
+1. **UI polish and appearance controls — shipped in v0.4.0.** See the completed checklist below. Dots remain the only generator in this first increment.
 2. **Screen/Add blending.** Overlay suitable black-background media. This does not remove arbitrary video backgrounds.
 3. **Potato FX pattern collection.** Add diagonal stripes, rings and square waves first, then consider checkerboard, sine waves, colour wash and pulsing squares. Target eight patterns including existing dots; add shared colour/direction/spacing controls where each pattern supports them. Check motion, pause, saved settings and output performance as patterns are added.
 4. **Missing-media repair and project collection.** Relink files while retaining geometry; export a project with its media for another computer.
 5. **Recovery and performance display.** Recover recent work after interruption, retain recoverable project backups and show useful output frame-rate information.
 
 Raspberry Pi, audio-reactive effects and multiple projectors remain later investigations.
+
+## Shipped in v0.4.0
+
+Implemented in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6), merged and published in [v0.4.0](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.4.0).
+
+- [x] **UI polish.** Rounded themed scrollbars, resizable sidebar, persistent surface list, collapsible inspector sections, shortened filenames/full-path tooltips and relevant video controls. Initial window fits the available desktop. Actual editor inspected at 1024 × 640 logical pixels; checks cover resizing, filename handling and keeping newly selected/added surfaces visible while preserving scroll during appearance edits.
+- [x] **Potato FX picker.** Existing dots are selected through Animation; their speed/size/pause controls appear when relevant. Loading media or clearing content returns the surface to media/grid. Additional generators remain planned.
+- [x] **Brightness and opacity per surface.** Shared image/video/dots rendering, defaults of 100% for older projects, live preview, one Undo per slider drag, Redo, reset and saved settings. Pixel checks cover images, dots, native NV12 video, overlapping layers and agreement between editor/output. Canvas alpha composition was corrected so Qt does not apply surface transparency twice.
+- [x] **Portable release and update handoff.** Release build and packaged appearance/mapping/dots/colour/clear/MP4 checks passed without developer libraries on PATH. Download/extraction/interruption/cancellation checks passed. A real v0.3.0 launcher installed v0.4.0 and reopened a saved fixture mapping; project/media bytes and the retained v0.3.0 runtime were unchanged. Public latest-release metadata matches the checked ZIP and SHA256. Physical-projector hardware and this new update on Shane's other laptop remain untested.
 
 ## Project and editing improvements
 
@@ -64,7 +74,7 @@ Raspberry Pi, audio-reactive effects and multiple projectors remain later invest
 ## Next visual features
 
 - [ ] **Screen and Add blending.** Let a surface choose normal, Screen, or Add blending so suitable black-background videos can overlay other surfaces. Check overlapping media in editor/output, undo, and save/reopen. This is not general background removal.
-- [ ] **Brightness and opacity per surface.** Apply controls consistently to images, videos, and generated patterns; include defaults for old projects, undo, save/reopen, and matching projector output.
+- [x] **Brightness and opacity per surface — shipped in v0.4.0.** Images, videos and dots share the controls; old-project defaults, Undo/Redo, save/reopen, overlap pixels and matching output checked. See PR #6 and the v0.4.0 checklist above.
 - [ ] **One more procedural pattern.** Start with diagonal moving lines, then consider rings or square waves. Share timing and settings handling with dots; verify animation, pause, and saved controls in editor/output. A real audio spectrum or waveform is separate work.
 
 ## Builds and releases
