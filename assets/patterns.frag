@@ -30,6 +30,15 @@ float movingField(vec2 p,float t){
     float v=.5+.23*sin(p.x*1.63+p.y*.57-t*.81)+.18*cos(p.y*1.37-p.x*.43+t*.61)+flow*.09*sin(p.x*2.71+p.y*2.13-t*.37);
     return smoothstep(.12,.88,v);
 }
+// Fixed spatial seeds interpolate continuously; animation moves coordinates.
+float cellSeed(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float smoothNoise(vec2 p){
+    vec2 i=floor(p),f=fract(p);f=f*f*f*(f*(f*6.0-15.0)+10.0);
+    return mix(mix(cellSeed(i),cellSeed(i+vec2(1,0)),f.x),mix(cellSeed(i+vec2(0,1)),cellSeed(i+vec2(1)),f.x),f.y);
+}
+vec2 organicWarp(vec2 p,float t,float amount){
+    return p+amount*vec2(sin(p.y*1.3+t*.31)+.35*cos(p.x*.9-t*.23),cos(p.x*1.1-t*.27)+.35*sin(p.y*.8+t*.19));
+}
 vec3 selectedTint(vec3 original){
     if(palette==1)return vec3(1.0);
     if(palette==2)return vec3(.22,.85,1.0);
@@ -51,6 +60,43 @@ void finishColor(){
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern>=9){
+        float alpha;
+        if(pattern==9){
+            // Curved interference ridges evoke pool-bottom light, without a
+            // fluid simulation or tracing light rays every frame.
+            vec2 p=organicWarp(metric*density*.55,phase,flow*.6);
+            float a=sin(p.x*1.7+sin(p.y*1.3+phase*.43))-cos(p.y*1.6+sin(p.x*1.1-phase*.37));
+            float b=sin(p.x*.8-p.y*1.2+flow*.8*sin(p.y*1.15+phase*.29)+phase*.29);
+            float d=min(abs(a)*.35,abs(b)*.45);
+            alpha=clamp(shapeMask(d-dotRadius*.16)+.12*max(0.0,1.0/(1.0+d*40.0)-1.0/11.0),0.0,1.0);
+        }else if(pattern==10){
+            // Two fixed noise scales form a moving height field. Contours
+            // remain continuous instead of jumping to new random values.
+            vec2 p=organicWarp(metric*5.0,phase,flow*.65)+vec2(phase*.06,-phase*.04);
+            float height=.65*smoothNoise(p*.7)+.35*smoothNoise(p*1.55+vec2(8.2,3.7));
+            float d=abs(fract(height*density*.6-phase*.12)-.5);
+            alpha=shapeMask(d-dotRadius*.32);
+        }else if(pattern==11){
+            // Opposite quarter-circle pairs meet at tile-side midpoints.
+            // Warping the whole coordinate field keeps adjacent paths joined.
+            vec2 p=organicWarp(metric*density*.55+vec2(phase*.12,-phase*.08),phase,flow*.25);
+            vec2 cell=floor(p),local=fract(p);if(cellSeed(cell)<.5)local.x=1.0-local.x;
+            float d=min(abs(length(local)-.5),abs(length(local-vec2(1))-.5));
+            float light=.7+.3*sin(p.x*.4+p.y*.37-phase*.6);
+            alpha=shapeMask(d-dotRadius*.3)*light;
+        }else{
+            // Logarithmic rings and angular spokes create perspective depth.
+            // A soft vanishing point hides subpixel detail at the centre.
+            vec2 p=metric-flow*.045*vec2(sin(phase*.23),cos(phase*.19));
+            float r=max(length(p),.001),depth=-log(r)*1.6+phase*.45;
+            float rings=abs(fract(depth*density*.12)-.5);
+            float spokes=abs(sin(atan(p.y,p.x)*max(4.0,floor(density*.25))+flow*.4*sin(depth*.6+phase*.2)));
+            alpha=max(shapeMask(rings-dotRadius*.32),shapeMask(spokes-dotRadius*.4));
+            alpha*=smoothstep(.018,.06,r)*(.25+.75*smoothstep(.04,.55,r));
+        }
+        color=vec4(vec3(1.0),alpha);finishColor();return;
+    }
     if(pattern>=5){
         vec2 field=metric*density;
         if(pattern==8){

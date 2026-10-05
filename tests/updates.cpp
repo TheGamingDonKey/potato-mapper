@@ -52,7 +52,7 @@ static bool until(const std::function<bool()> &ready,int timeout=20000){
 static QByteArray bytes(const QString &path){QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return f.readAll();}
 static void write(const QString &path,const QByteArray &data){QDir().mkpath(QFileInfo(path).absolutePath());QFile f(path);if(!f.open(QIODevice::WriteOnly)||f.write(data)!=data.size())throw std::runtime_error("Could not create fixture");}
 int main(int argc,char **argv){
-    QApplication app(argc,argv);app.setApplicationVersion("0.5.0");
+    QApplication app(argc,argv);app.setApplicationVersion("0.6.0");
     const auto args=app.arguments();if(args.size()<3){std::cerr<<"Usage: PotatoUpdateChecks.exe <release.zip> <extracted-package> --install-root <disposable-root>\n";return 2;}
     auto check=[](bool pass,const char *label){std::cout<<(pass?"PASS ":"FAIL ")<<label<<std::endl;if(!pass)throw std::runtime_error(label);};
     try{

@@ -6,6 +6,7 @@
 #include "style.h"
 #include "../tests/appearance-check.h"
 #include "../tests/fx-check.h"
+#include "../tests/fx-profile.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QInputDialog>
@@ -159,7 +160,7 @@ public:
         patternSize=new QSpinBox;patternSize->setObjectName("patternSize");patternSize->setRange(5,45);patternSize->setSuffix(" %");patternSizeLabel=new QLabel("Dot size");patternForm->addRow(patternSizeLabel,patternSize);
         patternSpeed->setObjectName("patternSpeed");
         auto fxSpin=[patternForm](const QString &label,const QString &id,int min,int max){auto *spin=new QSpinBox;spin->setRange(min,max);spin->setObjectName(id);patternForm->addRow(label,spin);return spin;};
-        patternDensity=fxSpin("Density","patternDensity",4,80);patternDensity->setToolTip("Number of elements across the surface. Higher values make a finer pattern; use size or line width to adjust each element separately.");
+        patternDensity=fxSpin("Density","patternDensity",4,80);patternDensity->setToolTip("Pattern density. Higher values add finer or more closely spaced detail; adjust size or line width separately.");
         patternFlow=fxSpin("Flow","patternFlow",0,100);patternFlow->setSuffix(" %");patternFlow->setToolTip("Amount of variation in the flowing cell effects.");
         patternAngle=fxSpin("Angle","patternAngle",-180,180);patternAngle->setSuffix(" °");
         patternPalette=new QComboBox;patternPalette->setObjectName("patternPalette");patternPalette->addItems({"Original palette","White","Cyan","Purple","Amber","Mint"});patternForm->addRow("Colour",patternPalette);
@@ -342,7 +343,7 @@ int main(int argc,char **argv){
     QApplication app(argc,argv);app.setApplicationName("Potato Mapper");app.setOrganizationName("PotatoMapper");app.setApplicationVersion(POTATO_VERSION);app.setWindowIcon(QIcon(":/assets/potato-mapper.png"));
     qInstallMessageHandler(logMessage);app.setStyle("Fusion");
     app.setStyleSheet(potatoStyle());
-    auto args=app.arguments();const bool diagnostic=std::any_of(args.begin(),args.end(),[](const QString &a){return a.startsWith("--smoke")||a.startsWith("--test-")||a=="--profile-media";});
+    auto args=app.arguments();const bool diagnostic=std::any_of(args.begin(),args.end(),[](const QString &a){return a.startsWith("--smoke")||a.startsWith("--test-")||a=="--profile-media"||a=="--profile-fx";});
     std::unique_ptr<QLockFile> runtimeLock;
     if(!diagnostic&&QFileInfo::exists(QDir(potatoInstallRoot()).filePath("installation.txt"))){runtimeLock=std::make_unique<QLockFile>(QDir(potatoInstallRoot()).filePath(".potato-runtime.lock"));runtimeLock->setStaleLockTime(0);if(!runtimeLock->tryLock()){QMessageBox::information(nullptr,"Potato Mapper","Potato Mapper is already open in this installation. Switch to its window to continue.");return 0;}}
     if(args.contains("--test-splash")){
@@ -361,7 +362,8 @@ int main(int argc,char **argv){
     const int mediaArgument=args.indexOf("--media");
     if(mediaArgument>=0&&mediaArgument+1<args.size())window.scene.assignMedia(0,args[mediaArgument+1]);
     if(args.contains("--smoke-fx")){window.smoke=true;runFxChecks(window,app,args);}
-    if(args.contains("--test-fx-motion")){window.smoke=true;const int i=args.indexOf("--frames");renderFxMotion(window,app,i>=0&&i+1<args.size()?args[i+1]:QString());}
+    if(args.contains("--profile-fx")){window.smoke=true;profileFx(window,app,args);}
+    if(args.contains("--test-fx-motion")){window.smoke=true;const int i=args.indexOf("--frames"),batch=args.indexOf("--first-pattern");renderFxMotion(window,app,i>=0&&i+1<args.size()?args[i+1]:QString(),batch>=0&&batch+1<args.size()?args[batch+1].toInt():5);}
     if(args.contains("--smoke-appearance")){window.smoke=true;runAppearanceChecks(window,app,args);}
     if(args.contains("--test-restart")){
         window.smoke=true;QTimer::singleShot(300,&window,[&window,&app]{

@@ -203,7 +203,7 @@ void Scene::setPattern(int i,int pattern){
     if(!pattern){clearMedia(i);return;}
     checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;
     s.fx.density=potatoPatternDensity(pattern);s.fx.palette=pattern>=5?1:0;
-    if(pattern>=5)s.patternSize=pattern==6?12:38;
+    if(pattern>=5)s.patternSize=potatoPatternDefaultSize(pattern);
     touch(true);
 }
 void Scene::setFxLook(int i,FxLook look){
