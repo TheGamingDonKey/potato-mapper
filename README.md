@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.5.0/PotatoMapper-0.5.0-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.6.0/PotatoMapper-0.6.0-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -29,7 +29,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Multiple surfaces with draggable corners and a subdivided mesh.
 - Images and looping video, with stretch, fit, and crop options.
 - Transparent white alignment grids.
-- Potato FX: eight animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the four cell effects. The new collection is implemented for v0.6.0, pending release.
+- Potato FX: eight animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the four cell effects. The flowing collection ships in v0.6.0.
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
