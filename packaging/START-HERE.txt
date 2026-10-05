@@ -21,6 +21,12 @@ Right-click a surface (or its list entry) and choose Clear media to return it
 to the white grid. Its mesh stays in place. Ctrl+Z restores the media.
 Double-click its list entry to rename it. Help has a quick guide and About.
 
+Drag the divider beside the surface list to resize the sidebar. Click Media,
+Appearance, Potato FX or Mapping headings to expand/collapse their controls.
+Appearance has brightness and opacity sliders for the selected surface.
+Potato FX offers the built-in animated dots; choose Media / white grid to
+return to the alignment grid, or load media to replace the animation.
+
 UPDATES
 Use Help > Check for updates to download a newer stable Windows release.
 Save your work when asked, then let the launcher install and reopen the app.

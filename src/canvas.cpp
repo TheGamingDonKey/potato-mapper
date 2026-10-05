@@ -44,6 +44,8 @@ uniform int pattern;
 uniform float phase;
 uniform float dotRadius;
 uniform float surfaceAspect;
+uniform float brightness;
+uniform float opacity;
 out vec4 color;
 void main(){
     if(pattern==1){
@@ -55,11 +57,12 @@ void main(){
         float aa=max(fwidth(distanceToDot),.002);
         float alpha=1.0-smoothstep(radius-aa,radius+aa,distanceToDot);
         vec3 tint=mix(vec3(.18,.75,1.0),vec3(.9,1.0,1.0),wave);
-        color=vec4(tint,alpha);return;
+        color=vec4(tint*brightness,alpha*opacity);return;
     }
     vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;
     if(yuvVideo){vec3 yuv=vec3(texture(picture,p).r,texture(chromaPicture,p).rg);color=vec4(clamp(yuvToRgb*(yuv-yuvOffset),0.0,1.0),1.0);}
     else color=texture(picture,p);
+    color.rgb*=brightness;color.a*=opacity;
 }
 )GLSL";
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment)||!program.link()){
@@ -101,7 +104,9 @@ void Canvas::paintGL(){
     const auto r=canvasRect();const double dpi=devicePixelRatioF();
     const int vx=qRound(r.x()*dpi),vy=qRound((height()-r.bottom())*dpi),vw=qRound(r.width()*dpi),vh=qRound(r.height()*dpi);
     glViewport(vx,vy,vw,vh);glEnable(GL_SCISSOR_TEST);glScissor(vx,vy,vw,vh);glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    // The canvas is opaque; retain that alpha while compositing surface layers.
+    // Otherwise Qt's window composition applies their transparency a second time.
+    glEnable(GL_BLEND);glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
     program.bind();vao.bind();buffer.bind();
     program.enableAttributeArray(0);program.enableAttributeArray(1);
     program.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));program.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
@@ -153,6 +158,7 @@ void Canvas::paintGL(){
         m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());program.setUniformValue("mapping",m);
         QVector2D uvScale(1,1),uvOffset(0,0);
         program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
+        program.setUniformValue("brightness",s.brightness/100.0f);program.setUniformValue("opacity",s.opacity/100.0f);
         {
             const auto pixel=[this](QPointF p){return QPointF(p.x()*scene->outputSize.width(),p.y()*scene->outputSize.height());};
             double sw=(QLineF(pixel(s.corners[0]),pixel(s.corners[1])).length()+QLineF(pixel(s.corners[3]),pixel(s.corners[2])).length())/2;

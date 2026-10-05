@@ -39,6 +39,8 @@ struct Surface {
     int patternSize = 18;
     bool patternPlaying = true;
     double patternPhase = 0;
+    int brightness = 100;
+    int opacity = 100;
     QPolygonF corners{QPointF(.15,.15), QPointF(.65,.15), QPointF(.65,.65), QPointF(.15,.65)};
     int cells = 2;
     QVector<QPointF> mesh;
@@ -72,6 +74,8 @@ public:
     void assignMedia(int index, const QString &path);
     void clearMedia(int index);
     void renameSurface(int index, const QString &name);
+    void setAppearance(int index, int brightness, int opacity, bool recordUndo=true);
+    void setPattern(int index, int pattern);
     void select(int index);
     void touch(bool structure = false);
     void checkpoint();

@@ -39,6 +39,10 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 
 Early prototype: expect rough edges. It has been run on Windows 11 with an AMD Radeon 840M. Automated checks cover animated editor/output rendering, pause, and saved pattern settings. A user has tried the basic mapping workflow; broad hardware and projector compatibility has not been established.
 
+### Next release: v0.4.0 (implemented, not yet published)
+
+The next increment adds a resizable sidebar with a persistent surface list, collapsible settings, themed scrollbars and filename tooltips. Appearance controls dim/fade each surface with Undo and saved settings. Potato FX introduces the animation picker with the existing dots generator. New animation patterns and blending follow as separate increments. The download above remains v0.3.0 until packaging and release checks finish.
+
 ## Build on Windows
 
 Install:
