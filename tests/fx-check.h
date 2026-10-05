@@ -106,7 +106,8 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
             }
             require(correct,"Screen respects pattern alpha "+potatoPatterns()[pattern]);scene.surfaces[0].visible=false;scene.setBlend(1,0);scene.setAppearance(1,100,100);
             size->setValue(32);const auto wide=window.output->grabFramebuffer();require(wide!=still&&energy(wide)>energy(still),"width control "+potatoPatterns()[pattern]);size->setValue(18);
-            if(pattern>=5){size->setValue(pattern==6?12:38);const auto preview=window.output->grabFramebuffer();size->setValue(18);QPainter painter(&state->sheet);const int x=((pattern-5)%2)*640,y=((pattern-5)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),preview);}
+            const int firstPreview=std::max(5,int(potatoPatterns().size())-4);
+            if(pattern>=firstPreview){size->setValue(potatoPatternDefaultSize(pattern));const auto preview=window.output->grabFramebuffer();size->setValue(18);QPainter painter(&state->sheet);const int x=((pattern-firstPreview)%2)*640,y=((pattern-firstPreview)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),preview);}
             pause->setChecked(false);scene.dirty=false;const auto saved=scene.json();const double phase=scene.current()->patternPhase;const auto editor=window.canvas->grabFramebuffer();
             QTimer::singleShot(260,&window,[&window,&app,state,require,pause,step,still,editor,phase,saved,pattern]{
                 auto &scene=window.scene;require(scene.current()->patternPhase>phase&&window.output->grabFramebuffer()!=still&&window.canvas->grabFramebuffer()!=editor,"motion in both canvases "+potatoPatterns()[pattern]);
@@ -129,11 +130,12 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
 
 // An opt-in preview rendered by the same four mapped surfaces as live output.
 // Deterministic phase steps make the exported frames easy to compare visually.
-template<class Window> void renderFxMotion(Window &window,QApplication &app,const QString &directory){
+template<class Window> void renderFxMotion(Window &window,QApplication &app,const QString &directory,int firstPattern=5){
     if(directory.isEmpty()||!QDir().mkpath(directory)){app.exit(2);return;}
+    if(firstPattern<5||firstPattern+3>=potatoPatterns().size()){app.exit(2);return;}
     auto &scene=window.scene;scene.newProject();
     for(int i=0;i<4;++i){
-        if(i)scene.add();scene.setPattern(i,i+5);
+        if(i)scene.add();scene.setPattern(i,i+firstPattern);
         auto &s=scene.surfaces[i];const double x=(i%2)*.5,y=(i/2)*.5;
         s.corners={QPointF(x,y),QPointF(x+.5,y),QPointF(x+.5,y+.5),QPointF(x,y+.5)};s.patternPlaying=false;
     }
