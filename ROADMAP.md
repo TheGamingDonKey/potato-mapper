@@ -4,10 +4,10 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
-- Latest published app: [v0.4.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.4.0).
+- Latest published app: [v0.5.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.5.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
 - On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
-- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. **Implemented — unreleased:** Screen/Add blending and three more Potato FX patterns on `codex/blending-potato-fx`, targeting v0.5.0. Source review and focused developer/portable checks passed; publication is pending. Raspberry Pi remains deferred.
+- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. Screen/Add blending and three more Potato FX patterns are merged in [PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7) and shipped in v0.5.0. No implementation is currently active. Next approved work: the remaining pattern collection/controls, then missing-media repair. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
@@ -46,8 +46,8 @@ These desktop improvements are in [v0.3.0](https://github.com/TheGamingDonKey/po
 Shane approved these increments in chat. Work proceeds in this order, with a runnable release between useful milestones. The current increment extends the existing editor and renderer; it does not introduce another framework.
 
 1. **UI polish and appearance controls — shipped in v0.4.0.** See the completed checklist below. Dots remain the only generator in this first increment.
-2. **Screen/Add blending.** Overlay suitable black-background media. This does not remove arbitrary video backgrounds.
-3. **Potato FX pattern collection.** Add diagonal stripes, rings and square waves first, then consider checkerboard, sine waves, colour wash and pulsing squares. Target eight patterns including existing dots; add shared colour/direction/spacing controls where each pattern supports them. Check motion, pause, saved settings and output performance as patterns are added.
+2. **Screen/Add blending — shipped in v0.5.0.** Overlay suitable black-background media. This does not remove arbitrary video backgrounds.
+3. **Potato FX pattern collection.** Diagonal stripes, rings and square waves shipped in v0.5.0. Next consider checkerboard, sine waves, colour wash and pulsing squares. Target eight patterns including existing dots; add shared colour/direction/spacing controls where each pattern supports them. Check motion, pause, saved settings and output performance as patterns are added.
 4. **Missing-media repair and project collection.** Relink files while retaining geometry; export a project with its media for another computer.
 5. **Recovery and performance display.** Recover recent work after interruption, retain recoverable project backups and show useful output frame-rate information.
 
@@ -73,9 +73,9 @@ Implemented in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6),
 
 ## Next visual features
 
-- [x] **Screen and Add blending — implemented, unreleased (v0.5.0).** Selected-surface Normal/Screen/Add, Undo/Redo/reset and saved settings. Numerical editor/output checks cover opacity, image alpha, black overlays, native NV12 and patterns over a midtone layer. Normal is the default for older mappings. This is not general background removal.
+- [x] **Screen and Add blending — shipped in v0.5.0.** Selected-surface Normal/Screen/Add, Undo/Redo/reset and saved settings. Numerical editor/output checks cover opacity, image alpha, black overlays, native NV12 and patterns over a midtone layer. Normal is the default for older mappings. This is not general background removal.
 - [x] **Brightness and opacity per surface — shipped in v0.4.0.** Images, videos and dots share the controls; old-project defaults, Undo/Redo, save/reopen, overlap pixels and matching output checked. See PR #6 and the v0.4.0 checklist above.
-- [x] **Three more procedural patterns — implemented, unreleased (v0.5.0).** Diagonal stripes, expanding rings and square waves, plus existing dots. Actual UI speed/width/pause, motion in both canvases, unchanged project state during ticks, saved settings and Clear/Undo checked. Actual output contact sheet and editor inspected. Four further patterns and colour/direction/spacing controls remain planned; audio-reactive effects are separate.
+- [x] **Three more procedural patterns — shipped in v0.5.0.** Diagonal stripes, expanding rings and square waves, plus existing dots. Actual UI speed/width/pause, motion in both canvases, unchanged project state during ticks, saved settings and Clear/Undo checked. Actual output contact sheet and editor inspected. Four further patterns and colour/direction/spacing controls remain planned; audio-reactive effects are separate.
 
 ## Builds and releases
 
@@ -95,7 +95,9 @@ These are possibilities, not an approved implementation queue. Preserve the usef
 
 </details>
 
-## v0.5.0 release handoff — publication pending
+## Shipped in v0.5.0
+
+Merged in [PR #7](https://github.com/TheGamingDonKey/potato-mapper/pull/7) and published in [v0.5.0](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.5.0). Public latest-release metadata, canonical download (HTTP 200), archive size and SHA256 match the checked package.
 
 - Release build and source review passed. `--smoke-fx`, appearance, mapping, video-colour and clear checks passed locally. The strengthened pattern Screen check uses a midtone underlay.
 - Fresh portable package FX/appearance and real MP4 checks passed with only Windows system directories on PATH. An earlier FX check hung after its assertions; it did not recur in the fresh checked package. No persistent cause was established.

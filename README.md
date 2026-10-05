@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.4.0/PotatoMapper-0.4.0-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.5.0/PotatoMapper-0.5.0-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -25,8 +25,6 @@ I wanted to plug in my projector at home, map a few squares onto a wall or an ob
 This is an independent project, unaffiliated with MadMapper. It currently focuses on manual mapping for one projector.
 
 ## What works today
-
-The v0.5.0 blending/pattern additions below are implemented on the development branch and awaiting publication; the download above is still v0.4.0.
 
 - Multiple surfaces with draggable corners and a subdivided mesh.
 - Images and looping video, with stretch, fit, and crop options.
