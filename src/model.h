@@ -11,6 +11,7 @@
 #include <QHash>
 #include <QUuid>
 #include <QElapsedTimer>
+#include "patterns.h"
 
 class MediaSource : public QObject {
     Q_OBJECT
@@ -34,13 +35,14 @@ struct Surface {
     QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString name;
     QString media;
-    int pattern = 0; // 0 media/alignment grid, 1 animated dots
+    int pattern = 0; // Stable IDs in patterns.h, also used by the shared shader.
     int patternSpeed = 100;
     int patternSize = 18;
     bool patternPlaying = true;
     double patternPhase = 0;
     int brightness = 100;
     int opacity = 100;
+    int blend = 0; // 0 Normal, 1 Screen, 2 Add
     QPolygonF corners{QPointF(.15,.15), QPointF(.65,.15), QPointF(.65,.65), QPointF(.15,.65)};
     int cells = 2;
     QVector<QPointF> mesh;
@@ -75,6 +77,8 @@ public:
     void clearMedia(int index);
     void renameSurface(int index, const QString &name);
     void setAppearance(int index, int brightness, int opacity, bool recordUndo=true);
+    void setBlend(int index, int blend);
+    void resetAppearance(int index);
     void setPattern(int index, int pattern);
     void select(int index);
     void touch(bool structure = false);

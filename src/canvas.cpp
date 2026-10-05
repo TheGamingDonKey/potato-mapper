@@ -41,12 +41,19 @@ uniform vec3 yuvOffset;
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
 uniform int pattern;
+uniform int blendMode;
 uniform float phase;
 uniform float dotRadius;
 uniform float surfaceAspect;
 uniform float brightness;
 uniform float opacity;
 out vec4 color;
+void finishColor(){
+    color.rgb*=brightness;color.a*=opacity;
+    // Screen uses the effective (alpha-weighted) source colour. Transparent
+    // pixels must neither brighten nor darken the layer below.
+    if(blendMode==1)color.rgb*=color.a;
+}
 void main(){
     if(pattern==1){
         vec2 field=uv*vec2(12.0,12.0/surfaceAspect)+vec2(-phase*.8,phase*.4);
@@ -57,12 +64,40 @@ void main(){
         float aa=max(fwidth(distanceToDot),.002);
         float alpha=1.0-smoothstep(radius-aa,radius+aa,distanceToDot);
         vec3 tint=mix(vec3(.18,.75,1.0),vec3(.9,1.0,1.0),wave);
-        color=vec4(tint*brightness,alpha*opacity);return;
+        color=vec4(tint,alpha);finishColor();return;
+    }
+    if(pattern>1){
+        vec2 field=uv*vec2(8.0,8.0/surfaceAspect);
+        float distanceToLine;
+        vec3 tint;
+        if(pattern==2){
+            distanceToLine=abs(fract(field.x+field.y-phase*.8)-.5);
+            tint=mix(vec3(.15,.65,1.0),vec3(.7,1.0,1.0),.5+.5*sin((field.x-field.y)*.3-phase));
+        }else if(pattern==3){
+            vec2 centred=(uv-.5)*vec2(8.0,8.0/surfaceAspect);
+            float radius=length(centred);
+            distanceToLine=abs(fract(radius-phase*.8)-.5);
+            tint=mix(vec3(.45,.22,1.0),vec3(1.0,.5,.85),.5+.5*sin(radius-phase));
+        }else{
+            // Distance to a repeating stepped polyline: horizontal plateaus
+            // and vertical rises are joined, rather than disconnected bars.
+            float x=mod(field.x-phase*.7,2.0);
+            float y=mod(field.y+1.0,3.0)-1.0;
+            float upperX=min(max(x-1.0,0.0),2.0-x);
+            float lowerX=min(max(1.0-x,0.0),x);
+            float horizontal=min(length(vec2(upperX,y)),length(vec2(lowerX,y-1.0)));
+            float vertical=length(vec2(min(min(x,2.0-x),abs(x-1.0)),y-clamp(y,0.0,1.0)));
+            distanceToLine=min(horizontal,vertical);
+            tint=mix(vec3(.1,1.0,.65),vec3(.8,1.0,.2),.5+.5*sin(field.y*.4-phase));
+        }
+        float aa=max(fwidth(distanceToLine),.002);
+        float alpha=1.0-smoothstep(dotRadius-aa,dotRadius+aa,distanceToLine);
+        color=vec4(tint,alpha);finishColor();return;
     }
     vec2 p=uv*uvScale+uvOffset;if(any(lessThan(p,vec2(0.0)))||any(greaterThan(p,vec2(1.0))))discard;
     if(yuvVideo){vec3 yuv=vec3(texture(picture,p).r,texture(chromaPicture,p).rg);color=vec4(clamp(yuvToRgb*(yuv-yuvOffset),0.0,1.0),1.0);}
     else color=texture(picture,p);
-    color.rgb*=brightness;color.a*=opacity;
+    finishColor();
 }
 )GLSL";
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment)||!program.link()){
@@ -114,6 +149,9 @@ void Canvas::paintGL(){
     program.setUniformValue("chromaPicture",1);
     if(editor||!scene->blackout)for(const auto &s:scene->surfaces){
         if(!s.visible)continue;
+        if(s.blend==1)glBlendFuncSeparate(GL_ONE,GL_ONE_MINUS_SRC_COLOR,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+        else glBlendFuncSeparate(GL_SRC_ALPHA,s.blend==2?GL_ONE:GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+        program.setUniformValue("blendMode",s.blend);
         auto *media=scene->source(s.media);const auto &img=media->image;const auto frameSize=media->frameSize();if(frameSize.isEmpty())continue;
         const bool yuv=media->mappedVideo.isValid();program.setUniformValue("yuvVideo",yuv);
         auto &tex=textures[s.media];if(!tex.id){glGenTextures(1,&tex.id);}
