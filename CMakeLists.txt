@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
-project(PotatoMapper VERSION 0.3.0 LANGUAGES CXX)
+project(PotatoMapper VERSION 0.4.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS Widgets OpenGLWidgets Multimedia Network)
 qt_add_executable(PotatoMapper WIN32
-    src/main.cpp src/model.h src/model.cpp src/canvas.h src/canvas.cpp src/branding.h src/updates.h src/updates.cpp)
+    src/main.cpp src/model.h src/model.cpp src/canvas.h src/canvas.cpp src/branding.h src/updates.h src/updates.cpp src/ui.h src/style.h)
 set_target_properties(PotatoMapper PROPERTIES OUTPUT_NAME PotatoMapperApp)
 target_compile_definitions(PotatoMapper PRIVATE POTATO_VERSION="${PROJECT_VERSION}")
 target_link_libraries(PotatoMapper PRIVATE Qt6::Widgets Qt6::OpenGLWidgets Qt6::Multimedia Qt6::Network)

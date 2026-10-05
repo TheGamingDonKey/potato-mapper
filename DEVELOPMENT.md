@@ -14,6 +14,7 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | `src/updates.h`, `src/updates.cpp` | GitHub release checks, streamed download, verification, extraction and restart handoff |
 | `src/launcher.cpp` | Small Windows launcher, version selection, update installation, rollback and startup recovery |
 | `src/branding.h` | Startup splash drawn with the existing potato logo |
+| `src/ui.h`, `src/style.h` | Collapsible inspector sections, filename elision and the shared widget theme |
 | `assets/` | Potato logo, Windows icon and resource metadata |
 | `build.ps1` | Configure, build Release, and deploy runtime DLLs locally |
 | `package.ps1` | Package the built executable and runtime dependencies into a portable Windows x64 ZIP |
@@ -26,6 +27,10 @@ Qt Multimedia decodes video through QVideoSink. Common unrotated SDR NV12 frames
 Dots are procedural fragment-shader output, with per-surface phase advanced by Scene's timer. Both canvases read the same phase. Animation frames emit repaint notifications without marking the project dirty. Speed, size, and pause are serialized; animation phase restarts on project load. Pattern `0` selects media/grid and `1` selects dots.
 
 The white grid uses a transparent texture with mipmaps. QPainter overlays coexist with OpenGL through `beginNativePainting()` / `endNativePainting()` and explicit viewport restoration. Preserve that ordering when changing rendering.
+
+The v0.4.0 increment stores per-surface `brightness` and `opacity` as integer percentages (0–100). Earlier projects default to 100 for both. The shared shader scales RGB and alpha after image/video sampling, and applies the same factors to procedural dots. Separate RGB/alpha blend factors retain an opaque canvas for Qt's final composition. `Scene::setAppearance` supports one undo record per slider drag; selecting a surface or repainting an animation does not change these settings. Earlier apps ignore the new appearance settings; saving in an earlier app does not retain them.
+
+The sidebar keeps the surface list above a scrolling inspector. Media, Appearance, Potato FX and Mapping are collapsible sections. Mapping and Potato FX begin collapsed; selecting dots reveals their settings. Potato FX currently offers media/grid and dots, with other generators scheduled as later increments.
 
 ## Build and focused checks
 
@@ -43,6 +48,8 @@ Existing general checks use `--smoke` (corner interaction, serialization, and re
 
 `--smoke-video-colour` checks native NV12 rendering against Qt's converted colours, padded row strides, colour ranges, and switching back to an RGB image. `--profile-media "C:\path\one.mp4" "C:\path\two.mp4" "C:\path\three.mp4"` runs a separate temporary scene and output window, then logs per-source frame rate, frame preparation time, and output repaint rate after warmup. It does not save or change the user's mapping.
 
+`--smoke-appearance` exercises the actual sliders and Potato FX picker, one Undo for a continuous slider drag, Redo, saved settings, earlier HomeMapper defaults, overlapping layers, image/dots/native-NV12 pixels and matching editor/output pixels. It also checks the compact sidebar and filename handling. `--snapshot <temporary.png>` captures the real editor for visual inspection. These checks use temporary synthetic projects/media.
+
 On the original Radeon 840M development PC, three 1280x720 Grok clips in that profiling window improved from about 12 to 27 output repaints per second after the NV12 change. Frame preparation fell from about 8.4 ms to 1.6-2.0 ms per frame. These are local measurements, not a guaranteed frame rate for other hardware, codecs, or projector configurations.
 
 To reopen a mapping normally:
@@ -58,6 +65,8 @@ For visual work, run the app and inspect the changed behavior once. For output c
 `--smoke-clear` checks the actual Clear media button, retained geometry, another surface, Undo/Redo, saved state, and original-file preservation. `--test-restart` exercises the real unsaved-work Cancel/Save prompts and active-output cancellation. `--test-splash --snapshot <temporary.png>` captures the actual splash widget; `QT_SCALE_FACTOR=1.5` allows a focused scaling check without changing Windows display settings.
 
 The optional `PotatoUpdateChecks` build target runs the actual update dialog against deterministic release responses and the real release ZIP/extractor. Supply `<release.zip> <extracted-package> --install-root <new-disposable-folder>`. It checks the packaged manifest, missing payload/digest handling, an interrupted download, cancelled restart, unchanged personal files, and staging cleanup. With `--handoff`, it uses the real launcher and editor process lock, exits after preparation, and reopens a sample mapping in the installed editor. Close that disposable editor afterwards. The fixture network is injected only by this test executable; the application's Help command always uses the public repository endpoint.
+
+The check reads the target version from the package and currently simulates an installed v0.3.0 editor. `--launcher <path>` lets the handoff use a retained older launcher. The v0.4.0 rehearsal used the actual v0.3.0 launcher and retained runtime; the v0.4.0 editor reopened the saved fixture with unchanged project/media bytes. This was a local disposable installation, not Shane's other laptop.
 
 Run `pwsh ./tests/launcher.ps1 -PackageDirectory <extracted-package>` for a packaged upgrade, rollback, repeat update after rollback, incomplete installation, and startup-failure recovery. These checks use a disposable installation under `out` and synthetic personal files; the retained old-version sentinel is not claimed as a run of an older editor. The current runtime is installed and launched for real, including reopening the sample mapping after recovery. The script requires PowerShell 7 for `ProcessStartInfo.ArgumentList`.
 
@@ -76,7 +85,7 @@ Release packaging is always fresh. Do not zip the developer's `app` folder or in
 - One projector output. Manual mapping only; no camera calibration or 3D object reconstruction.
 - Dots currently use a fixed cyan/white palette and fixed lattice density. Other generator names discussed in chat have not been implemented.
 - Ordinary media uses alpha blending. Screen/Add blending and background removal are not implemented. Black in an opaque video can obscure lower layers.
-- Sidebar controls may require scrolling on shorter displays.
+- The inspector may require scrolling on shorter displays; the surface list remains accessible above it.
 - Project files reference media; there is no pack-and-collect feature.
 - Existing video controls act on sources shared by path. Review resource cleanup and decoder performance before scaling to many videos.
 - Releases contain a portable Windows x64 ZIP with a manual GitHub update command. There is no installer or automated CI yet. When updating runtime libraries, update their notices and publish matching sources alongside the ZIP. Retaining earlier runtimes consumes disk space; there is no version-cleanup UI yet.

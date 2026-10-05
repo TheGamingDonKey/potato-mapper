@@ -6,7 +6,7 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 - Latest published app: [v0.3.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.3.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
-- Desktop usability/update work is merged in [PR #5](https://github.com/TheGamingDonKey/potato-mapper/pull/5) and published in v0.3.0. No feature implementation is currently in progress. Raspberry Pi remains deferred.
+- Desktop usability/update work is merged in [PR #5](https://github.com/TheGamingDonKey/potato-mapper/pull/5) and published in v0.3.0. **In progress:** UI polish, Potato FX naming/picker and per-surface brightness/opacity on `codex/ui-appearance`, targeting v0.4.0. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 
@@ -40,9 +40,19 @@ These desktop improvements are in [v0.3.0](https://github.com/TheGamingDonKey/po
 - [x] **Clear selected surface content — shipped in v0.3.0.** Visible Media-panel action plus right-click on a surface or its list entry. Removes image/video/dots content, retains geometry and other surfaces, supports Undo/Redo and save/reopen, and leaves source files in place. `--smoke-clear` passed; actual surface context menu inspected.
 - [x] **Check and install GitHub updates (Windows) — shipped in v0.3.0.** Help menu checks stable public releases, streams/cancels downloads, verifies SHA256 and runtime manifest, prompts for unsaved work/active projection, then hands off to the native launcher and reopens the saved mapping. Versioned folders retain previous runtimes. Actual ZIP extraction and editor-process handoff passed in a disposable installation, as did interrupted download, cancelled restart, incomplete installation, rollback/re-update, startup-failure recovery with both pointers restored, staging cleanup, and unchanged project/media checks. The real GitHub check dialog was inspected. v0.2.0 needs one manual package-copy upgrade; later copies use Help. A future GitHub-hosted update on Shane's other computer and a physical-projector update remain untested.
 
-## Supporting improvements
+## Approved development order — October 4, 2026
 
-Take one item at a time. Each line includes the behaviour needed before checking it off.
+Shane approved these increments in chat. Work proceeds in this order, with a runnable release between useful milestones. The current increment extends the existing editor and renderer; it does not introduce another framework.
+
+1. **UI polish and appearance controls (implemented — unreleased, targeting v0.4.0).** Rounded themed scrollbars, resizable sidebar, persistent surface list, collapsible inspector sections, shortened filenames with full-path tooltips, relevant playback controls, and brightness/opacity with Undo and saved settings. Potato FX names the animation picker; dots remain the only generator in this first increment. Release build and packaged appearance/mapping/dots/colour/clear/MP4 checks passed without developer libraries on PATH; real editor inspected at a 1024 × 640 logical window size. Download/extraction/cancellation checks passed. A real v0.3.0 launcher installed v0.4.0 and reopened a saved fixture mapping; project/media bytes and the retained v0.3.0 runtime were unchanged. Physical-projector hardware and this new update on Shane's other laptop remain untested.
+2. **Screen/Add blending.** Overlay suitable black-background media. This does not remove arbitrary video backgrounds.
+3. **Potato FX pattern collection.** Add diagonal stripes, rings and square waves first, then consider checkerboard, sine waves, colour wash and pulsing squares. Target eight patterns including existing dots; add shared colour/direction/spacing controls where each pattern supports them. Check motion, pause, saved settings and output performance as patterns are added.
+4. **Missing-media repair and project collection.** Relink files while retaining geometry; export a project with its media for another computer.
+5. **Recovery and performance display.** Recover recent work after interruption, retain recoverable project backups and show useful output frame-rate information.
+
+Raspberry Pi, audio-reactive effects and multiple projectors remain later investigations.
+
+## Project and editing improvements
 
 - [ ] **Collect project and media (lower priority).** Export a new folder containing the mapping and referenced files, handle duplicate filenames, and save portable relative paths. Reopen it after moving the folder with the original media unavailable; leave the original project untouched.
 - [ ] **Find missing media.** Show which files are missing and allow them to be relinked without losing surface geometry. Check reopening a moved project and saving corrected paths.

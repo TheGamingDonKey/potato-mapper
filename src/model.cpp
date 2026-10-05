@@ -118,13 +118,14 @@ QJsonObject Surface::json(const QString &base) const {
     QJsonArray cs,ms; for(auto p:corners)cs.append(pointJson(p));for(auto p:mesh)ms.append(pointJson(p));
     QString path=media;
     if(!path.isEmpty()&&!base.isEmpty())path=QDir(base).relativeFilePath(path);
-    return {{"id",id},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
+    return {{"id",id},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"brightness",brightness},{"opacity",opacity},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
 }
 bool Surface::fromJson(const QJsonObject &j,const QString &base,Surface &s){
     s.id=j["id"].toString(s.id);s.name=j["name"].toString("Surface");s.media=j["media"].toString();
     if(!s.media.isEmpty())s.media=QDir::cleanPath(QDir::isAbsolutePath(s.media)?s.media:QDir(base).absoluteFilePath(s.media));
     s.cells=j["cells"].toInt(2);s.visible=j["visible"].toBool(true);s.locked=j["locked"].toBool();s.fit=std::clamp(j["fit"].toInt(),0,2);
     s.pattern=std::clamp(j["pattern"].toInt(),0,1);s.patternSpeed=std::clamp(j["patternSpeed"].toInt(100),0,300);s.patternSize=std::clamp(j["patternSize"].toInt(18),5,45);s.patternPlaying=j["patternPlaying"].toBool(true);
+    s.brightness=std::clamp(j["brightness"].toInt(100),0,100);s.opacity=std::clamp(j["opacity"].toInt(100),0,100);
     auto readPoints=[](const QJsonArray &a,QPolygonF &pts){pts.clear();for(auto value:a){const auto p=value.toArray();if(p.size()!=2||!p[0].isDouble()||!p[1].isDouble())return false;pts.append({p[0].toDouble(),p[1].toDouble()});}return true;};
     QPolygonF points;
     if(!readPoints(j["corners"].toArray(),s.corners)||!readPoints(j["mesh"].toArray(),points))return false;
@@ -176,6 +177,18 @@ void Scene::renameSurface(int i,const QString &name){
     const auto clean=name.trimmed().left(80);
     if(i<0||i>=surfaces.size()||clean.isEmpty()||surfaces[i].name==clean)return;
     checkpoint();surfaces[i].name=clean;touch(true);
+}
+void Scene::setAppearance(int i,int brightness,int opacity,bool recordUndo){
+    if(i<0||i>=surfaces.size())return;
+    brightness=std::clamp(brightness,0,100);opacity=std::clamp(opacity,0,100);
+    auto &s=surfaces[i];if(s.brightness==brightness&&s.opacity==opacity)return;
+    if(recordUndo)checkpoint();s.brightness=brightness;s.opacity=opacity;touch(true);
+}
+void Scene::setPattern(int i,int pattern){
+    if(i<0||i>=surfaces.size())return;
+    pattern=std::clamp(pattern,0,1);auto &s=surfaces[i];if(s.pattern==pattern)return;
+    if(!pattern){clearMedia(i);return;}
+    checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;touch(true);
 }
 QJsonObject Scene::json(const QString &base) const {
     QJsonArray items;for(const auto &s:surfaces)items.append(s.json(base));
