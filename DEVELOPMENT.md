@@ -10,7 +10,8 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | --- | --- |
 | `src/main.cpp` | Application setup, toolbars, media controls, display selection, project actions, diagnostic CLI modes |
 | `src/model.h`, `src/model.cpp` | Surfaces, JSON persistence, undo/redo snapshots, media decoding, animation timing |
-| `src/canvas.h`, `src/canvas.cpp` | Shared editor/output renderer, shaders, mesh interaction, drag-and-drop |
+| `src/canvas.h`, `src/canvas.cpp` | Shared editor/output renderer, mesh interaction, drag-and-drop |
+| `assets/patterns.frag`, `src/patterns.h` | Shared GLSL image/video/pattern shader, stable pattern IDs and defaults |
 | `src/updates.h`, `src/updates.cpp` | GitHub release checks, streamed download, verification, extraction and restart handoff |
 | `src/launcher.cpp` | Small Windows launcher, version selection, update installation, rollback and startup recovery |
 | `src/branding.h` | Startup splash drawn with the existing potato logo |
@@ -35,7 +36,7 @@ The sidebar keeps the surface list above a scrolling inspector. Media, Appearanc
 
 The v0.5.0 increment stores `blend` (0 Normal, 1 Screen, 2 Add), defaulting to Normal for earlier mappings. Normal uses source-alpha composition, Add uses alpha-weighted addition and Screen uses `source * alpha + destination * (1 - source * alpha)` per RGB channel. The shared shader premultiplies only Screen RGB after applying brightness/opacity; separate alpha factors retain the opaque Qt canvas. Blend factors are selected for every surface so mixed layer modes work in order. `Scene::setBlend` and `resetAppearance` record Undo; reset restores 100% brightness/opacity and Normal in one operation. Screen/Add apply to images, native NV12 video and procedural patterns. They are layer blend modes, not multi-projector edge blending.
 
-`--smoke-fx` checks the actual blend/pattern controls, numerical overlap pixels in editor/output at 0/50/100% opacity, image alpha, black overlays, return to Normal, reset/Undo, native NV12 Screen, old-format defaults, generator motion/pause/width, and saved settings. `--preview <temporary.png>` captures the four real output frames as a contact sheet; `--snapshot <temporary.png>` captures the editor. Files and scenes are disposable.
+`--smoke-fx` checks the actual blend/pattern controls, numerical overlap pixels in editor/output at 0/50/100% opacity, image alpha, black overlays, return to Normal, reset/Undo, native NV12 Screen, old-format defaults, generator motion/pause/width, and saved settings. `--preview <temporary.png>` captures the four new cell effects as a contact sheet; `--snapshot <temporary.png>` captures the editor. Files and scenes are disposable.
 
 ## Build and focused checks
 
@@ -71,7 +72,7 @@ For visual work, run the app and inspect the changed behavior once. For output c
 
 The optional `PotatoUpdateChecks` build target runs the actual update dialog against deterministic release responses and the real release ZIP/extractor. Supply `<release.zip> <extracted-package> --install-root <new-disposable-folder>`. It checks the packaged manifest, missing payload/digest handling, an interrupted download, cancelled restart, unchanged personal files, and staging cleanup. With `--handoff`, it uses the real launcher and editor process lock, exits after preparation, and reopens a sample mapping in the installed editor. Close that disposable editor afterwards. The fixture network is injected only by this test executable; the application's Help command always uses the public repository endpoint.
 
-The check reads the target version from the package and currently simulates an installed v0.4.0 editor. `--launcher <path>` lets the handoff use a retained older launcher. The v0.4.0 rehearsal used the actual v0.3.0 launcher and retained runtime; the v0.4.0 editor reopened the saved fixture with unchanged project/media bytes. The v0.5.0 rehearsal likewise used the actual v0.4.0 launcher, reopened the saved mapping and retained its files/runtime. These were local disposable installations; this update on Shane's other laptop remains untested.
+The check reads the target version from the package and currently simulates an installed v0.5.0 editor. `--launcher <path>` lets the handoff use a retained older launcher. The v0.4.0 rehearsal used the actual v0.3.0 launcher and retained runtime; the v0.4.0 editor reopened the saved fixture with unchanged project/media bytes. The v0.5.0 rehearsal likewise used the actual v0.4.0 launcher, reopened the saved mapping and retained its files/runtime. These were local disposable installations; this update on Shane's other laptop remains untested.
 
 Run `pwsh ./tests/launcher.ps1 -PackageDirectory <extracted-package>` for a packaged upgrade, rollback, repeat update after rollback, incomplete installation, and startup-failure recovery. These checks use a disposable installation under `out` and synthetic personal files; the retained old-version sentinel is not claimed as a run of an older editor. The current runtime is installed and launched for real, including reopening the sample mapping after recovery. The script requires PowerShell 7 for `ProcessStartInfo.ArgumentList`.
 
@@ -88,7 +89,7 @@ Release packaging is always fresh. Do not zip the developer's `app` folder or in
 ## Known limits and next work
 
 - One projector output. Manual mapping only; no camera calibration or 3D object reconstruction.
-- Generators use fixed palettes, spacing and direction. Colour/direction/spacing controls and four further patterns remain planned.
+- The four flowing effects are original procedural interpretations of the inspected references, not exact replicas. Patterns remain clipped to their mapped surface. There is no shared world-coordinate pattern alignment between surfaces.
 - Screen/Add blending can overlay black-background media; it does not remove arbitrary video backgrounds. Normal remains the default.
 - The inspector may require scrolling on shorter displays; the surface list remains accessible above it.
 - Project files reference media; there is no pack-and-collect feature.
@@ -96,3 +97,15 @@ Release packaging is always fresh. Do not zip the developer's `app` folder or in
 - Releases contain a portable Windows x64 ZIP with a manual GitHub update command. There is no installer or automated CI yet. When updating runtime libraries, update their notices and publish matching sources alongside the ZIP. Retaining earlier runtimes consumes disk space; there is no version-cleanup UI yet.
 
 Keep changes small and runnable. Preserve backward compatibility with the existing version-1 JSON format and earlier `HomeMapper` format tag. A new feature should be reachable in the actual UI and render through the same output path.
+
+## Flowing Potato FX (v0.6.0, implemented pending release)
+
+Stable IDs 0–4 retain their generators; ID 4 is labelled Stepped waves to distinguish it from the new cell-based SquareWave. IDs 5–8 are SquareWave, Diagonals, CubicCircles and SquareArray. New effects default to white, Flow 70%, no rotation/reverse/edge fade and densities 48/32/24/18. New cell sizes default to 38%, with Diagonals at 12% line width. Density and size are separate controls.
+
+The shader combines continuous sine/cosine fields and coordinate warping to change neighbouring cells together. SquareWave stretches narrow cells; Diagonals changes stroke orientation; CubicCircles morphs square/circle/ring distance fields; SquareArray shifts rows while cell sizes change. Derivative-based antialiasing smooths small shapes. No added runtime library, video file or random reseeding is involved. Optional Soft edge fades the surface boundary and defaults to zero.
+
+Each surface serializes `fxDensity`, `fxFlow`, `fxAngle`, `fxPalette`, `fxEdge` and `fxReverse`. Setters clamp values and record Undo. Older projects default to their original spacing/palettes, angle zero and no fade/reverse. Phase remains transient and shared by editor/output. Saving a new mapping in an older app can discard these settings and new pattern IDs.
+
+`--smoke-fx` additionally checks control scope/Undo, saved look settings and old-pattern defaults, unchanged paused pixels when reversing, and timed backward motion. Direction applies to future Scene timer increments, preserving the current phase. `--test-fx-motion --frames <temporary-directory>` exports 48 actual output frames at 0.12-second phase steps, with all four cell effects mapped into quadrants. This is a deterministic visual preview, not a frame-rate benchmark. The shaders were inspected at multiple phases against the open MadMapper reference. Physical projection remains a user check.
+
+Technique references: [procedural grids and transforms](https://thebookofshaders.com/09/) and [continuous wave modulation](https://thebookofshaders.com/13/). These informed original implementation code; no third-party effect shader was copied.

@@ -152,12 +152,22 @@ public:
         connect(blendPicker,&QComboBox::currentIndexChanged,this,[this](int index){scene.setBlend(scene.selected,index);});
         resetAppearance=button("Reset appearance",[this]{scene.resetAppearance(scene.selected);});resetAppearance->setObjectName("resetAppearanceButton");appearance->content->addWidget(resetAppearance);
         fxSection=new InspectorSection("Potato FX");fxSection->heading->setChecked(false);detailLayout->addWidget(fxSection);
-        auto *fxForm=new QFormLayout;patternPicker=new QComboBox;patternPicker->setObjectName("animationPicker");patternPicker->addItems(potatoPatterns());fxForm->addRow("Animation",patternPicker);fxSection->content->addLayout(fxForm);
+        auto *fxForm=new QFormLayout;patternPicker=new QComboBox;patternPicker->setObjectName("animationPicker");patternPicker->addItems(potatoPatterns());patternPicker->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);patternPicker->setMinimumContentsLength(12);fxForm->addRow("Animation",patternPicker);fxSection->content->addLayout(fxForm);
         connect(patternPicker,&QComboBox::currentIndexChanged,this,[this](int index){scene.setPattern(scene.selected,index);});
         patternControls=new QWidget;patternControls->setObjectName("patternControls");auto *patternForm=new QFormLayout(patternControls);patternForm->setContentsMargins(0,0,0,0);
         patternSpeed=new QSpinBox;patternSpeed->setRange(0,300);patternSpeed->setSuffix(" %");patternSpeed->setSingleStep(10);patternForm->addRow("Speed",patternSpeed);
         patternSize=new QSpinBox;patternSize->setObjectName("patternSize");patternSize->setRange(5,45);patternSize->setSuffix(" %");patternSizeLabel=new QLabel("Dot size");patternForm->addRow(patternSizeLabel,patternSize);
         patternSpeed->setObjectName("patternSpeed");
+        auto fxSpin=[patternForm](const QString &label,const QString &id,int min,int max){auto *spin=new QSpinBox;spin->setRange(min,max);spin->setObjectName(id);patternForm->addRow(label,spin);return spin;};
+        patternDensity=fxSpin("Density","patternDensity",4,80);patternDensity->setToolTip("Number of elements across the surface. Higher values make a finer pattern; use size or line width to adjust each element separately.");
+        patternFlow=fxSpin("Flow","patternFlow",0,100);patternFlow->setSuffix(" %");patternFlow->setToolTip("Amount of variation in the flowing cell effects.");
+        patternAngle=fxSpin("Angle","patternAngle",-180,180);patternAngle->setSuffix(" °");
+        patternPalette=new QComboBox;patternPalette->setObjectName("patternPalette");patternPalette->addItems({"Original palette","White","Cyan","Purple","Amber","Mint"});patternForm->addRow("Colour",patternPalette);
+        patternEdge=fxSpin("Soft edge","patternEdge",0,25);patternEdge->setSuffix(" %");patternEdge->setToolTip("Optional fade near the mapped boundary. 0% keeps the whole surface active.");
+        patternReverse=new QCheckBox("Reverse movement");patternReverse->setObjectName("patternReverse");patternForm->addRow(patternReverse);
+        auto updateLook=[this]{if(auto *s=scene.current();s&&s->pattern){auto look=s->fx;look.density=patternDensity->value();look.flow=patternFlow->value();look.angle=patternAngle->value();look.palette=patternPalette->currentIndex();look.edge=patternEdge->value();look.reverse=patternReverse->isChecked();scene.setFxLook(scene.selected,look);}};
+        for(auto *spin:{patternDensity,patternFlow,patternAngle,patternEdge})connect(spin,qOverload<int>(&QSpinBox::valueChanged),this,[updateLook](int){updateLook();});
+        connect(patternPalette,&QComboBox::currentIndexChanged,this,[updateLook](int){updateLook();});connect(patternReverse,&QCheckBox::toggled,this,[updateLook](bool){updateLook();});
         patternPause=new QCheckBox("Pause animation");patternPause->setObjectName("patternPause");patternForm->addRow(patternPause);fxSection->content->addWidget(patternControls);
         connect(patternSpeed,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSpeed=v;scene.touch();}});
         connect(patternSize,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSize=v;scene.touch();}});
@@ -237,6 +247,9 @@ private:
     InspectorSection *mediaSection,*fxSection;
     QScrollArea *inspector;
     QSpinBox *patternSpeed,*patternSize;
+    QSpinBox *patternDensity,*patternFlow,*patternAngle,*patternEdge;
+    QComboBox *patternPalette;
+    QCheckBox *patternReverse;
     QCheckBox *patternPause;
     QCheckBox *visible,*locked,*mute;
     ElidedLabel *mediaLabel;
@@ -304,7 +317,7 @@ private:
         }
     }
     void refresh(){
-        QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity),b13(blendPicker);
+        QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity),b13(blendPicker),b14(patternDensity),b15(patternFlow),b16(patternAngle),b17(patternPalette),b18(patternEdge),b19(patternReverse);
         const int listScroll=list->verticalScrollBar()->value();const auto previousId=list->currentItem()?list->currentItem()->data(Qt::UserRole).toString():QString();
         QStringList previousOrder,nextOrder;for(int i=0;i<list->count();++i)previousOrder<<list->item(i)->data(Qt::UserRole).toString();
         list->clear();for(const auto &s:scene.surfaces){const auto content=s.pattern?QString("Potato FX · ")+potatoPatterns().value(s.pattern):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setData(Qt::UserRole,s.id);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);
@@ -313,6 +326,8 @@ private:
         patternPicker->setEnabled(s);if(s&&s->pattern&&patternPicker->currentIndex()!=s->pattern)fxSection->heading->setChecked(true);patternPicker->setCurrentIndex(s?s->pattern:0);patternControls->setVisible(s&&s->pattern);
         brightness->setEnabled(s);opacity->setEnabled(s);blendPicker->setEnabled(s);blendPicker->setCurrentIndex(s?s->blend:0);patternSizeLabel->setText(potatoPatternSizeLabel(s?s->pattern:0));resetAppearance->setEnabled(s&&(s->brightness!=100||s->opacity!=100||s->blend));
         brightness->setValue(s?s->brightness:100);opacity->setValue(s?s->opacity:100);brightnessValue->setText(QString::number(brightness->value())+" %");opacityValue->setText(QString::number(opacity->value())+" %");
+        if(s){patternDensity->setValue(s->fx.density);patternFlow->setValue(s->fx.flow);patternAngle->setValue(s->fx.angle);patternPalette->setCurrentIndex(s->fx.palette);patternEdge->setValue(s->fx.edge);patternReverse->setChecked(s->fx.reverse);}
+        const bool flowing=s&&s->pattern>=5;patternFlow->setEnabled(flowing);patternReverse->setEnabled(s&&s->pattern);patternDensity->setEnabled(s&&s->pattern);
         if(s){patternSpeed->setValue(s->patternSpeed);patternSize->setValue(s->patternSize);patternPause->setChecked(!s->patternPlaying);visible->setChecked(s->visible);locked->setChecked(s->locked);subdivisions->setValue(s->cells);subdivisions->setSuffix(" × "+QString::number(s->cells)+" cells");fit->setCurrentIndex(s->fit);fit->setEnabled(!s->pattern&&!s->media.isEmpty());mediaLabel->setFullText(s->pattern?potatoPatterns().value(s->pattern)+" · Potato FX":s->media.isEmpty()?"White grid — drop media here":QFileInfo(s->media).fileName(),s->media);auto *m=scene.source(s->media);videoControls->setVisible(m->player&&!s->pattern);mute->setEnabled(m->audio);mute->setChecked(!m->audio||m->audio->isMuted());}
         else {mediaLabel->setFullText("Add a surface to begin");mute->setEnabled(false);videoControls->hide();}
         setWindowTitle("Potato Mapper"+(scene.projectPath.isEmpty()?QString():" — "+QFileInfo(scene.projectPath).fileName())+" [*]");setWindowModified(scene.dirty);
@@ -346,6 +361,7 @@ int main(int argc,char **argv){
     const int mediaArgument=args.indexOf("--media");
     if(mediaArgument>=0&&mediaArgument+1<args.size())window.scene.assignMedia(0,args[mediaArgument+1]);
     if(args.contains("--smoke-fx")){window.smoke=true;runFxChecks(window,app,args);}
+    if(args.contains("--test-fx-motion")){window.smoke=true;const int i=args.indexOf("--frames");renderFxMotion(window,app,i>=0&&i+1<args.size()?args[i+1]:QString());}
     if(args.contains("--smoke-appearance")){window.smoke=true;runAppearanceChecks(window,app,args);}
     if(args.contains("--test-restart")){
         window.smoke=true;QTimer::singleShot(300,&window,[&window,&app]{
