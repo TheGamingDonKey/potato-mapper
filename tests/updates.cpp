@@ -56,6 +56,21 @@ int main(int argc,char **argv){
     const auto args=app.arguments();if(args.size()<3){std::cerr<<"Usage: PotatoUpdateChecks.exe <release.zip> <extracted-package> --install-root <disposable-root>\n";return 2;}
     auto check=[](bool pass,const char *label){std::cout<<(pass?"PASS ":"FAIL ")<<label<<std::endl;if(!pass)throw std::runtime_error(label);};
     try{
+        if(args.contains("--root-resolution-only")){
+            QTemporaryDir install;check(install.isValid(),"temporary root fixture");
+            const auto runtime=install.filePath("versions/0.7.0");QDir().mkpath(runtime);
+            write(install.filePath("installation.txt"),"PotatoMapper/1\n");
+            write(install.filePath("PotatoMapper.exe"),"fixture launcher");
+            check(resolvePotatoInstallRoot(runtime,{"PotatoMapperApp.exe"})==install.path(),"direct editor finds enclosing portable installation");
+            check(resolvePotatoInstallRoot(runtime,{"PotatoMapperApp.exe","--install-root",install.filePath("explicit")})==install.filePath("explicit"),"explicit launcher root retained");
+            QFile::remove(install.filePath("PotatoMapper.exe"));
+            check(resolvePotatoInstallRoot(runtime,{"PotatoMapperApp.exe"})==runtime,"incomplete package is not inferred");
+            const auto unrelated=install.filePath("unrelated/0.7.0");QDir().mkpath(unrelated);
+            write(install.filePath("PotatoMapper.exe"),"fixture launcher");
+            check(resolvePotatoInstallRoot(unrelated,{"PotatoMapperApp.exe"})==unrelated,"unrelated folder is not an installation");
+            check(resolvePotatoInstallRoot(install.path(),{"PotatoMapper.exe"})==install.path(),"root and legacy flat launch remain unchanged");
+            return 0;
+        }
         const auto zip=bytes(args[1]);check(!zip.isEmpty(),"read packaged ZIP");
         const auto package=QFileInfo(args[2]).absoluteFilePath();
         const auto version=QString::fromUtf8(bytes(QDir(package).filePath("current.txt"))).trimmed();

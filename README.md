@@ -82,6 +82,8 @@ Drag the divider beside the surface list to resize the sidebar. Click **Media**,
 
 **From v0.3.0 onward:** use **Help → Check for updates**. Downloads show progress and can be cancelled. Before restarting, the app asks you to save/discard/cancel unsaved changes and stop any active projection. Your saved mapping reopens after installation. **Help → Use previous app version** switches back to the retained version; it does not undo edits to saved projects.
 
+If an older copy says it was opened outside the portable launcher layout, save and close it, then open **PotatoMapper.exe in the main extracted folder** and check again. A shortcut should point to that file. Only extract another full app ZIP if the launcher files are missing. From v0.7.1, directly opening the inner editor also detects its enclosing portable folder.
+
 Save personal files outside `versions` and `.updates`, which are managed app folders. Updates replace the selected runtime rather than the whole app folder. Projects and linked media can remain in the app root or anywhere else you choose. Updates require an internet connection and a writable app folder; mapping still works offline. There is no automatic update check during projection.
 
 ## Continue development
