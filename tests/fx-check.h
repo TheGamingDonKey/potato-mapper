@@ -61,7 +61,7 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         }else require(false,"NV12 frame map");
         auto legacy=scene.json();auto items=legacy["surfaces"].toArray();for(int i=0;i<items.size();++i){auto item=items[i].toObject();item.remove("blend");items[i]=item;}legacy["surfaces"]=items;legacy["format"]="HomeMapper";QString error;
         require(scene.restore(legacy,{},error)&&scene.surfaces[1].blend==0,"old project defaults Normal");
-        scene.assignMedia(0,fixture("white.png",Qt::white));scene.select(1);scene.setAppearance(1,100,100);scene.surfaces[0].visible=false;
+        scene.select(1);scene.setAppearance(1,100,100);scene.surfaces[0].visible=false;
         // Iterate each generator with real elapsed time, then pause and round-trip.
         auto step=std::make_shared<std::function<void()>>();
         std::weak_ptr<std::function<void()>> weakStep=step;
@@ -77,9 +77,12 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
             picker->setCurrentIndex(pattern);speed->setValue(130);size->setValue(18);pause->setChecked(true);scene.setBlend(1,0);scene.current()->patternPhase=.37;
             auto energy=[](const QImage &image){quint64 result=0;for(int y=0;y<image.height();y+=2)for(int x=0;x<image.width();x+=2){const auto c=image.pixelColor(x,y);result+=c.red()+c.green()+c.blue();}return result;};
             const auto still=window.output->grabFramebuffer();require(energy(still)>100000,"visible "+potatoPatterns()[pattern]);
-            scene.surfaces[0].visible=true;scene.setBlend(1,1);scene.setAppearance(1,50,50);const auto screened=window.output->grabFramebuffer();bool white=true;
-            for(int y=20;y<screened.height();y+=30)for(int x=20;x<screened.width();x+=30){const auto c=screened.pixelColor(x,y);white=white&&c.red()>=251&&c.green()>=251&&c.blue()>=251;}
-            require(white,"Screen respects pattern alpha "+potatoPatterns()[pattern]);scene.surfaces[0].visible=false;scene.setBlend(1,0);scene.setAppearance(1,100,100);
+            scene.setAppearance(1,50,50);const auto faded=window.output->grabFramebuffer();scene.surfaces[0].visible=true;scene.setBlend(1,1);const auto screened=window.output->grabFramebuffer();bool correct=true;
+            for(int y=20;y<screened.height();y+=30)for(int x=20;x<screened.width();x+=30){const auto c=faded.pixelColor(x,y),actual=screened.pixelColor(x,y);
+                const QColor expected(qRound(c.red()+60*(1-c.red()/255.0)),qRound(c.green()+90*(1-c.green()/255.0)),qRound(c.blue()+120*(1-c.blue()/255.0)));
+                correct=correct&&std::max({std::abs(expected.red()-actual.red()),std::abs(expected.green()-actual.green()),std::abs(expected.blue()-actual.blue())})<=4;
+            }
+            require(correct,"Screen respects pattern alpha "+potatoPatterns()[pattern]);scene.surfaces[0].visible=false;scene.setBlend(1,0);scene.setAppearance(1,100,100);
             size->setValue(32);const auto wide=window.output->grabFramebuffer();require(wide!=still&&energy(wide)>energy(still),"width control "+potatoPatterns()[pattern]);size->setValue(18);
             {QPainter painter(&state->sheet);const int x=((pattern-1)%2)*640,y=((pattern-1)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),still);}
             pause->setChecked(false);scene.dirty=false;const auto saved=scene.json();const double phase=scene.current()->patternPhase;const auto editor=window.canvas->grabFramebuffer();
