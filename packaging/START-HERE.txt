@@ -31,6 +31,9 @@ UPDATES
 Use Help > Check for updates to download a newer stable Windows release.
 Save your work when asked, then let the launcher install and reopen the app.
 The previous app version remains available under Help > Use previous version.
+If an older copy reports "outside the portable launcher layout", save and close
+it, then open PotatoMapper.exe in the main extracted folder and check again.
+Point shortcuts to that launcher. Extract the full ZIP if launcher files are missing.
 Updates preserve projects/media outside versions and .updates. Do not save
 personal files inside those two managed folders. Media remains linked.
 

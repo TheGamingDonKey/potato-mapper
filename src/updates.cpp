@@ -26,8 +26,19 @@
 
 bool validPotatoVersion(const QString &v){return QRegularExpression("^[0-9]{1,5}\\.[0-9]{1,5}\\.[0-9]{1,5}$").match(v).hasMatch();}
 QString potatoInstallRoot(){
-    const auto args=QCoreApplication::arguments();const int i=args.indexOf("--install-root");
-    return QDir::cleanPath(i>=0&&i+1<args.size()?QFileInfo(args[i+1]).absoluteFilePath():QCoreApplication::applicationDirPath());
+    return resolvePotatoInstallRoot(QCoreApplication::applicationDirPath(),QCoreApplication::arguments());
+}
+QString resolvePotatoInstallRoot(const QString &applicationDirectory,const QStringList &args){
+    const int i=args.indexOf("--install-root");
+    if(i>=0&&i+1<args.size())return QDir::cleanPath(QFileInfo(args[i+1]).absoluteFilePath());
+    QDir runtime(applicationDirectory),root=runtime;
+    // A direct editor launch or shortcut still belongs to its portable package.
+    // Only recognize the known versions/<version> layout, never an arbitrary ancestor.
+    if(validPotatoVersion(runtime.dirName())&&root.cdUp()&&root.dirName().compare("versions",Qt::CaseInsensitive)==0&&root.cdUp()){
+        QFile marker(root.filePath("installation.txt"));
+        if(marker.open(QIODevice::ReadOnly)&&marker.readAll()=="PotatoMapper/1\n"&&QFileInfo(root.filePath("PotatoMapper.exe")).isFile())return root.absolutePath();
+    }
+    return QDir::cleanPath(applicationDirectory);
 }
 bool parsePotatoRelease(const QJsonObject &j,const QString &current,PotatoRelease &r,QString &error){
     r={};error.clear();r.version=j["tag_name"].toString();if(r.version.startsWith('v'))r.version.remove(0,1);
@@ -110,7 +121,7 @@ void UpdateDialog::check(){
         if(!s.release.newer){s.status->setText("You're up to date. No newer stable release is available.");return;}
         s.status->setText("Version "+s.release.version+" is available ("+QString::number(s.release.size/1048576.0,'f',1)+" MB). Your saved mappings and media stay in place.");
         QFile marker(QDir(s.root).filePath("installation.txt"));
-        if(!marker.open(QIODevice::ReadOnly)||marker.readAll()!="PotatoMapper/1\n"||!QFileInfo::exists(QDir(s.root).filePath("PotatoMapper.exe"))){s.status->setText("A newer release is available. This copy was opened outside the portable launcher layout; download the full ZIP from GitHub to enable installation.");return;}
+        if(!marker.open(QIODevice::ReadOnly)||marker.readAll()!="PotatoMapper/1\n"||!QFileInfo(QDir(s.root).filePath("PotatoMapper.exe")).isFile()){s.status->setText("Version "+s.release.version+" is available, but this folder is missing the portable launcher files. Save and close this copy, then open PotatoMapper.exe in the main extracted app folder. If that file or installation.txt is missing, extract the complete app ZIP from GitHub.");return;}
         s.install->setEnabled(true);
     });
 }

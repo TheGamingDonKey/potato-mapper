@@ -2,6 +2,7 @@
 #include <QDialog>
 #include <QJsonObject>
 #include <QUrl>
+#include <QStringList>
 #include <functional>
 #include <memory>
 
@@ -16,6 +17,7 @@ bool parsePotatoRelease(const QJsonObject &json,const QString &current,PotatoRel
 bool validatePotatoPayload(const QString &directory,const QString &version,QString &error);
 bool validPotatoVersion(const QString &version);
 QString potatoInstallRoot();
+QString resolvePotatoInstallRoot(const QString &applicationDirectory,const QStringList &arguments);
 class QNetworkAccessManager;
 
 class UpdateDialog : public QDialog {
