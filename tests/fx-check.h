@@ -113,8 +113,13 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
                 require(!scene.dirty&&scene.json()==saved,"animation ticks preserve project "+potatoPatterns()[pattern]);pause->setChecked(true);const auto frozen=window.output->grabFramebuffer();const double stopped=scene.current()->patternPhase;
                 QTimer::singleShot(90,&window,[&window,&app,state,require,step,frozen,stopped,pattern]{
                     auto &scene=window.scene;require(scene.current()->patternPhase==stopped&&window.output->grabFramebuffer()==frozen,"pause "+potatoPatterns()[pattern]);
-                    scene.setBlend(1,pattern%3);const auto saved=scene.json();QString error;require(scene.save(state->temp.filePath("fx.pmap"),error)&&scene.load(state->temp.filePath("fx.pmap"),error)&&scene.json()==saved,"save/reopen "+potatoPatterns()[pattern]);scene.select(1);
-                    ++state->pattern;QTimer::singleShot(0,&window,[step]{(*step)();});
+                    auto finish=[&window,state,require,step,pattern]{auto &scene=window.scene;scene.setBlend(1,pattern%3);const auto saved=scene.json();QString error;require(scene.save(state->temp.filePath("fx.pmap"),error)&&scene.load(state->temp.filePath("fx.pmap"),error)&&scene.json()==saved,"save/reopen "+potatoPatterns()[pattern]);scene.select(1);++state->pattern;QTimer::singleShot(0,&window,[step]{(*step)();});};
+                    if(pattern==5){
+                        auto *reverse=window.template findChild<QCheckBox*>("patternReverse");auto *pause=window.template findChild<QCheckBox*>("patternPause");const auto editor=window.canvas->grabFramebuffer();reverse->setChecked(true);
+                        require(scene.current()->patternPhase==stopped&&window.output->grabFramebuffer()==frozen&&window.canvas->grabFramebuffer()==editor,"reverse preserves paused frame");
+                        pause->setChecked(false);scene.dirty=false;const auto saved=scene.json();
+                        QTimer::singleShot(120,&window,[&window,require,finish,pause,reverse,stopped,saved]{auto &scene=window.scene;require(scene.current()->patternPhase<stopped&&!scene.dirty&&scene.json()==saved,"reverse resumes backwards without dirty ticks");pause->setChecked(true);reverse->setChecked(false);finish();});
+                    }else finish();
                 });
             });
         };

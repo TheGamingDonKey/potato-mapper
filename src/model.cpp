@@ -139,7 +139,7 @@ Scene::Scene(QObject *parent):QObject(parent){
     animationClock.start();auto *timer=new QTimer(this);timer->setTimerType(Qt::PreciseTimer);
     connect(timer,&QTimer::timeout,this,[this]{
         const double dt=std::min(animationClock.restart()/1000.0,.1);bool animated=false;
-        for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0;animated=true;}
+        for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);animated=true;}
         if(animated)emit changed();
     });timer->start(16);
 }

@@ -130,7 +130,7 @@ void Canvas::paintGL(){
         m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());
         m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());program.setUniformValue("mapping",m);
         QVector2D uvScale(1,1),uvOffset(0,0);
-        program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0))*(s.fx.reverse?-1.f:1.f));program.setUniformValue("dotRadius",s.patternSize/100.0f);
+        program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
         program.setUniformValue("density",float(s.fx.density));program.setUniformValue("flow",s.fx.flow/100.0f);program.setUniformValue("angle",s.fx.angle*float(3.141592653589793/180.0));program.setUniformValue("palette",s.fx.palette);program.setUniformValue("edgeFade",s.fx.edge/100.0f);
         program.setUniformValue("brightness",s.brightness/100.0f);program.setUniformValue("opacity",s.opacity/100.0f);
         {
