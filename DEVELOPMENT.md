@@ -112,7 +112,7 @@ Technique references: [procedural grids and transforms](https://thebookofshaders
 
 The v0.6.0 release is published from PR #8. The final portable FX and real MP4 checks passed without developer libraries on PATH. The v0.5.0 launcher installed the final ZIP and reopened the fixture mapping, preserving project/media bytes and the old runtime. Source review completed; Reverse continuity was fixed and verified. Published SHA256: `e240ba0e9b04401e40f4b9f69be7191de50f28c23586429ed8fe7d338eefdfe0`. The developer app and personal mappings/media were left in place.
 
-## Organic and depth collection (v0.7.0, implemented pending release)
+## Organic and depth collection (shipped in v0.7.0)
 
 Stable IDs 9–12 are Waterlight, Contour Flow, Curve Maze and Depth Tunnel. The earlier generators/settings remain unchanged. All four reuse speed, line width, density, flow, angle, palette, reverse, optional edge fade, brightness, opacity and blending; JSON version 1 is retained. No new runtime dependency. Defaults are White, density 30/18/24/18 and line width 14/12/14/12 percent.
 
@@ -127,3 +127,5 @@ The corrected October 5 measurement on the Radeon 840M development PC gave the n
 The updater's public HTTPS GET goes to GitHub's latest-release endpoint and then the release-asset URL. There is no owner login or credential in the app request, and no project upload. Publishing uses developer credentials separately. The existing native launcher switches version folders and reopens the saved mapping.
 
 The inherited renderer wraps its phase at 10,000 units. Effects are not all periodic at that boundary and can visibly jump after about 2.8 hours at speed 100%, or 56 minutes at 300%. Removing that wrap requires considering shader float precision during long runs. This release's short motion checks do not establish multi-hour continuity; a bounded animation-clock improvement is follow-up work.
+
+Merged in [PR #9](https://github.com/TheGamingDonKey/potato-mapper/pull/9) and published as [v0.7.0](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.7.0). Focused source review found no blocking issues; diagnostic failure handling was corrected and invalid-range/valid-grid profiling checked. Final portable FX and real MP4 playback passed with only Windows system directories on PATH. The actual v0.6.0 launcher installed the final ZIP and reopened the disposable saved mapping, retaining the project/media bytes and old runtime. Extraction, interrupted download and cancelled restart also passed. Public latest-release metadata, canonical HTTP 200 download, size and SHA256 match the final package: `050e613d9cc11f797c8388a7dcd95e06a0d56e891026aec2437b4956d61455e5`. The existing developer app and personal files remain in place.
