@@ -7,7 +7,7 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - Latest published app: [v0.4.0 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.4.0).
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
 - On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
-- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. No feature implementation is currently in progress. Next approved increments: Screen/Add blending, then additional Potato FX patterns. Raspberry Pi remains deferred.
+- UI polish, Potato FX naming/picker and per-surface brightness/opacity are merged in [PR #6](https://github.com/TheGamingDonKey/potato-mapper/pull/6) and shipped in v0.4.0. **In progress:** Screen/Add blending and three more Potato FX patterns on `codex/blending-potato-fx`, targeting v0.5.0. Raspberry Pi remains deferred.
 - October 4 changes: branded splash; panel/context-menu Clear media; surface rename/content labels; File/Edit/Help menus; version display; remembered project folder; and GitHub download/install/restart with previous-version recovery. Media controls are placed before mesh settings in the existing sidebar.
 - Local project storage is acceptable. Collecting projects/media for transfer is lower priority than preserving them during app updates. Keep the current release available while developing changes.
 

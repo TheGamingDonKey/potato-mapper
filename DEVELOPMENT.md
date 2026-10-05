@@ -30,7 +30,12 @@ The white grid uses a transparent texture with mipmaps. QPainter overlays coexis
 
 The v0.4.0 increment stores per-surface `brightness` and `opacity` as integer percentages (0–100). Earlier projects default to 100 for both. The shared shader scales RGB and alpha after image/video sampling, and applies the same factors to procedural dots. Separate RGB/alpha blend factors retain an opaque canvas for Qt's final composition. `Scene::setAppearance` supports one undo record per slider drag; selecting a surface or repainting an animation does not change these settings. Earlier apps ignore the new appearance settings; saving in an earlier app does not retain them.
 
-The sidebar keeps the surface list above a scrolling inspector. Media, Appearance, Potato FX and Mapping are collapsible sections. Mapping and Potato FX begin collapsed; selecting dots reveals their settings. Potato FX currently offers media/grid and dots, with other generators scheduled as later increments.
+The sidebar keeps the surface list above a scrolling inspector. Media, Appearance, Potato FX and Mapping are collapsible sections. Mapping and Potato FX begin collapsed; selecting dots reveals their settings. Potato FX offers media/grid plus dots, diagonal stripes, expanding rings and square waves. `src/patterns.h` holds the stable names/IDs (0–4); dots retain ID 1. Each generator uses speed, size/line width and pause, with its own fixed palette. All render inside the existing mesh and share the scene timer. Phase remains transient; ticking does not dirty a project or add Undo records.
+
+
+The v0.5.0 increment stores `blend` (0 Normal, 1 Screen, 2 Add), defaulting to Normal for earlier mappings. Normal uses source-alpha composition, Add uses alpha-weighted addition and Screen uses `source * alpha + destination * (1 - source * alpha)` per RGB channel. The shared shader premultiplies only Screen RGB after applying brightness/opacity; separate alpha factors retain the opaque Qt canvas. Blend factors are selected for every surface so mixed layer modes work in order. `Scene::setBlend` and `resetAppearance` record Undo; reset restores 100% brightness/opacity and Normal in one operation. Screen/Add apply to images, native NV12 video and procedural patterns. They are layer blend modes, not multi-projector edge blending.
+
+`--smoke-fx` checks the actual blend/pattern controls, numerical overlap pixels in editor/output at 0/50/100% opacity, image alpha, black overlays, return to Normal, reset/Undo, native NV12 Screen, old-format defaults, generator motion/pause/width, and saved settings. `--preview <temporary.png>` captures the four real output frames as a contact sheet; `--snapshot <temporary.png>` captures the editor. Files and scenes are disposable.
 
 ## Build and focused checks
 
@@ -66,7 +71,7 @@ For visual work, run the app and inspect the changed behavior once. For output c
 
 The optional `PotatoUpdateChecks` build target runs the actual update dialog against deterministic release responses and the real release ZIP/extractor. Supply `<release.zip> <extracted-package> --install-root <new-disposable-folder>`. It checks the packaged manifest, missing payload/digest handling, an interrupted download, cancelled restart, unchanged personal files, and staging cleanup. With `--handoff`, it uses the real launcher and editor process lock, exits after preparation, and reopens a sample mapping in the installed editor. Close that disposable editor afterwards. The fixture network is injected only by this test executable; the application's Help command always uses the public repository endpoint.
 
-The check reads the target version from the package and currently simulates an installed v0.3.0 editor. `--launcher <path>` lets the handoff use a retained older launcher. The v0.4.0 rehearsal used the actual v0.3.0 launcher and retained runtime; the v0.4.0 editor reopened the saved fixture with unchanged project/media bytes. This was a local disposable installation, not Shane's other laptop.
+The check reads the target version from the package and currently simulates an installed v0.4.0 editor. `--launcher <path>` lets the handoff use a retained older launcher. The v0.4.0 rehearsal used the actual v0.3.0 launcher and retained runtime; the v0.4.0 editor reopened the saved fixture with unchanged project/media bytes. This was a local disposable installation, not Shane's other laptop.
 
 Run `pwsh ./tests/launcher.ps1 -PackageDirectory <extracted-package>` for a packaged upgrade, rollback, repeat update after rollback, incomplete installation, and startup-failure recovery. These checks use a disposable installation under `out` and synthetic personal files; the retained old-version sentinel is not claimed as a run of an older editor. The current runtime is installed and launched for real, including reopening the sample mapping after recovery. The script requires PowerShell 7 for `ProcessStartInfo.ArgumentList`.
 
@@ -83,8 +88,8 @@ Release packaging is always fresh. Do not zip the developer's `app` folder or in
 ## Known limits and next work
 
 - One projector output. Manual mapping only; no camera calibration or 3D object reconstruction.
-- Dots currently use a fixed cyan/white palette and fixed lattice density. Other generator names discussed in chat have not been implemented.
-- Ordinary media uses alpha blending. Screen/Add blending and background removal are not implemented. Black in an opaque video can obscure lower layers.
+- Generators use fixed palettes, spacing and direction. Colour/direction/spacing controls and four further patterns remain planned.
+- Screen/Add blending can overlay black-background media; it does not remove arbitrary video backgrounds. Normal remains the default.
 - The inspector may require scrolling on shorter displays; the surface list remains accessible above it.
 - Project files reference media; there is no pack-and-collect feature.
 - Existing video controls act on sources shared by path. Review resource cleanup and decoder performance before scaling to many videos.
