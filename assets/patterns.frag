@@ -60,6 +60,26 @@ void finishColor(){
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern==13){
+        // Two staggered lattices give the nearest hexagon centre. The shared
+        // field bends the whole lattice gently and offsets neighbouring pulses.
+        vec2 p=metric*density+vec2(-phase*.18,phase*.08);
+        p+=flow*.28*vec2(sin(metric.y*5.0+phase*.23),cos(metric.x*4.0-phase*.19));
+        const vec2 spacing=vec2(1.0,1.7320508);
+        vec2 a=mod(p,spacing)-spacing*.5;
+        vec2 b=mod(p-spacing*.5,spacing)-spacing*.5;
+        vec2 local=dot(a,a)<dot(b,b)?a:b;
+        vec2 centre=(p-local)/density*7.0;
+        // Two broad harmonics coordinate the pulses. The lattice already
+        // supplies the gentle warp, so avoid deforming the field a second time.
+        float wave=smoothstep(.1,.9,.5+.33*sin(centre.x*1.63+centre.y*.57-phase*.53)
+                                       +flow*.15*cos(centre.y*1.37-centre.x*.43+phase*.4));
+        float radius=dotRadius*(.25+.75*wave);
+        vec2 q=abs(local);
+        float distance=max(q.x,dot(q,vec2(.5,.8660254)))-radius;
+        color=vec4(vec3(1.0),shapeMask(distance)*(.3+.7*wave));
+        finishColor();return;
+    }
     if(pattern>=9){
         float alpha;
         if(pattern==9){
