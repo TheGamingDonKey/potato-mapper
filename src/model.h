@@ -75,6 +75,13 @@ public:
     PotatoDynamic::Frame dynamicFrame;
     double dynamicElapsed = 0;
     QVector<PotatoDynamic::Surface> dynamicSurfaces;
+    struct DynamicGeometry {
+        QVector<float> vertices;
+        QHash<int,QPair<int,int>> ranges;
+        quint64 revision=0;
+    };
+    const DynamicGeometry &dynamicGeometry();
+    quint64 dynamicGeometryBuilds=0;
     void setDynamic(PotatoDynamic::Settings settings);
     void setDynamicTime(double seconds);
     void rebuildDynamic();
@@ -108,4 +115,7 @@ private:
     QElapsedTimer animationClock;
     QHash<QString, MediaSource*> mediaSources;
     QVector<QJsonObject> history, future;
+    DynamicGeometry cachedDynamicGeometry;
+    quint64 dynamicRevision=1;
+    void updateDynamicFrame();
 };

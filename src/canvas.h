@@ -17,6 +17,9 @@ public:
     bool meshMode=false;
     bool graphicsReady=false;
     quint64 paintedFrames=0;
+    // Collected only by the diagnostic profiler; normal drawing creates no queries.
+    bool profileRendering=false;
+    struct RenderStats {quint64 meshNs=0,meshBuilds=0,uploads=0,gpuNs=0,gpuSamples=0;} renderStats;
     QString graphicsError;
     QString graphicsDescription;
     QRectF canvasRect() const;
@@ -44,7 +47,11 @@ private:
     QOpenGLShaderProgram dynamicProgram;
     QOpenGLBuffer dynamicBuffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject dynamicVao;
-    void drawDynamic(const Surface &surface);
+    GLuint profileQueries[4]{};
+    bool profilePending[4]{};
+    int activeProfileQuery=-1;
+    quint64 dynamicUploadedRevision=0;
+    void drawDynamic(const Surface &surface,int surfaceIndex);
     struct Texture {GLuint id=0,chroma=0;quint64 revision=0;QSize size;bool yuv=false;};
     QHash<QString,Texture> textures;
     double zoom=1;
