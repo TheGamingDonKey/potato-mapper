@@ -1,5 +1,6 @@
 #include "model.h"
 #include "projects.h"
+#include "mesh-geometry.h"
 #include <QImageReader>
 #include <QVideoFrame>
 #include <QPainter>
@@ -140,16 +141,58 @@ Scene::Scene(QObject *parent):QObject(parent){
     animationClock.start();auto *timer=new QTimer(this);timer->setTimerType(Qt::PreciseTimer);
     connect(timer,&QTimer::timeout,this,[this]{
         const double dt=std::min(animationClock.restart()/1000.0,.1);bool animated=false;
-        for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);animated=true;}
+        for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);if(!dynamicSurface(s.id))animated=true;}
         if(dynamic.effect&&dynamic.playing&&!dynamicSurfaces.isEmpty()){
             dynamicElapsed+=dt*dynamic.speed/100.0;
-            dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);animated=true;
+            updateDynamicFrame();animated=true;
         }
         if(animated)emit changed();
     });timer->start(16);
 }
 Surface *Scene::current(){return selected>=0&&selected<surfaces.size()?&surfaces[selected]:nullptr;}
 bool Scene::dynamicSurface(const QString &id) const {return dynamic.effect&&dynamic.members.contains(id);}
+void Scene::updateDynamicFrame(){
+    dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);++dynamicRevision;
+}
+const Scene::DynamicGeometry &Scene::dynamicGeometry(){
+    if(cachedDynamicGeometry.revision==dynamicRevision)return cachedDynamicGeometry;
+    auto &geometry=cachedDynamicGeometry;geometry.vertices.clear();geometry.ranges.clear();geometry.vertices.reserve(20000);
+    for(int surfaceIndex=0;surfaceIndex<surfaces.size();++surfaceIndex){
+        const auto &s=surfaces[surfaceIndex];
+        if(!s.visible||!dynamicSurface(s.id))continue;
+        bool regular=s.mesh.size()==(s.cells+1)*(s.cells+1);
+        for(int i=0;regular&&i<s.mesh.size();++i){
+            const QPointF expected(double(i%(s.cells+1))/s.cells,double(i/(s.cells+1))/s.cells);
+            regular=QLineF(s.mesh[i],expected).length()<1e-12;
+        }
+        const int first=int(geometry.vertices.size()/6);
+        auto vertex=[&](QPointF uv,QColor colour,double alpha){
+            const auto p=regular?uv:s.sample(uv.x(),uv.y());
+            geometry.vertices<<float(p.x())<<float(p.y())<<float(colour.redF())<<float(colour.greenF())<<float(colour.blueF())<<float(std::min(1.0,colour.alphaF()*alpha*1.5));
+        };
+        auto triangle=[&](QPointF a,QPointF b,QPointF c,QColor colour,double alpha){
+            if(regular&&std::min({a.x(),b.x(),c.x(),a.y(),b.y(),c.y()})>=0&&std::max({a.x(),b.x(),c.x(),a.y(),b.y(),c.y()})<=1){vertex(a,colour,alpha);vertex(b,colour,alpha);vertex(c,colour,alpha);return;}
+            potatoEachMeshVertex(a,b,c,regular?1:s.cells,[&](QPointF p){vertex(p,colour,alpha);});
+        };
+        double aspect=1;for(const auto &surface:dynamicSurfaces)if(surface.id==s.id){aspect=surface.aspect;break;}
+        for(const auto &shape:dynamicFrame.shapes)if(shape.surfaceId==s.id&&shape.points.size()>=2){
+            const auto &points=shape.points;
+            if(shape.filled)for(int i=1;i+1<points.size();++i)triangle(points[0],points[i],points[i+1],shape.color,1);
+            for(int layer=0;layer<2;++layer){
+                const double width=shape.width*(layer?1:3.2),alpha=layer?1:.13;
+                const int count=shape.closed&&points.size()>2?int(points.size()):int(points.size())-1;
+                for(int i=0;i<count;++i){
+                    const auto a=points[i],b=points[(i+1)%points.size()];const auto delta=b-a;
+                    const double dx=delta.x()*aspect,dy=delta.y(),length=std::hypot(dx,dy);if(length<1e-8)continue;
+                    const QPointF normal(-dy/length*width/aspect/2,dx/length*width/2);
+                    triangle(a+normal,b+normal,b-normal,shape.color,alpha);triangle(a+normal,b-normal,a-normal,shape.color,alpha);
+                }
+            }
+        }
+        geometry.ranges.insert(surfaceIndex,{first,int(geometry.vertices.size()/6)-first});
+    }
+    geometry.revision=dynamicRevision;++dynamicGeometryBuilds;return geometry;
+}
 void Scene::rebuildDynamic(){
     QStringList previous;for(const auto &s:dynamicSurfaces)previous<<s.id;
     dynamicSurfaces.clear();
@@ -164,7 +207,7 @@ void Scene::rebuildDynamic(){
     QStringList next;for(const auto &s:dynamicSurfaces)next<<s.id;
     previous.sort();next.sort();
     if(previous!=next)dynamicElapsed=0;
-    dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);
+    updateDynamicFrame();
 }
 void Scene::setDynamic(PotatoDynamic::Settings settings){
     settings=PotatoDynamic::Settings::fromJson(settings.json());
@@ -174,7 +217,7 @@ void Scene::setDynamic(PotatoDynamic::Settings settings){
 }
 void Scene::setDynamicTime(double seconds){
     dynamicElapsed=std::isfinite(seconds)?std::max(0.0,seconds):0;
-    dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);emit changed();
+    updateDynamicFrame();emit changed();
 }
 MediaSource *Scene::source(const QString &path){
     if(mediaSources.contains(path))return mediaSources[path];

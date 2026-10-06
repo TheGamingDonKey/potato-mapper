@@ -1,5 +1,4 @@
 #include "canvas.h"
-#include "mesh-geometry.h"
 #include <QPainter>
 #include <QFile>
 #include <QMimeData>
@@ -20,7 +19,9 @@ Canvas::~Canvas(){cleanup();}
 void Canvas::cleanup(){
     if(!context())return;makeCurrent();
     for(auto &t:textures){if(t.id)glDeleteTextures(1,&t.id);if(t.chroma)glDeleteTextures(1,&t.chroma);}
-    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();dynamicBuffer.destroy();dynamicVao.destroy();dynamicProgram.removeAllShaders();doneCurrent();graphicsReady=false;
+    if(profileQueries[0])glDeleteQueries(4,profileQueries);
+    std::fill(std::begin(profileQueries),std::end(profileQueries),0u);std::fill(std::begin(profilePending),std::end(profilePending),false);activeProfileQuery=-1;
+    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();dynamicBuffer.destroy();dynamicVao.destroy();dynamicProgram.removeAllShaders();dynamicUploadedRevision=0;doneCurrent();graphicsReady=false;
 }
 void Canvas::initializeGL(){
     if(!initializeOpenGLFunctions()){graphicsError="OpenGL 3.3 could not be initialized.";emit graphicsInitialized(graphicsError);return;}
@@ -55,34 +56,18 @@ void main(){vec4 c=vec4(ink.rgb*brightness,ink.a*opacity);if(blendMode==1)c.rgb*
     }
     vao.create();buffer.create();dynamicVao.create();dynamicBuffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
 }
-void Canvas::drawDynamic(const Surface &s){
-    QVector<float> vertices;vertices.reserve(20000);
-    auto vertex=[&](QPointF uv,QColor colour,double alpha){
-        const auto p=s.sample(uv.x(),uv.y());vertices<<float(p.x())<<float(p.y())<<float(colour.redF())<<float(colour.greenF())<<float(colour.blueF())<<float(std::min(1.0,colour.alphaF()*alpha*1.5));
-    };
-    auto triangle=[&](QPointF a,QPointF b,QPointF c,QColor colour,double alpha){for(const auto p:potatoMeshTriangles(a,b,c,s.cells))vertex(p,colour,alpha);};
-    double aspect=1;for(const auto &surface:scene->dynamicSurfaces)if(surface.id==s.id){aspect=surface.aspect;break;}
-    for(const auto &shape:scene->dynamicFrame.shapes)if(shape.surfaceId==s.id&&shape.points.size()>=2){
-        const auto &points=shape.points;
-        if(shape.filled)for(int i=1;i+1<points.size();++i)triangle(points[0],points[i],points[i+1],shape.color,1);
-        for(int layer=0;layer<2;++layer){
-            const double width=shape.width*(layer?1:3.2),alpha=layer?1:.13;
-            const int count=shape.closed&&points.size()>2?int(points.size()):int(points.size())-1;
-            for(int i=0;i<count;++i){
-                const auto a=points[i],b=points[(i+1)%points.size()];const auto delta=b-a;
-                const double dx=delta.x()*aspect,dy=delta.y(),length=std::hypot(dx,dy);if(length<1e-8)continue;
-                const QPointF normal(-dy/length*width/aspect/2,dx/length*width/2);
-                triangle(a+normal,b+normal,b-normal,shape.color,alpha);triangle(a+normal,b-normal,a-normal,shape.color,alpha);
-            }
-        }
-    }
+void Canvas::drawDynamic(const Surface &s,int surfaceIndex){
+    const auto &geometry=scene->dynamicGeometry();
     program.release();buffer.release();vao.release();dynamicProgram.bind();dynamicVao.bind();dynamicBuffer.bind();
     dynamicProgram.enableAttributeArray(0);dynamicProgram.enableAttributeArray(1);
     dynamicProgram.setAttributeBuffer(0,GL_FLOAT,0,2,6*sizeof(float));dynamicProgram.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),4,6*sizeof(float));
     const auto t=s.transform();QMatrix3x3 m;
     m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());
     dynamicProgram.setUniformValue("mapping",m);dynamicProgram.setUniformValue("brightness",s.brightness/100.f);dynamicProgram.setUniformValue("opacity",s.opacity/100.f);dynamicProgram.setUniformValue("blendMode",s.blend);
-    dynamicBuffer.allocate(vertices.constData(),int(vertices.size()*sizeof(float)));glDrawArrays(GL_TRIANGLES,0,int(vertices.size()/6));
+    if(dynamicUploadedRevision!=geometry.revision){
+        dynamicBuffer.allocate(geometry.vertices.constData(),int(geometry.vertices.size()*sizeof(float)));dynamicUploadedRevision=geometry.revision;if(profileRendering)++renderStats.uploads;
+    }
+    const auto range=geometry.ranges.value(surfaceIndex);glDrawArrays(GL_TRIANGLES,range.first,range.second);
     dynamicBuffer.release();dynamicVao.release();dynamicProgram.release();program.bind();vao.bind();buffer.bind();
 }
 QRectF Canvas::canvasRect() const {
@@ -112,8 +97,22 @@ int Canvas::hitSurface(const QPointF &pos)const{
 void Canvas::paintGL(){
     ++paintedFrames;
     if(!graphicsReady){QPainter p(this);p.fillRect(rect(),Qt::black);p.setPen(Qt::white);if(editor)p.drawText(rect(),Qt::AlignCenter,graphicsError);return;}
+    if((editor||!scene->blackout)&&scene->dynamic.effect&&!scene->dynamicSurfaces.isEmpty()){
+        // Prepare once before the native pass so profiling excludes CPU meshing.
+        QElapsedTimer meshTimer;if(profileRendering)meshTimer.start();const auto builds=scene->dynamicGeometryBuilds;
+        scene->dynamicGeometry();
+        if(profileRendering){renderStats.meshNs+=meshTimer.nsecsElapsed();renderStats.meshBuilds+=scene->dynamicGeometryBuilds-builds;}
+    }
     QPainter p(this);
     p.beginNativePainting();
+    if(profileRendering){
+        if(!profileQueries[0])glGenQueries(4,profileQueries);
+        for(int i=0;i<4;++i)if(profilePending[i]){
+            GLint ready=0;glGetQueryObjectiv(profileQueries[i],GL_QUERY_RESULT_AVAILABLE,&ready);
+            if(ready){GLuint64 ns=0;glGetQueryObjectui64v(profileQueries[i],GL_QUERY_RESULT,&ns);renderStats.gpuNs+=ns;++renderStats.gpuSamples;profilePending[i]=false;}
+        }
+        for(int i=0;i<4;++i)if(!profilePending[i]){activeProfileQuery=i;glBeginQuery(GL_TIME_ELAPSED,profileQueries[i]);break;}
+    }
     glDisable(GL_SCISSOR_TEST);glDisable(GL_DEPTH_TEST);glDisable(GL_CULL_FACE);
     glClearColor(editor?.065f:0,editor?.078f:0,editor?.095f:0,1);glClear(GL_COLOR_BUFFER_BIT);
     const auto r=canvasRect();const double dpi=devicePixelRatioF();
@@ -127,12 +126,13 @@ void Canvas::paintGL(){
     program.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));program.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
     program.setUniformValue("picture",0);
     program.setUniformValue("chromaPicture",1);
-    if(editor||!scene->blackout)for(const auto &s:scene->surfaces){
+    if(editor||!scene->blackout)for(int surfaceIndex=0;surfaceIndex<scene->surfaces.size();++surfaceIndex){
+        const auto &s=scene->surfaces[surfaceIndex];
         if(!s.visible)continue;
         if(s.blend==1)glBlendFuncSeparate(GL_ONE,GL_ONE_MINUS_SRC_COLOR,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
         else glBlendFuncSeparate(GL_SRC_ALPHA,s.blend==2?GL_ONE:GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
         program.setUniformValue("blendMode",s.blend);
-        if(scene->dynamicSurface(s.id)){drawDynamic(s);continue;}
+        if(scene->dynamicSurface(s.id)){drawDynamic(s,surfaceIndex);continue;}
         auto *media=scene->source(s.media);const auto &img=media->image;const auto frameSize=media->frameSize();if(frameSize.isEmpty())continue;
         const bool yuv=media->mappedVideo.isValid();program.setUniformValue("yuvVideo",yuv);
         auto &tex=textures[s.media];if(!tex.id){glGenTextures(1,&tex.id);}
@@ -199,6 +199,7 @@ void Canvas::paintGL(){
     }
     buffer.release();vao.release();program.release();glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,0);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
     glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
+    if(activeProfileQuery>=0){glEndQuery(GL_TIME_ELAPSED);profilePending[activeProfileQuery]=true;activeProfileQuery=-1;}
     p.endNativePainting();
     if((editor||!scene->blackout)&&scene->dynamicFrame.titleOpacity>0){
         p.save();p.setClipRect(r);p.setRenderHint(QPainter::Antialiasing);p.setOpacity(scene->dynamicFrame.titleOpacity);
