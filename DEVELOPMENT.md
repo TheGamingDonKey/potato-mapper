@@ -98,6 +98,20 @@ Focused source review found no remaining blocking issues. The final extracted 0.
 
 Merged in [PR #13](https://github.com/TheGamingDonKey/potato-mapper/pull/13), release commit `ec390a9f2cc58077b222948a13824890f7e16fa2`, and published as [v0.8.2](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.2). Public latest metadata and the canonical HTTP 200 download match the final package's 27,049,169 bytes and digest. Existing personal mappings/media and the previous local package remain in place.
 
+### Snake connections (0.8.3, implemented, unreleased)
+
+The nearest-neighbour tour previously chose the first equally close sampled boundary pair. Aligned surfaces therefore connected at corners despite a whole facing edge being available. For each chosen neighbour, facing edges now project onto a common tangent; the widest shared interval supplies centred portals. If the centre between those portals maps inside both overlapping surfaces, both use that same point. With no usable facing span, retain the closest-boundary fallback. Geometry edits invalidate the existing cached tour; phase changes do not rerun the search.
+
+Portal bends use a common output direction converted into each surface's UV coordinates. The lateral wave's endpoint derivative is zero. Trailing segments can occupy the previous stop while the head moves onto the next; internal handoffs keep full opacity, while tour beginnings/endings retain their fade. This applies to exploration and ambient passes. Geometry remains bounded, separate gaps stay dark, and project settings/format are unchanged. Routing still uses the corner/projective outline; heavily deformed outer mesh edges remain approximate.
+
+Review caught independent UV-axis clipping changing the direction near an oblique corner. `dynamic-geometry.h` now shortens the entire ray to its first square boundary. The independent mapped-heading regression failed before and passed after correction; focused review found no remaining blockers. Nested/concentric panels have no facing opening and retain the documented fallback.
+
+`--test-dynamic-motion --portal-frames --frames <folder>` captures 24 actual output frames around a touching, partially aligned two-surface handoff. The runtime check also samples brightness at that shared opening immediately before and after the crossing.
+
+Release build, geometry/settings checks, actual rendered handoff and extracted `--smoke-dynamic`/`--smoke` passed. The real 0.8.2 launcher installed the final 0.8.3 ZIP, refreshed itself and reopened a managed project, retaining original project/media bytes, the old runtime and launcher backup. SHA256: `83e2bc3a1abac3db9c8b99792593a859154020e2760c4cae358523b10ecd6598`.
+
+A same-session dense four-surface profile (16 cells, density 80) measured 2.281 ms CPU preparation and 0.185 ms native GPU time for this build, versus 2.289/0.177 ms for the previous 0.8.2 binary. Repaints were 12.0 versus 12.3/s with another demo editor still open; these short samples do not establish guaranteed FPS or explain window-composition limits. The routing search is cached until geometry changes, rather than repeated each animation frame.
+
 ### Desktop/update checks
 
 `--smoke-clear` checks the actual Clear media button, retained geometry, another surface, Undo/Redo, saved state, and original-file preservation. `--test-restart` exercises the real unsaved-work Cancel/Save prompts and active-output cancellation. `--test-splash --snapshot <temporary.png>` captures the actual splash widget; `QT_SCALE_FACTOR=1.5` allows a focused scaling check without changing Windows display settings.

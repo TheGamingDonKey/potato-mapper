@@ -1,4 +1,5 @@
 #include "dynamic.h"
+#include "dynamic-geometry.h"
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QSet>
@@ -34,6 +35,11 @@ static bool bounded(const Frame &f, const QVector<Surface> &surfaces) {
         for(const auto &v:p.points) if(!std::isfinite(v.x()) || !std::isfinite(v.y()) || v.x()<0 || v.x()>1 || v.y()<0 || v.y()>1) return false;
     }
     return true;
+}
+static QPointF head(const Frame &f) {
+    const auto &p=f.shapes.back(); QPointF center;
+    for(const auto &point:p.points) center+=point;
+    return center/double(p.points.size());
 }
 int main(int argc, char **argv) {
     QCoreApplication app(argc,argv);
@@ -79,7 +85,40 @@ int main(int argc, char **argv) {
         const auto exitFrame=frame(settings,routeSurfaces,routeSlot-.3);
         QPointF exitCenter;for(const auto &point:exitFrame.shapes.back().points)exitCenter+=point;
         exitCenter/=double(exitFrame.shapes.back().points.size());
-        check(exitCenter.x()>.85 && exitCenter.y()<.2,"tour exits through closest sampled mapped boundary");
+        check(exitCenter.x()>.85 && std::abs(exitCenter.y()-.5)<.08,"equal-distance openings use the middle of the facing edge");
+        const QVector<Surface> connected{{"A",{{.05,.1},{.5,.1},{.5,.7},{.05,.7}},.75},
+            {"B",{{.5,.3},{.95,.3},{.95,.9},{.5,.9}},.75}};
+        const double connectedSlot=timeline(settings,2).exploreEnd/2;
+        const auto leaving=frame(settings,connected,connectedSlot*.99);
+        const auto entering=frame(settings,connected,connectedSlot*1.01);
+        check(std::abs(head(leaving).y()-2.0/3)<.07 && std::abs(head(entering).y()-1.0/3)<.07,
+            "partial facing overlap uses its shared midpoint on both surfaces");
+        QSet<QString> bodySurfaces;
+        for(const auto &p:entering.shapes) if(p.filled && std::abs(p.width-.0045)<1e-9) bodySurfaces.insert(p.surfaceId);
+        check(bodySurfaces==QSet<QString>{"A","B"},"snake body continues across both sides of a surface handoff");
+        check(entering.shapes.back().color.alphaF()>.8 && leaving.shapes.back().color.alphaF()>.8,
+            "connected handoff keeps the head visible instead of fading each panel");
+        auto vertical=connected;
+        for(auto &s:vertical) for(auto &p:s.boundary) std::swap(p.rx(),p.ry());
+        check(std::abs(head(frame(settings,vertical,connectedSlot*.99)).y()-2.0/3)<.07,
+            "rotated and reversed-winding surfaces keep the centred connection");
+        const QVector<Surface> overlap{{"A",{{0,0},{.6,0},{.6,.6},{0,.6}},1},
+            {"B",{{.5,.2},{1,.2},{1,.8},{.5,.8}},1}};
+        const auto overlapExit=head(frame(settings,overlap,connectedSlot*.999));
+        const auto overlapEntry=head(frame(settings,overlap,connectedSlot*1.001));
+        check(std::abs(.6*overlapExit.x()-(.5+.5*overlapEntry.x()))<.015 &&
+            std::abs(.6*overlapExit.y()-(.2+.6*overlapEntry.y()))<.015,
+            "overlapping surfaces hand off at one mapped point inside their overlap");
+        const QPolygonF slanted{{1.4169872981,1.0969872981},{2.2830127019,1.5969872981},
+            {1.7830127019,2.4630127019},{.9169872981,1.9630127019}};
+        QTransform tilt;check(QTransform::quadToQuad({{0,0},{1,0},{1,1},{0,1}},slanted,tilt),"oblique portal fixture has an invertible mapping");
+        const QPointF entryNearCorner(0,.00737205584),opening=tilt.map(entryNearCorner);
+        const QPointF heading(std::cos(15*3.141592653589793/180),std::sin(15*3.141592653589793/180));
+        const auto bend=potatoPortalBend(tilt.inverted(),opening,entryNearCorner,heading);
+        const auto mappedRay=tilt.map(bend)-opening;
+        check(bend.x()>=0&&bend.x()<=1&&bend.y()>=0&&bend.y()<=1 &&
+            (mappedRay.x()*heading.x()+mappedRay.y()*heading.y())/std::hypot(mappedRay.x(),mappedRay.y())>.99999,
+            "near-corner oblique portal preserves the shared mapped heading when bounded");
         const auto explored=frame(settings,surfaces,times.exploreEnd-.01);
         QSet<QString> visited; for(const auto &p:explored.shapes) visited.insert(p.surfaceId);
         check(visited.size()==3,"exploration leaves fragments on each group member");

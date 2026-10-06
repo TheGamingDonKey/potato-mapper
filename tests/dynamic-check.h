@@ -58,16 +58,25 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
             scene.surfaces[0].corners={{0,0},{.4,0},{.4,1},{0,1}};scene.surfaces.append(second);scene.touch(true);scene.dynamicFrame.shapes={line};
             const auto duplicate=window.output->grabFramebuffer();
             require(duplicate.pixelColor(qRound(duplicate.width()*.2),qRound(duplicate.height()*.65)).red()>60&&duplicate.pixelColor(qRound(duplicate.width()*.8),qRound(duplicate.height()*.35)).red()>60,"accepted duplicate surface IDs retain distinct mesh geometry");
+            scene.newProject();scene.surfaces[0].id="A";scene.surfaces[0].corners={{.05,.1},{.5,.1},{.5,.7},{.05,.7}};
+            scene.add();scene.surfaces[1].id="B";scene.surfaces[1].corners={{.5,.3},{.95,.3},{.95,.9},{.5,.9}};scene.touch(true);
+            PotatoDynamic::Settings connected;connected.effect=1;connected.playing=false;connected.palette=1;connected.members={"A","B"};scene.setDynamic(connected);
+            const double handoff=PotatoDynamic::timeline(connected,2).exploreEnd/2;
+            const auto portalLit=[](const QImage &image){int bright=0;for(int y=qRound(image.height()*.485);y<=qRound(image.height()*.515);++y)for(int x=qRound(image.width()*.49);x<=qRound(image.width()*.51);++x)if(image.pixelColor(x,y).red()>100)++bright;return bright>12;};
+            scene.setDynamicTime(handoff-.001);const auto beforePortal=window.output->grabFramebuffer();
+            scene.setDynamicTime(handoff+.001);const auto afterPortal=window.output->grabFramebuffer();
+            require(portalLit(beforePortal)&&portalLit(afterPortal),"connected snake stays bright at the shared opening before and after handoff");
             qInfo()<<"DYNAMIC CHECK"<<(state->errors.isEmpty()?"PASS":"FAIL")<<state->errors;
             if(!state->errors.isEmpty()){app.exit(2);return;}
             if(!args.contains("--test-dynamic-motion")){pause->setChecked(false);scene.dirty=false;QTimer::singleShot(160,&window,[&window,&app]{qInfo()<<"DYNAMIC timed clean"<<!window.scene.dirty;app.exit(window.scene.dirty?2:0);});return;}
             const int argument=args.indexOf("--frames");const QString folder=argument>=0&&argument+1<args.size()?args[argument+1]:QString();
             if(folder.isEmpty()||!QDir().mkpath(folder)){app.exit(2);return;}
-            scene.newProject();scene.surfaces.clear();for(int i=0;i<3;++i){Surface surface;surface.id=QString(QChar('A'+i));surface.name="Surface "+QString::number(i+1);surface.corners=i==0?QPolygonF{{.06,.12},{.34,.09},{.36,.50},{.08,.53}}:i==1?QPolygonF{{.53,.06},{.94,.17},{.86,.49},{.45,.38}}:QPolygonF{{.27,.60},{.73,.56},{.81,.91},{.22,.95}};scene.surfaces<<surface;}
+            const bool portals=args.contains("--portal-frames");
+            scene.newProject();scene.surfaces.clear();for(int i=0;i<(portals?2:3);++i){Surface surface;surface.id=QString(QChar('A'+i));surface.name="Surface "+QString::number(i+1);surface.corners=portals?(i==0?QPolygonF{{.05,.1},{.5,.1},{.5,.7},{.05,.7}}:QPolygonF{{.5,.3},{.95,.3},{.95,.9},{.5,.9}}):i==0?QPolygonF{{.06,.12},{.34,.09},{.36,.50},{.08,.53}}:i==1?QPolygonF{{.53,.06},{.94,.17},{.86,.49},{.45,.38}}:QPolygonF{{.27,.60},{.73,.56},{.81,.91},{.22,.95}};scene.surfaces<<surface;}
             PotatoDynamic::Settings settings;settings.effect=1;settings.members={"A","B","C"};settings.playing=false;scene.setDynamic(settings);
             auto index=std::make_shared<int>(0);auto capture=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weak=capture;
             const bool reference=args.contains("--reference-frames");
-            *capture=[&window,&app,folder,index,weak,reference]{auto keep=weak.lock();if(*index==(reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
+            *capture=[&window,&app,folder,index,weak,reference,portals]{auto keep=weak.lock();if(*index==(portals?24:reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=portals?1:*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(portals?6.2+*index*.08:reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
                 const auto file=QDir(folder).filePath(QString("frame-%1.png").arg(*index,3,10,QChar('0')));if(!window.output->grabFramebuffer().save(file)){app.exit(2);return;}++*index;QTimer::singleShot(30,&window,[keep]{(*keep)();});};(*capture)();
         });
     });

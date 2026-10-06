@@ -82,7 +82,7 @@ Drag the divider beside the surface list to resize the sidebar. Click **Media**,
 
 [0.8.2](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.2) reduces geometry preparation work, shares it between editor and projector, and reuses geometry and GPU buffers while paused. The animation look is retained; performance still depends on hardware and mesh complexity.
 
-These effects use the mapped mesh and one shared clock for editor/projector. Travel between separated surfaces is a timed handoff; the dark space outside your surfaces remains dark. Routing approximates the nearest openings from the surface corners. Cameras and automatic physical-surface recognition remain future work.
+These effects use the mapped mesh and one shared clock for editor/projector. The snake visits nearby surfaces and uses the centre of their widest facing overlap, with its tail continuing across the handoff. Overlapping panels can share one crossing point. With no facing opening it falls back to the closest boundary; separate gaps stay dark. Routing uses the corner/projective outline, so heavily deformed outer mesh edges remain approximate. Cameras and automatic physical-surface recognition remain future work.
 
 ## Updating an existing copy
 
