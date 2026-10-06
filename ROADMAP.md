@@ -4,8 +4,8 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
-- Latest published app: [v0.8.2 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.2).
-- **0.8.3 implemented — unreleased**, branch `codex/snake-wide-portals`. Centred wide openings, continued tail and common mapped headings. Focused geometry/actual-renderer checks, final extracted package and real 0.8.2 update/reopen passed; review found no remaining blockers. Publishing the checked portable ZIP is next.
+- Latest published app: [v0.8.3 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.3).
+- **0.8.3 shipped**, merged in [PR #14](https://github.com/TheGamingDonKey/potato-mapper/pull/14): centred wide openings, continued snake tail and common mapped headings. Focused geometry/actual-renderer checks, final extracted package and real 0.8.2 update/reopen passed; review found no remaining blockers. Public latest metadata and canonical HTTP 200 download match the checked ZIP. Continue with 0.8.x improvements; camera and Pi remain deferred.
 - **0.8.2 shipped**, merged in [PR #13](https://github.com/TheGamingDonKey/potato-mapper/pull/13): shared Dynamic FX geometry, paused buffer reuse, regular-mesh fast path and reduced deformed-mesh allocation. Final portable mapping/FX checks and actual 0.8.1 update/reopen passed, preserving fixture project/media and prior runtime. Public latest-release metadata and canonical HTTP 200 download match the checked ZIP's size and SHA256. The 0.8.1 managed Projects, launcher refresh/recovery and coordinated animations remain included. Camera work is deferred; continue with 0.8.x increments before 0.9/1.0. The specific reported File → Open failure still needs the failing file path/message.
 - On October 1, 2026, Shane reported that the downloaded app runs on another computer. That report does not establish every feature or projector combination on that computer.
 - On October 4, Shane again confirmed that the GitHub download runs on a new laptop. Installing this newly published update there remains a user check.
@@ -173,10 +173,12 @@ Merged in [PR #13](https://github.com/TheGamingDonKey/potato-mapper/pull/13) and
 - [x] **Check the final portable ZIP and update.** Extracted Dynamic FX, existing FX and mapping checks passed with only Windows system directories on PATH. An actual 0.8.1 launcher installed 0.8.2, refreshed itself and reopened the managed mapping; original project/media bytes, old runtime and launcher backup were retained. Source review found no remaining blockers.
 - [x] **Publish the checked 0.8.2 portable ZIP.** Public latest metadata and canonical HTTP 200 download match the tested 27,049,169-byte ZIP and SHA256 `36c529a89e406f1c75276c073d1ed3a430738b6a48fa62ab629ff9d943a804f3`. Hardware/driver/window composition still affect repaint rates; optimization does not guarantee 60 FPS on all computers.
 
-## Wider snake connections — implemented, unreleased (0.8.3)
+## Wider snake connections — shipped in 0.8.3
+
+Merged in [PR #14](https://github.com/TheGamingDonKey/potato-mapper/pull/14) and published in [v0.8.3](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.3).
 
 - [x] Choose the centre of the widest facing overlap between the nearest tour neighbours, retaining nearest-boundary fallback for corner-only/separated diagonal arrangements. Overlapping panels share one mapped point when available; nested/concentric panels retain fallback.
 - [x] Keep the head visible and distribute the trailing body across surfaces during both exploration and ambient passes; join portal directions in mapped space. Oblique near-corner bends preserve direction by shortening the whole UV ray. Regression failed before correction and passed afterwards.
 - [x] Check partial overlaps, touching and overlapping panels, rotation/winding, rendered handoff brightness and animation performance. Actual output inspected around a crossing. Dense four-surface geometry cost remained roughly 2.3 ms in a same-session 0.8.2 comparison; short desktop FPS remains hardware/window dependent.
 - [x] Final extracted mapping/Dynamic FX checks and real 0.8.2 launcher update/reopen passed, retaining original fixture project/media, previous runtime and root-launcher backup. Focused review found no remaining blockers.
-- [ ] Publish and verify the checked portable 0.8.3 update. Physical projection remains a user check; corner-based routing still approximates deformed outer mesh edges.
+- [x] Publish and verify the checked portable 0.8.3 update. Public latest metadata and canonical HTTP 200 download match the 27,053,718-byte final ZIP and SHA256 `83e2bc3a1abac3db9c8b99792593a859154020e2760c4cae358523b10ecd6598`. Physical projection remains a user check; corner-based routing still approximates deformed outer mesh edges.
