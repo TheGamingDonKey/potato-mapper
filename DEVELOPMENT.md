@@ -96,6 +96,8 @@ The actual-renderer check covers paused geometry and buffer reuse, hidden-FX idl
 
 Focused source review found no remaining blocking issues. The final extracted 0.8.2 ZIP passed `--smoke-dynamic`, `--smoke-fx` and `--smoke` with only Windows system directories on PATH. A real 0.8.1 launcher installed it, refreshed the root launcher, reopened the managed mapping and retained the original project/media bytes, prior runtime and launcher backup. SHA256: `36c529a89e406f1c75276c073d1ed3a430738b6a48fa62ab629ff9d943a804f3`. Physical projector and other-laptop performance remain user checks.
 
+Merged in [PR #13](https://github.com/TheGamingDonKey/potato-mapper/pull/13), release commit `ec390a9f2cc58077b222948a13824890f7e16fa2`, and published as [v0.8.2](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.2). Public latest metadata and the canonical HTTP 200 download match the final package's 27,049,169 bytes and digest. Existing personal mappings/media and the previous local package remain in place.
+
 ### Desktop/update checks
 
 `--smoke-clear` checks the actual Clear media button, retained geometry, another surface, Undo/Redo, saved state, and original-file preservation. `--test-restart` exercises the real unsaved-work Cancel/Save prompts and active-output cancellation. `--test-splash --snapshot <temporary.png>` captures the actual splash widget; `QT_SCALE_FACTOR=1.5` allows a focused scaling check without changing Windows display settings.

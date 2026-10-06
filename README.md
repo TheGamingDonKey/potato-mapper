@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.1/PotatoMapper-0.8.1-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.2/PotatoMapper-0.8.2-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -79,6 +79,8 @@ Drag the divider beside the surface list to resize the sidebar. Click **Media**,
 ### Dynamic FX
 
 **Shipped in [0.8.1](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.1).** Open **File → Examples** for a three-surface demo, or click **Dynamic FX** and choose participating surfaces. **Hot-Ass Potato** explores their perimeters with a polygon snake, sheds fragments, performs a staged glitch/reboot, then settles into coordinated ambient geometry. **Potato Focus** adds holographic scanning bands and polygon networks. Speed, shape count, six colours and pause apply to the whole group; Replay intro and Skip to ambient control the snake sequence. Switch the effect to Off to restore the surfaces' original media or individual FX.
+
+[0.8.2](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.2) reduces geometry preparation work, shares it between editor and projector, and reuses geometry and GPU buffers while paused. The animation look is retained; performance still depends on hardware and mesh complexity.
 
 These effects use the mapped mesh and one shared clock for editor/projector. Travel between separated surfaces is a timed handoff; the dark space outside your surfaces remains dark. Routing approximates the nearest openings from the surface corners. Cameras and automatic physical-surface recognition remain future work.
 
