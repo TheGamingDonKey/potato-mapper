@@ -1,4 +1,5 @@
 #include "model.h"
+#include "projects.h"
 #include <QImageReader>
 #include <QVideoFrame>
 #include <QPainter>
@@ -140,10 +141,41 @@ Scene::Scene(QObject *parent):QObject(parent){
     connect(timer,&QTimer::timeout,this,[this]{
         const double dt=std::min(animationClock.restart()/1000.0,.1);bool animated=false;
         for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);animated=true;}
+        if(dynamic.effect&&dynamic.playing&&!dynamicSurfaces.isEmpty()){
+            dynamicElapsed+=dt*dynamic.speed/100.0;
+            dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);animated=true;
+        }
         if(animated)emit changed();
     });timer->start(16);
 }
 Surface *Scene::current(){return selected>=0&&selected<surfaces.size()?&surfaces[selected]:nullptr;}
+bool Scene::dynamicSurface(const QString &id) const {return dynamic.effect&&dynamic.members.contains(id);}
+void Scene::rebuildDynamic(){
+    QStringList previous;for(const auto &s:dynamicSurfaces)previous<<s.id;
+    dynamicSurfaces.clear();
+    for(const auto &s:surfaces)if(s.visible&&dynamic.members.contains(s.id)){
+        const auto pixel=[this](QPointF p){return QPointF(p.x()*outputSize.width(),p.y()*outputSize.height());};
+        const auto t=s.transform();QPolygonF boundary;
+        for(const auto uv:QPolygonF{{0,0},{1,0},{1,1},{0,1}})boundary<<pixel(t.map(s.sample(uv.x(),uv.y())));
+        const double w=(QLineF(boundary[0],boundary[1]).length()+QLineF(boundary[3],boundary[2]).length())/2;
+        const double h=(QLineF(boundary[0],boundary[3]).length()+QLineF(boundary[1],boundary[2]).length())/2;
+        dynamicSurfaces.append({s.id,boundary,std::clamp(w/std::max(h,.001),.05,20.0)});
+    }
+    QStringList next;for(const auto &s:dynamicSurfaces)next<<s.id;
+    previous.sort();next.sort();
+    if(previous!=next)dynamicElapsed=0;
+    dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);
+}
+void Scene::setDynamic(PotatoDynamic::Settings settings){
+    settings=PotatoDynamic::Settings::fromJson(settings.json());
+    if(settings==dynamic)return;
+    checkpoint();if(settings.effect!=dynamic.effect||settings.members!=dynamic.members)dynamicElapsed=0;
+    dynamic=settings;touch(true);
+}
+void Scene::setDynamicTime(double seconds){
+    dynamicElapsed=std::isfinite(seconds)?std::max(0.0,seconds):0;
+    dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);emit changed();
+}
 MediaSource *Scene::source(const QString &path){
     if(mediaSources.contains(path))return mediaSources[path];
     auto *s=new MediaSource(path,this);mediaSources.insert(path,s);
@@ -153,6 +185,7 @@ MediaSource *Scene::source(const QString &path){
 void Scene::select(int i){selected=i;emit structureChanged();emit changed();}
 void Scene::touch(bool structure){
     dirty=true;
+    rebuildDynamic();
     if(structure)for(auto it=mediaSources.begin();it!=mediaSources.end();++it){
         if(it.value()->player){bool used=false;for(const auto &s:surfaces)if(s.media==it.key()){used=true;break;}if(!used)it.value()->player->pause();}
     }
@@ -160,7 +193,7 @@ void Scene::touch(bool structure){
 }
 void Scene::newProject(){
     for(auto *s:mediaSources)if(s->player)s->player->stop();
-    surfaces.clear();projectPath.clear();selected=-1;add();history.clear();future.clear();dirty=false;emit structureChanged();
+    surfaces.clear();projectPath.clear();dynamic={};dynamicElapsed=0;selected=-1;add();history.clear();future.clear();dirty=false;emit structureChanged();
 }
 void Scene::add(){
     checkpoint();Surface s;s.name="Surface "+QString::number(surfaces.size()+1);
@@ -213,15 +246,20 @@ void Scene::setFxLook(int i,FxLook look){
 }
 QJsonObject Scene::json(const QString &base) const {
     QJsonArray items;for(const auto &s:surfaces)items.append(s.json(base));
-    return {{"format","PotatoMapper"},{"version",1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items}};
+    return {{"format","PotatoMapper"},{"version",1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items},{"dynamic",dynamic.json()}};
 }
-bool Scene::restore(const QJsonObject &j,const QString &base,QString &error){
+bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool restartDynamic){
+    if(!PotatoProjects::validateDocument(j,error))return false;
     if((j["format"].toString()!="PotatoMapper"&&j["format"].toString()!="HomeMapper")||j["version"].toInt()!=1){error="This is not a supported Potato Mapper project.";return false;}
     QSize size(j["width"].toInt(),j["height"].toInt());
     if(size.width()<1||size.height()<1||size.width()>16384||size.height()>16384){error="Invalid output size.";return false;}
     QVector<Surface> restored;
-    for(auto v:j["surfaces"].toArray()){Surface s;if(!Surface::fromJson(v.toObject(),base,s)){error="Invalid surface in project.";return false;}restored.append(s);}
+    int surfaceIndex=0;
+    for(auto v:j["surfaces"].toArray()){Surface s;if(!Surface::fromJson(v.toObject(),base,s)){error=QString("Surface %1 (%2) has invalid corners or mesh points. The current project was kept.").arg(++surfaceIndex).arg(v.toObject()["name"].toString("unnamed"));return false;}restored.append(s);++surfaceIndex;}
     surfaces=restored;outputSize=size;selected=surfaces.isEmpty()?-1:0;
+    const auto restoredDynamic=PotatoDynamic::Settings::fromJson(j["dynamic"].toObject());
+    if(restartDynamic||restoredDynamic.effect!=dynamic.effect||restoredDynamic.members!=dynamic.members)dynamicElapsed=0;
+    dynamic=restoredDynamic;rebuildDynamic();
     for(auto *src:mediaSources)if(src->player)src->player->pause();
     for(const auto &s:surfaces){if(s.media.isEmpty()||QFileInfo::exists(s.media)){auto *src=source(s.media);if(src->player)src->player->play();}else emit message("Missing media: "+s.media+". Select its surface and use Load media to locate it.");}
     emit structureChanged();emit changed();return true;
@@ -230,6 +268,7 @@ void Scene::checkpoint(){history.append(json());if(history.size()>80)history.rem
 void Scene::undo(){if(history.isEmpty())return;future.append(json());QString e;restore(history.takeLast(),{},e);touch(true);}
 void Scene::redo(){if(future.isEmpty())return;history.append(json());QString e;restore(future.takeLast(),{},e);touch(true);}
 bool Scene::save(const QString &path,QString &error){
+    if(!PotatoProjects::backup(path,error))return false;
     QSaveFile file(path);if(!file.open(QIODevice::WriteOnly)){error=file.errorString();return false;}
     const auto bytes=QJsonDocument(json(QFileInfo(path).absolutePath())).toJson();
     if(file.write(bytes)!=bytes.size()||!file.commit()){error=file.errorString();return false;}
@@ -239,6 +278,6 @@ bool Scene::load(const QString &path,QString &error){
     QFile file(path);if(!file.open(QIODevice::ReadOnly)){error=file.errorString();return false;}
     QJsonParseError parse;auto doc=QJsonDocument::fromJson(file.readAll(),&parse);
     if(parse.error!=QJsonParseError::NoError){error=parse.errorString();return false;}
-    if(!restore(doc.object(),QFileInfo(path).absolutePath(),error))return false;
+    if(!restore(doc.object(),QFileInfo(path).absolutePath(),error,true))return false;
     projectPath=path;history.clear();future.clear();dirty=false;emit structureChanged();return true;
 }

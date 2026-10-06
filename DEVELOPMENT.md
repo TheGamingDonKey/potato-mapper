@@ -14,6 +14,10 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | `assets/patterns.frag`, `src/patterns.h` | Shared GLSL image/video/pattern shader, stable pattern IDs and defaults |
 | `src/updates.h`, `src/updates.cpp` | GitHub release checks, streamed download, verification, extraction and restart handoff |
 | `src/launcher.cpp` | Small Windows launcher, version selection, update installation, rollback and startup recovery |
+| `src/launcher-files.h`, `src/launcher-refresh.cpp/.h` | Retained runtime inventory, native root launcher refresh and replacement backup |
+| `src/projects.cpp/.h` | Managed portable project copies, media collection, recent paths and previous-save backups |
+| `src/dynamic.cpp/.h`, `src/dynamic-ui.h` | Scene-wide procedural geometry, route/stages and Dynamic FX controls |
+| `src/mesh-geometry.h` | Clips Dynamic FX triangles to mesh cells before mapping their vertices |
 | `src/branding.h` | Startup splash drawn with the existing potato logo |
 | `src/ui.h`, `src/style.h` | Collapsible inspector sections, filename elision and the shared widget theme |
 | `assets/` | Potato logo, Windows icon and resource metadata |
@@ -65,6 +69,20 @@ To reopen a mapping normally:
 ```
 
 For visual work, run the app and inspect the changed behavior once. For output changes, check display selection and fullscreen output; distinguish an output-window test from testing a connected physical projector. Avoid repeated broad checks without a specific failure to investigate.
+
+### Coordinated effects and managed projects (0.8.1)
+
+Dynamic settings are appended to the version-1 project as `dynamic`; earlier apps ignore them and lose those settings if they save. Scene advances one transient group clock, builds one bounded primitive frame and shares it between canvases. The renderer batches glowing polygon geometry per surface, clips triangles to the existing mesh, and respects brightness, opacity and blend mode. Polygon generation is capped at 500 primitives. Routing uses sampled projective corner boundaries, so nearest entry on a heavily bent outer mesh remains approximate. Removing/hiding a participant restarts the intro; geometry changes and unrelated Undo preserve its clock. Loading a project restarts the intro.
+
+Hot-Ass Potato stages are Explore, Overload, Reboot and Ambient. For three surfaces the intro is about 23.5 seconds at 100% speed. The glitch is an animation, followed by a glowing Potato Mapper title and tile assembly; it does not crash the program. Focus is an original scanning/polygon effect. Neither effect requires media or camera access. Examples are shipped inside the versioned runtime so protocol-1 updates deliver them.
+
+`PotatoDynamicChecks` exercises 23 geometry/settings assertions; `PotatoProjectChecks` exercises 26 temporary-fixture assertions. `--smoke-dynamic` covers actual controls, shared pause, motion pixels, clean timer ticks, persistence, membership, Undo clock continuity, failed-load scene preservation and a scan following an interior mesh deformation. `--test-dynamic-motion --frames <folder>` exports a short real-renderer preview; `--snapshot <file>` captures controls. `--check-project <path>` reads a mapping without collection or saving. The existing local `My mapping.hmap` loaded with five surfaces; Shane's separate File → Open failure needs its file/message before a specific cause can be established.
+
+Short simultaneous 1920×1080 output and 960×540 preview measurements on the original Radeon 840M: grid 21.6/25.0, Hot-Ass Potato 22.2/18.3 and Focus 18.7/20.1 output repaints/s for one/four overlapping surfaces. Editor rates matched. These are repaint counts over two-second samples, not GPU timings or promised performance. Four overlapping surfaces are a stress scene. Triangulation is still computed per canvas; shared geometry caching remains a possible improvement.
+
+Projects collection uses a locked atomic index, unique destination folders and relative media paths. Source mappings/media are retained. Unchanged imports reuse their edited managed copy; newly referenced external media is repacked while retaining that copy. Default Save writes to Projects and keeps a `.bak`; Save itself does not collect newly added media. Missing media can still open for manual Load media repair. Structural validation runs before Scene mutation. Failed collection keeps the original valid mapping open and reports the path.
+
+Launcher maintenance stays inside the detected installation. Protocol 1 includes `PotatoLauncherRefresh.exe`, the replacement launcher and its digest inside `versions/<version>`. The selected editor requests detached maintenance; older directly opened runtimes cannot replace a newer selected launcher. The helper uses the update lock, a flushed staged copy, atomic replacement, bounded retry and a previous executable backup. A damaged inventoried current runtime falls back to a verified previous version; older runtimes have weaker completeness checks because they lack inventories. A missing root launcher can be restored by a working inner editor started with an explicit `--install-root`; without a runnable entry point, obtain the full ZIP and retain personal data.
 
 ### Desktop/update checks
 

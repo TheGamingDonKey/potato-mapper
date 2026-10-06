@@ -13,9 +13,9 @@ You do not need Visual Studio, Qt, Python, or a GitHub account to run this build
 For 64-bit Intel/AMD Windows 10 (22H2) or Windows 11 with an OpenGL 3.3 Core
 graphics driver. This is not a macOS, Linux, or native Windows ARM build.
 
-Save mappings using the app's Save command. Images and videos are linked files,
-not stored inside the mapping. Copy them too when moving to another computer;
-use Load media to reconnect any paths that changed.
+Save mappings using the app's Save command. Projects is the default location.
+Opening an external project can collect a portable copy and its media there;
+the original files remain available. Keep Projects when moving the app folder.
 
 Right-click a surface (or its list entry) and choose Clear media to return it
 to the white grid. Its mesh stays in place. Ctrl+Z restores the media.
@@ -24,8 +24,10 @@ Double-click its list entry to rename it. Help has a quick guide and About.
 Drag the divider beside the surface list to resize the sidebar. Click Media,
 Appearance, Potato FX or Mapping headings to expand/collapse their controls.
 Appearance has brightness and opacity sliders for the selected surface.
-Potato FX offers the built-in animated dots; choose Media / white grid to
-return to the alignment grid, or load media to replace the animation.
+Potato FX offers individual procedural animations. Dynamic FX coordinates
+several surfaces with Hot-Ass Potato or Potato Focus. File > Examples opens
+ready-made three-surface demos. Choose participating surfaces in Dynamic FX;
+select Off to restore their original content. Replay intro restarts the snake.
 
 UPDATES
 Use Help > Check for updates to download a newer stable Windows release.
@@ -36,6 +38,14 @@ it, then open PotatoMapper.exe in the main extracted folder and check again.
 Point shortcuts to that launcher. Extract the full ZIP if launcher files are missing.
 Updates preserve projects/media outside versions and .updates. Do not save
 personal files inside those two managed folders. Media remains linked.
+The installed editor also refreshes the root launcher from its release payload.
+Previous launcher copies and readable maintenance errors live in .maintenance.
+Keep the versions folder intact for recovery and rollback. If current.txt is
+missing, invalid, or selects a damaged current runtime with an inventory, the
+launcher selects a complete retained application.
+If PotatoMapper.exe itself is missing, extract a complete app ZIP into a new
+folder, or open versions/<version>/PotatoMapperApp.exe with --install-root pointing
+to the original app folder so its native maintenance helper can restore it.
 
 IF YOU ALREADY HAVE VERSION 0.2.0
 Close Potato Mapper. Extract this ZIP, then copy its contents into your existing

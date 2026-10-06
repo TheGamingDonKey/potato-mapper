@@ -3,6 +3,7 @@
 /out/
 *.pmap
 *.hmap
+!examples/*.pmap
 *.log
 /.vs/
 /CMakeUserPresets.json

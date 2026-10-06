@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "mesh-geometry.h"
 #include <QPainter>
 #include <QFile>
 #include <QMimeData>
@@ -19,7 +20,7 @@ Canvas::~Canvas(){cleanup();}
 void Canvas::cleanup(){
     if(!context())return;makeCurrent();
     for(auto &t:textures){if(t.id)glDeleteTextures(1,&t.id);if(t.chroma)glDeleteTextures(1,&t.chroma);}
-    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();doneCurrent();graphicsReady=false;
+    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();dynamicBuffer.destroy();dynamicVao.destroy();dynamicProgram.removeAllShaders();doneCurrent();graphicsReady=false;
 }
 void Canvas::initializeGL(){
     if(!initializeOpenGLFunctions()){graphicsError="OpenGL 3.3 could not be initialized.";emit graphicsInitialized(graphicsError);return;}
@@ -38,7 +39,51 @@ void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment.constData())||!program.link()){
         graphicsError=program.log();emit graphicsInitialized(graphicsError);return;
     }
-    vao.create();buffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
+    const char *dynamicVertex=R"GLSL(#version 330 core
+layout(location=0) in vec2 position;
+layout(location=1) in vec4 colour;
+uniform mat3 mapping;
+out vec4 ink;
+void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2.0*p.y,0.0,p.z);ink=colour;}
+)GLSL";
+    const char *dynamicFragment=R"GLSL(#version 330 core
+in vec4 ink;uniform float brightness;uniform float opacity;uniform int blendMode;out vec4 outputColour;
+void main(){vec4 c=vec4(ink.rgb*brightness,ink.a*opacity);if(blendMode==1)c.rgb*=c.a;outputColour=c;}
+)GLSL";
+    if(!dynamicProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,dynamicVertex)||!dynamicProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,dynamicFragment)||!dynamicProgram.link()){
+        graphicsError=dynamicProgram.log();emit graphicsInitialized(graphicsError);return;
+    }
+    vao.create();buffer.create();dynamicVao.create();dynamicBuffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
+}
+void Canvas::drawDynamic(const Surface &s){
+    QVector<float> vertices;vertices.reserve(20000);
+    auto vertex=[&](QPointF uv,QColor colour,double alpha){
+        const auto p=s.sample(uv.x(),uv.y());vertices<<float(p.x())<<float(p.y())<<float(colour.redF())<<float(colour.greenF())<<float(colour.blueF())<<float(std::min(1.0,colour.alphaF()*alpha*1.5));
+    };
+    auto triangle=[&](QPointF a,QPointF b,QPointF c,QColor colour,double alpha){for(const auto p:potatoMeshTriangles(a,b,c,s.cells))vertex(p,colour,alpha);};
+    double aspect=1;for(const auto &surface:scene->dynamicSurfaces)if(surface.id==s.id){aspect=surface.aspect;break;}
+    for(const auto &shape:scene->dynamicFrame.shapes)if(shape.surfaceId==s.id&&shape.points.size()>=2){
+        const auto &points=shape.points;
+        if(shape.filled)for(int i=1;i+1<points.size();++i)triangle(points[0],points[i],points[i+1],shape.color,1);
+        for(int layer=0;layer<2;++layer){
+            const double width=shape.width*(layer?1:3.2),alpha=layer?1:.13;
+            const int count=shape.closed&&points.size()>2?int(points.size()):int(points.size())-1;
+            for(int i=0;i<count;++i){
+                const auto a=points[i],b=points[(i+1)%points.size()];const auto delta=b-a;
+                const double dx=delta.x()*aspect,dy=delta.y(),length=std::hypot(dx,dy);if(length<1e-8)continue;
+                const QPointF normal(-dy/length*width/aspect/2,dx/length*width/2);
+                triangle(a+normal,b+normal,b-normal,shape.color,alpha);triangle(a+normal,b-normal,a-normal,shape.color,alpha);
+            }
+        }
+    }
+    program.release();buffer.release();vao.release();dynamicProgram.bind();dynamicVao.bind();dynamicBuffer.bind();
+    dynamicProgram.enableAttributeArray(0);dynamicProgram.enableAttributeArray(1);
+    dynamicProgram.setAttributeBuffer(0,GL_FLOAT,0,2,6*sizeof(float));dynamicProgram.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),4,6*sizeof(float));
+    const auto t=s.transform();QMatrix3x3 m;
+    m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());
+    dynamicProgram.setUniformValue("mapping",m);dynamicProgram.setUniformValue("brightness",s.brightness/100.f);dynamicProgram.setUniformValue("opacity",s.opacity/100.f);dynamicProgram.setUniformValue("blendMode",s.blend);
+    dynamicBuffer.allocate(vertices.constData(),int(vertices.size()*sizeof(float)));glDrawArrays(GL_TRIANGLES,0,int(vertices.size()/6));
+    dynamicBuffer.release();dynamicVao.release();dynamicProgram.release();program.bind();vao.bind();buffer.bind();
 }
 QRectF Canvas::canvasRect() const {
     const double margin=editor?28:0;
@@ -87,6 +132,7 @@ void Canvas::paintGL(){
         if(s.blend==1)glBlendFuncSeparate(GL_ONE,GL_ONE_MINUS_SRC_COLOR,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
         else glBlendFuncSeparate(GL_SRC_ALPHA,s.blend==2?GL_ONE:GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
         program.setUniformValue("blendMode",s.blend);
+        if(scene->dynamicSurface(s.id)){drawDynamic(s);continue;}
         auto *media=scene->source(s.media);const auto &img=media->image;const auto frameSize=media->frameSize();if(frameSize.isEmpty())continue;
         const bool yuv=media->mappedVideo.isValid();program.setUniformValue("yuvVideo",yuv);
         auto &tex=textures[s.media];if(!tex.id){glGenTextures(1,&tex.id);}
@@ -154,6 +200,10 @@ void Canvas::paintGL(){
     buffer.release();vao.release();program.release();glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,0);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
     glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
     p.endNativePainting();
+    if((editor||!scene->blackout)&&scene->dynamicFrame.titleOpacity>0){
+        p.save();p.setClipRect(r);p.setRenderHint(QPainter::Antialiasing);p.setOpacity(scene->dynamicFrame.titleOpacity);
+        QFont font("Segoe UI");font.setBold(true);font.setPixelSize(qMax(12,int(r.height()*.065)));font.setLetterSpacing(QFont::AbsoluteSpacing,r.height()*.004);p.setFont(font);p.setPen(QColor("#bcfaff"));p.drawText(r,Qt::AlignCenter,"POTATO MAPPER");p.restore();
+    }
     if(!editor)return;
     p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#566171"),1));p.drawRect(r);
     for(int i=0;i<scene->surfaces.size();i++){
