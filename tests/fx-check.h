@@ -35,6 +35,8 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         auto *edge=window.template findChild<QSpinBox*>("patternEdge");
         auto *reverse=window.template findChild<QCheckBox*>("patternReverse");
         if(!blend||!picker||!speed||!size||!pause||!density||!flow||!angle||!palette||!edge||!reverse){qInfo()<<"FX FAIL controls missing";app.exit(2);return;}
+        const int hex=picker->findText("Hex Tide",Qt::MatchStartsWith);
+        require(hex>=0,"Hex Tide selectable in Potato FX");
         auto sample=[](Canvas *canvas){auto image=canvas->grabFramebuffer();return image.pixelColor(image.width()/2,image.height()/2);};
         auto near=[](QColor a,QColor b){return std::max({std::abs(a.red()-b.red()),std::abs(a.green()-b.green()),std::abs(a.blue()-b.blue())})<=4;};
         auto fixture=[&](const QString &name,QColor colour){QImage img(32,32,QImage::Format_RGBA8888);img.fill(colour);const auto path=state->temp.filePath(name);require(img.save(path),"write "+name);return path;};
@@ -70,6 +72,18 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         auto legacy=scene.json();auto items=legacy["surfaces"].toArray();for(int i=0;i<items.size();++i){auto item=items[i].toObject();item.remove("blend");items[i]=item;}legacy["surfaces"]=items;legacy["format"]="HomeMapper";QString error;
         require(scene.restore(legacy,{},error)&&scene.surfaces[1].blend==0,"old project defaults Normal");
         scene.select(1);scene.setAppearance(1,100,100);scene.surfaces[0].visible=false;
+        if(hex>=0){
+            picker->setCurrentIndex(hex);pause->setChecked(true);scene.current()->patternPhase=1.999;
+            const auto look=scene.current()->fx;
+            picker->setCurrentIndex(12);scene.setFxLook(1,look);size->setValue(38);scene.current()->patternPhase=1.999;
+            const auto tunnelFrame=window.output->grabFramebuffer();picker->setCurrentIndex(hex);size->setValue(38);scene.setFxLook(1,look);pause->setChecked(true);scene.current()->patternPhase=1.999;
+            require(window.output->grabFramebuffer()!=tunnelFrame,"Hex Tide renders its own geometry rather than the tunnel fallback");
+            auto difference=[](const QImage &a,const QImage &b){double sum=0;int count=0;for(int y=0;y<a.height();y+=3)for(int x=0;x<a.width();x+=3){sum+=std::abs(a.pixelColor(x,y).red()-b.pixelColor(x,y).red());++count;}return sum/count;};
+            const auto before=window.output->grabFramebuffer();scene.current()->patternPhase=2.001;const auto nearby=window.output->grabFramebuffer();scene.current()->patternPhase=2.999;
+            const auto later=window.output->grabFramebuffer();const double small=difference(before,nearby),large=difference(before,later);
+            require(small<2&&large>small+.5,"Hex Tide evolves continuously between nearby times");
+            const auto hexProject=scene.json();require(scene.save(state->temp.filePath("hex.pmap"),error)&&scene.load(state->temp.filePath("hex.pmap"),error)&&scene.json()==hexProject&&scene.surfaces[1].pattern==hex,"Hex Tide survives saving and reopening");scene.select(1);
+        }
         picker->setCurrentIndex(5);pause->setChecked(true);
         const auto originalLook=scene.surfaces[1].fx;const auto otherSurface=scene.surfaces[0].json();
         density->setValue(22);require(scene.surfaces[1].fx.density==22&&scene.surfaces[0].json()==otherSurface,"density scoped to selected surface");
@@ -128,16 +142,17 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
     });
 }
 
-// An opt-in preview rendered by the same four mapped surfaces as live output.
+// An opt-in preview rendered by the same mapped surfaces as live output.
 // Deterministic phase steps make the exported frames easy to compare visually.
 template<class Window> void renderFxMotion(Window &window,QApplication &app,const QString &directory,int firstPattern=5){
     if(directory.isEmpty()||!QDir().mkpath(directory)){app.exit(2);return;}
-    if(firstPattern<5||firstPattern+3>=potatoPatterns().size()){app.exit(2);return;}
+    if(firstPattern<5||firstPattern>=potatoPatterns().size()){app.exit(2);return;}
+    const int count=std::min(4,int(potatoPatterns().size())-firstPattern);
     auto &scene=window.scene;scene.newProject();
-    for(int i=0;i<4;++i){
+    for(int i=0;i<count;++i){
         if(i)scene.add();scene.setPattern(i,i+firstPattern);
-        auto &s=scene.surfaces[i];const double x=(i%2)*.5,y=(i/2)*.5;
-        s.corners={QPointF(x,y),QPointF(x+.5,y),QPointF(x+.5,y+.5),QPointF(x,y+.5)};s.patternPlaying=false;
+        auto &s=scene.surfaces[i];const double width=count==1?1.0:.5,height=count<=2?1.0:.5,x=(i%2)*width,y=(i/2)*height;
+        s.corners={QPointF(x,y),QPointF(x+width,y),QPointF(x+width,y+height),QPointF(x,y+height)};s.patternPlaying=false;
     }
     scene.select(0);window.output->resize(960,540);window.output->show();
     QTimer::singleShot(650,&window,[&window,&app,directory]{
