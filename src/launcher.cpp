@@ -11,6 +11,8 @@
 #include <vector>
 #include <regex>
 #include <stdexcept>
+#include "launcher-files.h"
+#include <algorithm>
 
 namespace fs=std::filesystem;
 static HWND progressWindow=nullptr,progressLabel=nullptr,progressBar=nullptr;
@@ -36,6 +38,35 @@ static void writeAtomic(const fs::path &root,const wchar_t *name,const std::stri
     if(!MoveFileExW(temp.c_str(),(root/name).c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Could not select the installed version. The current version was not changed.");
 }
 static void writePointer(const fs::path &root,const wchar_t *name,const std::string &value){writeAtomic(root,name,value+"\n");}
+static void ensureCurrent(const fs::path &root){
+    auto current=read(root/L"current.txt");while(!current.empty()&&(current.back()=='\n'||current.back()=='\r'))current.pop_back();
+    const auto runtime=root/L"versions"/current;
+    // Preserve a complete explicit selection, including rollback. Retained
+    // inventories also catch an editor or dependency damaged after installation.
+    // Earlier unmarked layouts retain their original startup behavior.
+    if(versionValid(current)&&potatoLauncher::plainPath(runtime)&&fs::is_regular_file(runtime/L"PotatoMapperApp.exe")
+        &&(!fs::exists(runtime/L"runtime-version.txt")||potatoLauncher::completeRuntime(runtime,current)))return;
+    std::vector<std::string> retained;
+    const auto versions=root/L"versions";
+    if(potatoLauncher::plainPath(versions)&&fs::is_directory(versions)){
+        for(const auto &entry:fs::directory_iterator(versions)){
+            const auto version=entry.path().filename().string();
+            if(entry.is_directory()&&versionValid(version)&&potatoLauncher::completeRuntime(entry.path(),version))retained.push_back(version);
+        }
+    }
+    if(retained.empty())throw std::runtime_error("The active application pointer is missing or invalid and no complete retained version was found. Extract a complete Potato Mapper ZIP into a new folder, then open your saved projects.");
+    auto numbers=[](const std::string &value){std::array<int,3> parts{};std::istringstream in(value);char dot=0;in>>parts[0]>>dot>>parts[1]>>dot>>parts[2];return parts;};
+    std::sort(retained.begin(),retained.end(),[&](const auto &a,const auto &b){return numbers(a)>numbers(b);});
+    // Keep a verified previous version as the first recovery choice.
+    auto previous=read(root/L"previous.txt");while(!previous.empty()&&(previous.back()=='\n'||previous.back()=='\r'))previous.pop_back();
+    const auto found=std::find(retained.begin(),retained.end(),previous);
+    writePointer(root,L"current.txt",found==retained.end()?retained.front():*found);
+}
+static void prepareProjects(const fs::path &root){
+    const auto projects=root/L"Projects";
+    if(fs::exists(projects)&&!fs::is_directory(projects))throw std::runtime_error("The default Projects folder name is occupied by a file. Rename that file, then reopen Potato Mapper.");
+    if(!fs::exists(projects))fs::create_directory(projects);
+}
 static bool inside(const fs::path &child,const fs::path &parent){
     auto c=fs::weakly_canonical(child),p=fs::weakly_canonical(parent);auto ci=c.begin();
     for(auto pi=p.begin();pi!=p.end();++pi,++ci){if(ci==c.end()||_wcsicmp(ci->c_str(),pi->c_str())!=0)return false;}
@@ -76,14 +107,17 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     HANDLE lock=INVALID_HANDLE_VALUE;fs::path pendingOwned,sessionOwned;std::string restoreVersion,priorPrevious;bool previousExisted=false,pointersTouched=false;
     try{
         if(read(root/L"installation.txt")!="PotatoMapper/1\n")throw std::runtime_error("Extract the entire Potato Mapper package before starting it. Keep installation.txt and versions beside this launcher.");
+        prepareProjects(root);
         if(!apply&&!rollback){
             HANDLE busy=CreateFileW((root/L".update-lock").c_str(),GENERIC_READ|GENERIC_WRITE,0,nullptr,OPEN_ALWAYS,FILE_ATTRIBUTE_HIDDEN,nullptr);
             if(busy==INVALID_HANDLE_VALUE)throw std::runtime_error("Potato Mapper is updating. Wait for the update to finish and open it again.");lock=busy;
+            ensureCurrent(root);
             bool wait=false;for(const auto &a:args)if(a.rfind(L"--smoke",0)==0||a==L"--profile-media"||a.rfind(L"--test-",0)==0)wait=true;
             const int result=int(launch(root,args,wait));CloseHandle(lock);return result;
         }
         lock=CreateFileW((root/L".update-lock").c_str(),GENERIC_READ|GENERIC_WRITE,0,nullptr,OPEN_ALWAYS,FILE_ATTRIBUTE_HIDDEN,nullptr);
         if(lock==INVALID_HANDLE_VALUE)throw std::runtime_error("Another update is already in progress.");
+        ensureCurrent(root);
         if(apply){
             const auto session=fs::path(value(L"--apply-update"));
             if(!inside(session,root/L".updates")||!fs::is_directory(session)||fs::is_symlink(session))throw std::runtime_error("Update staging folder is outside this installation.");

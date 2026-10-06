@@ -21,7 +21,8 @@ if (-not $CrtPath) {
 }
 $exe = Join-Path $BuildDirectory 'Release\PotatoMapperApp.exe'
 $launcher = Join-Path $BuildDirectory 'Release\PotatoMapper.exe'
-foreach ($required in $exe, $launcher, (Join-Path $QtPath 'bin\windeployqt.exe'), (Join-Path $CrtPath 'vcruntime140.dll')) {
+$refresh = Join-Path $BuildDirectory 'Release\PotatoLauncherRefresh.exe'
+foreach ($required in $exe, $launcher, $refresh, (Join-Path $QtPath 'bin\windeployqt.exe'), (Join-Path $CrtPath 'vcruntime140.dll')) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Missing: $required" }
 }
 $version = (Get-Item -LiteralPath $exe).VersionInfo.FileVersion
@@ -39,8 +40,16 @@ if ($DestinationDirectory) {
 $stage = [IO.Path]::GetFullPath($stage)
 $runtime = Join-Path $stage "versions\$version"
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $stage 'Projects') | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $runtime 'launcher') | Out-Null
 Copy-Item -LiteralPath $launcher -Destination $stage
 Copy-Item -LiteralPath $exe -Destination $runtime
+# Protocol 1 only transfers versioned files. Retained older launchers therefore
+# deliver both maintenance executables without any changes to the protocol.
+Copy-Item -LiteralPath $launcher -Destination (Join-Path $runtime 'launcher\PotatoMapper.exe')
+Copy-Item -LiteralPath $refresh -Destination $runtime
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'examples') -Destination $runtime -Recurse
+[IO.File]::WriteAllText((Join-Path $runtime 'launcher\launcher-sha256.txt'), ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash.ToLowerInvariant() + "`n"), [Text.Encoding]::ASCII)
 & (Join-Path $QtPath 'bin\windeployqt.exe') --release --no-translations --no-compiler-runtime --no-system-d3d-compiler --no-system-dxc-compiler --no-opengl-sw (Join-Path $runtime 'PotatoMapperApp.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Qt runtime deployment failed.' }
 # ICU is supplied by supported Windows versions. Do not redistribute a copy
@@ -59,6 +68,14 @@ foreach ($module in 'qtbase', 'qtmultimedia', 'qtsvg') {
 [IO.File]::WriteAllText((Join-Path $stage 'installation.txt'), "PotatoMapper/1`n", [Text.Encoding]::ASCII)
 [IO.File]::WriteAllText((Join-Path $stage 'current.txt'), "$version`n", [Text.Encoding]::ASCII)
 [IO.File]::WriteAllText((Join-Path $runtime 'runtime-version.txt'), "$version`n", [Text.Encoding]::ASCII)
+# A retained copy needs its own digest inventory: old launchers do not retain
+# the package-root update manifest when installing a version.
+$runtimeInventory = @(Get-ChildItem -LiteralPath $runtime -File -Recurse | Sort-Object FullName | ForEach-Object {
+    $relative = $_.FullName.Substring($runtime.Length + 1).Replace('\', '/')
+    if ($relative -match "[`t`r`n]") { throw "Unsupported runtime filename: $relative" }
+    (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + "`t" + $relative
+})
+[IO.File]::WriteAllText((Join-Path $runtime 'runtime-files.sha256'), (($runtimeInventory -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
 $files = @(Get-ChildItem -LiteralPath $runtime -File -Recurse | Sort-Object FullName | ForEach-Object {
     @{ path = $_.FullName.Substring($stage.Length + 1).Replace('\', '/'); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
 })

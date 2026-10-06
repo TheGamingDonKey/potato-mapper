@@ -70,11 +70,17 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 3. Drag corner handles; switch **Edit** to **Mesh points** for finer adjustments. Drag inside a surface to move it.
 4. Choose the projector under **PROJECTOR OUTPUT** and click **Start output**.
 5. Use **Stop**, or Escape while the output window has focus. **B** toggles blackout while a mapper window has focus.
-6. Save your mapping. Media is referenced by file path, not embedded; keep those files available when moving a project.
+6. Save your mapping. **Projects** in the app folder is the default location. Media stays linked; opening a project collects a portable copy with its referenced media when those files are available.
 
 Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on an animation surface switches it back to media playback. **Clear media** returns an image, video, or animation surface to the white grid. Double-click a surface's list entry to rename it.
 
 Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100% and Blend to Normal. Screen gives a softer bright overlay; Add adds light and can clip to white. Move the overlay above the other surface using **Forward**, overlap their mapped areas, then choose Screen/Add. Open Potato FX and choose a flowing effect. Start with White, Soft edge 0%, Speed 100% and Flow 70%. Increase Density for smaller elements, then adjust Cell size or Line width. SquareWave uses dense stretching cells; Diagonals uses rotating strokes; CubicCircles morphs filled cells into circles/rings; SquareArray moves rows of changing blocks. Waterlight draws a shimmering light web; Contour Flow drifts landscape-like lines; Curve Maze joins curved paths; Depth Tunnel creates a perspective grid. Older dots, stripes, rings and the former square waves (now labelled Stepped waves) remain available. Earlier app versions ignore the new appearance settings and do not retain them when saving.
+
+### Dynamic FX
+
+**Implemented for 0.8.1; publication is tracked in the roadmap.** Open **File → Examples** for a three-surface demo, or click **Dynamic FX** and choose participating surfaces. **Hot-Ass Potato** explores their perimeters with a polygon snake, sheds fragments, performs a staged glitch/reboot, then settles into coordinated ambient geometry. **Potato Focus** adds holographic scanning bands and polygon networks. Speed, shape count, six colours and pause apply to the whole group; Replay intro and Skip to ambient control the snake sequence. Switch the effect to Off to restore the surfaces' original media or individual FX.
+
+These effects use the mapped mesh and one shared clock for editor/projector. Travel between separated surfaces is a timed handoff; the dark space outside your surfaces remains dark. Routing approximates the nearest openings from the surface corners. Cameras and automatic physical-surface recognition remain future work.
 
 ## Updating an existing copy
 
@@ -84,7 +90,11 @@ Drag the divider beside the surface list to resize the sidebar. Click **Media**,
 
 If an older copy says it was opened outside the portable launcher layout, save and close it, then open **PotatoMapper.exe in the main extracted folder** and check again. A shortcut should point to that file. Only extract another full app ZIP if the launcher files are missing. From v0.7.1, directly opening the inner editor also detects its enclosing portable folder.
 
-Save personal files outside `versions` and `.updates`, which are managed app folders. Updates replace the selected runtime rather than the whole app folder. Projects and linked media can remain in the app root or anywhere else you choose. Updates require an internet connection and a writable app folder; mapping still works offline. There is no automatic update check during projection.
+Save personal files outside `versions`, `.updates` and `.maintenance`, which are managed app folders. The root launcher selects the current editor in `versions`; its name and your outer folder can remain **Potato Mapper** through updates. Updates require an internet connection and a writable app folder; mapping still works offline. There is no automatic update check during projection.
+
+The 0.8.1 maintenance payload can refresh an older root launcher automatically and retains its previous executable under `.maintenance`. The launcher repairs a missing/invalid current pointer using a complete retained version; new runtimes also retain an inventory so a damaged selected runtime can fall back. A completely deleted launcher still needs a replacement from a full release ZIP. Keep the existing Projects folder and media when repairing an installation.
+
+On normal startup, mappings immediately inside the app root or a version folder are copied with available media into **Projects**; originals stay in place. Opening an external mapping uses the same collection process. Edited managed copies are retained, collisions get separate names, and **File → Recent projects / Open Projects folder** make them accessible. Saves keep the previous mapping beside it as `.bak`. New media added later remains linked until the mapping is opened and collected again. Keep a separate backup of Projects: deleting the entire app folder also deletes projects stored there.
 
 ## Continue development
 

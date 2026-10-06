@@ -4,9 +4,13 @@
 #include "updates.h"
 #include "ui.h"
 #include "style.h"
+#include "dynamic-ui.h"
+#include "projects.h"
+#include "launcher-refresh.h"
 #include "../tests/appearance-check.h"
 #include "../tests/fx-check.h"
 #include "../tests/fx-profile.h"
+#include "../tests/dynamic-check.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QInputDialog>
@@ -75,6 +79,7 @@ public:
         action("Undo",QKeySequence::Undo,[this]{scene.undo();});action("Redo",QKeySequence::Redo,[this]{scene.redo();});bar->addSeparator();
         action("+ Surface",QKeySequence("Ctrl+N, S"),[this]{scene.add();});action("Load media",QKeySequence("Ctrl+I"),[this]{loadMedia();});
         action("Potato FX",{},[this]{if(!scene.current())scene.add();fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);patternPicker->setFocus();patternPicker->showPopup();});
+        action("Dynamic FX",{},[this]{showDynamicControls();});
         addToolBarBreak();
         auto *outputBar=addToolBar("Projector output");outputBar->setMovable(false);
         auto *outputPanel=new QWidget;auto *outputLayout=new QVBoxLayout(outputPanel);outputLayout->setContentsMargins(4,2,4,2);outputLayout->setSpacing(5);
@@ -173,6 +178,7 @@ public:
         connect(patternSpeed,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSpeed=v;scene.touch();}});
         connect(patternSize,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSize=v;scene.touch();}});
         connect(patternPause,&QCheckBox::toggled,this,[this](bool v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternPlaying=!v;scene.touch();}});
+        dynamicSection=new DynamicPanel(&scene);detailLayout->addWidget(dynamicSection);
         auto *mapping=new InspectorSection("Mapping");mapping->heading->setChecked(false);detailLayout->addWidget(mapping);auto *form=new QFormLayout;
         mode=new QComboBox;mode->addItems({"Corners","Mesh points"});form->addRow("Edit",mode);
         connect(mode,&QComboBox::currentIndexChanged,this,[this](int i){canvas->meshMode=i==1;canvas->update();});
@@ -200,7 +206,12 @@ public:
         auto *fileMenu=menuBar()->addMenu("File");auto *editMenu=menuBar()->addMenu("Edit");
         for(auto *a:bar->actions()){if(QStringList{"New","Open","Save","Save as"}.contains(a->text()))fileMenu->addAction(a);if(QStringList{"Undo","Redo"}.contains(a->text()))editMenu->addAction(a);}
         fileMenu->addSeparator();fileMenu->addAction("Open app folder",this,[]{QDesktopServices::openUrl(QUrl::fromLocalFile(potatoInstallRoot()));});
-        fileMenu->addAction("Exit",this,&QWidget::close);
+        fileMenu->addAction("Open Projects folder",this,[]{QDesktopServices::openUrl(QUrl::fromLocalFile(PotatoProjects::directory(potatoInstallRoot())));});
+        auto *recentMenu=fileMenu->addMenu("Recent projects");
+        connect(recentMenu,&QMenu::aboutToShow,this,[this,recentMenu]{recentMenu->clear();for(const auto &path:PotatoProjects::recent(potatoInstallRoot())){auto *a=recentMenu->addAction(QFileInfo(path).fileName());a->setToolTip(path);connect(a,&QAction::triggered,this,[this,path]{openProject(path);});}if(recentMenu->isEmpty())recentMenu->addAction("No recent projects")->setEnabled(false);});
+        auto *examplesMenu=fileMenu->addMenu("Examples");
+        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap"));showDynamicControls();});}
+        fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *helpMenu=menuBar()->addMenu("Help");
         helpMenu->addAction("Quick guide",this,[this]{QMessageBox::information(this,"Potato Mapper — Quick guide","1. Connect your projector and extend your desktop.\n2. Add a surface and load or drop media.\n3. Drag corners or choose Mesh points to align it.\n4. Choose your projector and Start output.\n\nRight-click a surface to clear media or rename it.\nClear media keeps the mesh and supports Undo.\nSave your project; media files stay linked on disk.\n\nB: blackout   Esc: stop output   F: fit editor view");});
         helpMenu->addAction("Check for updates…",this,[this]{if(updateDialog){updateDialog->raise();updateDialog->activateWindow();return;}updateDialog=new UpdateDialog(this,[this]{return prepareRestart();},[this]{return scene.projectPath;});updateDialog->show();});
@@ -212,15 +223,31 @@ public:
         statusBar()->showMessage("Add a surface, then drop an image or video onto it.");
     }
     ~MainWindow()override{delete output;}
+    void showDynamicControls(){
+        dynamicSection->heading->setChecked(true);
+        // Scroll after the expanded section has received its layout geometry.
+        QTimer::singleShot(0,this,[this]{
+            inspector->widget()->layout()->activate();
+            inspector->verticalScrollBar()->setValue(dynamicSection->heading->mapTo(inspector->widget(),QPoint()).y());
+        });
+    }
     bool save(bool as){
         QString path=scene.projectPath;
         if(as||path.isEmpty())path=QFileDialog::getSaveFileName(this,"Save mapping",path.isEmpty()?QDir(projectFolder()).filePath("My mapping.pmap"):path,"Potato Mapper (*.pmap *.hmap)");
         if(path.isEmpty())return false;if(!path.endsWith(".pmap",Qt::CaseInsensitive)&&!path.endsWith(".hmap",Qt::CaseInsensitive))path+=".pmap";
-        QString error;if(!scene.save(path,error)){QMessageBox::warning(this,"Save failed",error);return false;}QSettings().setValue("projects/folder",QFileInfo(path).absolutePath());statusBar()->showMessage("Saved "+QFileInfo(path).fileName(),5000);return true;
+        QString error;if(!scene.save(path,error)){QMessageBox::warning(this,"Save failed",path+"\n\n"+error);return false;}PotatoProjects::remember(potatoInstallRoot(),path);statusBar()->showMessage("Saved "+QFileInfo(path).fileName(),5000);return true;
     }
     void open(){
         if(!canDiscard())return;auto path=QFileDialog::getOpenFileName(this,"Open mapping",projectFolder(),"Potato Mapper (*.pmap *.hmap)");if(path.isEmpty())return;
-        QString error;if(!scene.load(path,error))QMessageBox::warning(this,"Open failed",error);else QSettings().setValue("projects/folder",QFileInfo(path).absolutePath());canvas->resetView();
+        openProject(path,false);
+    }
+    bool openProject(const QString &path,bool ask=true){
+        if(ask&&!canDiscard())return false;
+        QString error;if(!scene.load(path,error)){QMessageBox::warning(this,"Open failed",path+"\n\n"+error+"\n\nYour current mapping was kept.");return false;}
+        const auto collected=PotatoProjects::collect(path,potatoInstallRoot(),error);
+        if(collected.isEmpty())QMessageBox::warning(this,"Project opened — collection needs attention",error+"\n\nThe original project remains open. Use Save as to choose another location.");
+        else if(collected!=path){if(!scene.load(collected,error))QMessageBox::warning(this,"Collected project could not open",collected+"\n\n"+error);}
+        PotatoProjects::remember(potatoInstallRoot(),scene.projectPath);canvas->resetView();return true;
     }
     void showOutput(){
         QScreen *target=nullptr;for(auto *s:QGuiApplication::screens())if(s->name()==selectedDisplay){target=s;break;}
@@ -246,6 +273,7 @@ private:
     QLabel *patternSizeLabel;
     QWidget *patternControls,*videoControls;
     InspectorSection *mediaSection,*fxSection;
+    DynamicPanel *dynamicSection;
     QScrollArea *inspector;
     QSpinBox *patternSpeed,*patternSize;
     QSpinBox *patternDensity,*patternFlow,*patternAngle,*patternEdge;
@@ -270,7 +298,7 @@ private:
         auto answer=QMessageBox::question(this,"Save mapping?","Save your changes before continuing?",QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel);
         return answer==QMessageBox::Discard||(answer==QMessageBox::Save&&save(false));
     }
-    QString projectFolder() const {auto folder=QSettings().value("projects/folder",potatoInstallRoot()).toString();return QDir(folder).exists()?folder:potatoInstallRoot();}
+    QString projectFolder() const {return PotatoProjects::directory(potatoInstallRoot());}
     void renameSelected(){auto *s=scene.current();if(!s)return;bool ok=false;const auto name=QInputDialog::getText(this,"Rename surface","Surface name:",QLineEdit::Normal,s->name,&ok);if(ok)scene.renameSurface(scene.selected,name);}
     void surfaceMenu(int index,const QPoint &pos){
         if(index<0||index>=scene.surfaces.size())return;scene.select(index);QMenu menu(this);
@@ -321,7 +349,7 @@ private:
         QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity),b13(blendPicker),b14(patternDensity),b15(patternFlow),b16(patternAngle),b17(patternPalette),b18(patternEdge),b19(patternReverse);
         const int listScroll=list->verticalScrollBar()->value();const auto previousId=list->currentItem()?list->currentItem()->data(Qt::UserRole).toString():QString();
         QStringList previousOrder,nextOrder;for(int i=0;i<list->count();++i)previousOrder<<list->item(i)->data(Qt::UserRole).toString();
-        list->clear();for(const auto &s:scene.surfaces){const auto content=s.pattern?QString("Potato FX · ")+potatoPatterns().value(s.pattern):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setData(Qt::UserRole,s.id);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);
+        list->clear();for(const auto &s:scene.surfaces){const auto content=scene.dynamicSurface(s.id)?QString("Dynamic FX · ")+(scene.dynamic.effect==1?"Hot-Ass Potato":"Potato Focus"):s.pattern?QString("Potato FX · ")+potatoPatterns().value(s.pattern):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setData(Qt::UserRole,s.id);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);
         if(list->currentItem()){if(previousId==list->currentItem()->data(Qt::UserRole).toString()&&previousOrder==nextOrder)list->verticalScrollBar()->setValue(listScroll);else list->scrollToItem(list->currentItem());}
         auto *s=scene.current();clearButton->setEnabled(s&&(!s->media.isEmpty()||s->pattern));visible->setEnabled(s);locked->setEnabled(s);subdivisions->setEnabled(s&&!s->locked);fit->setEnabled(s);
         patternPicker->setEnabled(s);if(s&&s->pattern&&patternPicker->currentIndex()!=s->pattern)fxSection->heading->setChecked(true);patternPicker->setCurrentIndex(s?s->pattern:0);patternControls->setVisible(s&&s->pattern);
@@ -343,9 +371,16 @@ int main(int argc,char **argv){
     QApplication app(argc,argv);app.setApplicationName("Potato Mapper");app.setOrganizationName("PotatoMapper");app.setApplicationVersion(POTATO_VERSION);app.setWindowIcon(QIcon(":/assets/potato-mapper.png"));
     qInstallMessageHandler(logMessage);app.setStyle("Fusion");
     app.setStyleSheet(potatoStyle());
-    auto args=app.arguments();const bool diagnostic=std::any_of(args.begin(),args.end(),[](const QString &a){return a.startsWith("--smoke")||a.startsWith("--test-")||a=="--profile-media"||a=="--profile-fx";});
+    auto args=app.arguments();const bool diagnostic=std::any_of(args.begin(),args.end(),[](const QString &a){return a.startsWith("--smoke")||a.startsWith("--test-")||a=="--profile-media"||a=="--profile-fx"||a=="--check-project";});
+    if(args.contains("--check-project")){const int i=args.indexOf("--check-project");Scene scene;QString error;const bool ok=i+1<args.size()&&scene.load(args[i+1],error);qInfo()<<"PROJECT LOAD"<<ok<<"surfaces"<<scene.surfaces.size()<<error;return ok?0:2;}
+    QString maintenanceNotice;
     std::unique_ptr<QLockFile> runtimeLock;
     if(!diagnostic&&QFileInfo::exists(QDir(potatoInstallRoot()).filePath("installation.txt"))){runtimeLock=std::make_unique<QLockFile>(QDir(potatoInstallRoot()).filePath(".potato-runtime.lock"));runtimeLock->setStaleLockTime(0);if(!runtimeLock->tryLock()){QMessageBox::information(nullptr,"Potato Mapper","Potato Mapper is already open in this installation. Switch to its window to continue.");return 0;}}
+    if(!diagnostic){
+        QString error;PotatoProjects::organizeLegacy(potatoInstallRoot(),error);if(!error.isEmpty())maintenanceNotice="Project organization: "+error;
+        if(!requestPotatoLauncherRefresh(potatoInstallRoot(),&error))maintenanceNotice+="\n"+error;
+        QFile refreshReport(QDir(potatoInstallRoot()).filePath(".maintenance/launcher-refresh-error.txt"));if(refreshReport.open(QIODevice::ReadOnly))maintenanceNotice+="\n"+QString::fromUtf8(refreshReport.readAll());
+    }
     if(args.contains("--test-splash")){
         auto *splash=potatoSplash();splash->show();QTimer::singleShot(250,splash,[&app,args,splash]{
             auto frame=splash->grab();bool ok=!frame.isNull()&&splash->isVisible();
@@ -356,11 +391,15 @@ int main(int argc,char **argv){
     }
     QSplashScreen *splash=nullptr;if(!diagnostic&&!args.contains("--no-splash")){splash=potatoSplash();splash->show();app.processEvents();}
     MainWindow window;window.show();
+    if(!maintenanceNotice.trimmed().isEmpty())QTimer::singleShot(1500,&window,[&window,maintenanceNotice]{window.statusBar()->showMessage(maintenanceNotice.trimmed(),30000);});
     if(splash)QTimer::singleShot(args.contains("--preview-splash")?10000:1100,&window,[splash,&window]{splash->finish(&window);splash->deleteLater();});
     const int projectArgument=args.indexOf("--project");
-    if(projectArgument>=0&&projectArgument+1<args.size()){QString error;if(!window.scene.load(args[projectArgument+1],error))window.statusBar()->showMessage(error);}
+    if(projectArgument>=0&&projectArgument+1<args.size())window.openProject(args[projectArgument+1],false);
+    else if(!diagnostic)for(int i=1;i<args.size();++i)if(args[i].endsWith(".pmap",Qt::CaseInsensitive)||args[i].endsWith(".hmap",Qt::CaseInsensitive)){window.openProject(args[i],false);break;}
     const int mediaArgument=args.indexOf("--media");
     if(mediaArgument>=0&&mediaArgument+1<args.size())window.scene.assignMedia(0,args[mediaArgument+1]);
+    if(args.contains("--smoke-dynamic"))runDynamicChecks(window,app,args);
+    if(args.contains("--test-dynamic-motion"))runDynamicChecks(window,app,args);
     if(args.contains("--smoke-fx")){window.smoke=true;runFxChecks(window,app,args);}
     if(args.contains("--profile-fx")){window.smoke=true;profileFx(window,app,args);}
     if(args.contains("--test-fx-motion")){window.smoke=true;const int i=args.indexOf("--frames"),batch=args.indexOf("--first-pattern");renderFxMotion(window,app,i>=0&&i+1<args.size()?args[i+1]:QString(),batch>=0&&batch+1<args.size()?args[batch+1].toInt():5);}

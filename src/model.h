@@ -12,6 +12,7 @@
 #include <QUuid>
 #include <QElapsedTimer>
 #include "patterns.h"
+#include "dynamic.h"
 
 class MediaSource : public QObject {
     Q_OBJECT
@@ -70,6 +71,14 @@ public:
     bool blackout = false;
     bool dirty = false;
     QString projectPath;
+    PotatoDynamic::Settings dynamic;
+    PotatoDynamic::Frame dynamicFrame;
+    double dynamicElapsed = 0;
+    QVector<PotatoDynamic::Surface> dynamicSurfaces;
+    void setDynamic(PotatoDynamic::Settings settings);
+    void setDynamicTime(double seconds);
+    void rebuildDynamic();
+    bool dynamicSurface(const QString &id) const;
     Surface *current();
     MediaSource *source(const QString &path);
     void add();
@@ -88,7 +97,7 @@ public:
     void undo();
     void redo();
     QJsonObject json(const QString &base = {}) const;
-    bool restore(const QJsonObject &, const QString &base, QString &error);
+    bool restore(const QJsonObject &, const QString &base, QString &error, bool restartDynamic=false);
     bool save(const QString &path, QString &error);
     bool load(const QString &path, QString &error);
 signals:

@@ -41,6 +41,10 @@ private:
     QOpenGLShaderProgram program;
     QOpenGLBuffer buffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject vao;
+    QOpenGLShaderProgram dynamicProgram;
+    QOpenGLBuffer dynamicBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLVertexArrayObject dynamicVao;
+    void drawDynamic(const Surface &surface);
     struct Texture {GLuint id=0,chroma=0;quint64 revision=0;QSize size;bool yuv=false;};
     QHash<QString,Texture> textures;
     double zoom=1;
