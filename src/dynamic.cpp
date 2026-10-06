@@ -1,4 +1,5 @@
 #include "dynamic.h"
+#include "dynamic-geometry.h"
 #include <QJsonArray>
 #include <QSet>
 #include <QTransform>
@@ -51,6 +52,8 @@ double unit(double v) {return std::clamp(v,0.0,1.0);}
 double smooth(double v) {v=unit(v);return v*v*(3-2*v);}
 double fract(double v) {return v-std::floor(v);}
 double lengthSquared(const QPointF &v) {return v.x()*v.x()+v.y()*v.y();}
+double dot(const QPointF &a,const QPointF &b) {return a.x()*b.x()+a.y()*b.y();}
+QPointF normalized(const QPointF &v) {const double n=std::sqrt(lengthSquared(v));return n>1e-12?v/n:QPointF();}
 QPointF mix(const QPointF &a,const QPointF &b,double v) {return a+(b-a)*v;}
 QPointF clipped(QPointF p) {return {unit(p.x()),unit(p.y())};}
 quint32 scramble(quint32 v) {
@@ -106,15 +109,54 @@ QPointF perimeter(double position,double inset=0) {
     if(t<3) return {1-inset-(t-2)*span,1-inset};
     return {inset,1-inset-(t-3)*span};
 }
-struct Stop {int index=0;QPointF entry{0,.5},exit{1,.5};};
+struct Stop {
+    int index=0;
+    QPointF entry{0,.5},exit{1,.5};
+    QPointF entryBend{-1,-1},exitBend{-1,-1};
+};
+struct Portal {QPointF exit,entry,direction;bool found=false;};
+Portal widestPortal(const QPolygonF &a,const QPolygonF &b) {
+    QPointF centerA,centerB;
+    for(const auto &p:a) centerA+=p/4;
+    for(const auto &p:b) centerB+=p/4;
+    Portal best;double widest=0,shortest=std::numeric_limits<double>::max();
+    for(int i=0;i<4;++i) for(int j=0;j<4;++j) {
+        const QPointF a0=a[i],a1=a[(i+1)%4],b0=b[j],b1=b[(j+1)%4];
+        const QPointF edgeA=normalized(a1-a0),edgeB=normalized(b1-b0);
+        if(lengthSquared(edgeA)<.5 || lengthSquared(edgeB)<.5 || std::abs(dot(edgeA,edgeB))<.5) continue;
+        QPointF normalA(edgeA.y(),-edgeA.x()),normalB(edgeB.y(),-edgeB.x());
+        if(dot(normalA,centerA-(a0+a1)/2)>0) normalA=-normalA;
+        if(dot(normalB,centerB-(b0+b1)/2)>0) normalB=-normalB;
+        if(dot(normalA,normalB)>-.35 || dot(normalA,centerB-centerA)<=1e-12 || dot(normalB,centerA-centerB)<=1e-12) continue;
+        const QPointF tangent=normalized(edgeA+edgeB*(dot(edgeA,edgeB)<0?-1:1));
+        const double pa0=dot(a0,tangent),pa1=dot(a1,tangent),pb0=dot(b0,tangent),pb1=dot(b1,tangent);
+        const double low=std::max(std::min(pa0,pa1),std::min(pb0,pb1));
+        const double high=std::min(std::max(pa0,pa1),std::max(pb0,pb1));
+        const double width=high-low;
+        if(width<=1e-9) continue; // A corner-only neighbour has no wide opening.
+        const double middle=(low+high)/2;
+        const QPointF exit=mix(a0,a1,(middle-pa0)/(pa1-pa0));
+        const QPointF entry=mix(b0,b1,(middle-pb0)/(pb1-pb0));
+        const double distance=lengthSquared(entry-exit);
+        if(width>widest+1e-12 || (std::abs(width-widest)<=1e-12 && distance<shortest)) {
+            widest=width;shortest=distance;best={exit,entry,normalized(normalA-normalB),true};
+        }
+    }
+    return best;
+}
 QVector<Stop> tour(const QVector<Surface> &surfaces,quint32 seed) {
     const int count=int(surfaces.size());
     QVector<Stop> result;if(!count) return result;
     QVector<QVector<QPointF>> mapped(count);
+    QVector<QTransform> inverses(count);
+    QVector<QPolygonF> boundaries(count);
     for(int i=0;i<count;++i) {
         QTransform transform;
         const QPolygonF square{{0,0},{1,0},{1,1},{0,1}};
         const bool projective=surfaces[i].boundary.size()==4 && QTransform::quadToQuad(square,surfaces[i].boundary,transform);
+        if(!projective) transform=QTransform();
+        inverses[i]=transform.inverted();
+        for(const auto &corner:square) boundaries[i]<<transform.map(corner);
         for(int k=0;k<boundarySamples;++k) {
             const QPointF local=perimeter(double(k)/boundarySamples);
             QPointF point=projective?transform.map(local):local;
@@ -139,9 +181,24 @@ QVector<Stop> tour(const QVector<Surface> &surfaces,quint32 seed) {
             }
         }
         active.exit=next<0?perimeter(random(seed,step+17)):perimeter(double(exitIndex)/boundarySamples);
+        QPointF entry=perimeter(double(entryIndex)/boundarySamples),entryBend(-1,-1);
+        if(next>=0) {
+            const auto portal=widestPortal(boundaries[current],boundaries[next]);
+            if(portal.found) {
+                QPointF exitMapped=portal.exit,entryMapped=portal.entry;
+                const QPointF middle=(exitMapped+entryMapped)/2;
+                const QPointF localA=inverses[current].map(middle),localB=inverses[next].map(middle);
+                // Overlapping panels share a single point inside their overlap.
+                const auto inside=[](const QPointF &p){return p.x()>=0 && p.x()<=1 && p.y()>=0 && p.y()<=1;};
+                if(inside(localA)&&inside(localB)) exitMapped=entryMapped=middle;
+                active.exit=clipped(inverses[current].map(exitMapped));entry=clipped(inverses[next].map(entryMapped));
+                active.exitBend=potatoPortalBend(inverses[current],exitMapped,active.exit,-portal.direction);
+                entryBend=potatoPortalBend(inverses[next],entryMapped,entry,portal.direction);
+            }
+        }
         result.append(active);
         if(next<0) break;
-        current=next;active={current,perimeter(double(entryIndex)/boundarySamples),{1,.5}};
+        current=next;active={current,entry,{1,.5},entryBend,{-1,-1}};
     }
     return result;
 }
@@ -160,22 +217,26 @@ const QVector<Stop> &cachedTour(const QVector<Surface> &surfaces,quint32 seed) {
 QPointF path(const Stop &stop,double t,quint32 seed) {
     t=unit(t);
     const auto entry=stop.entry,exit=stop.exit;
-    // Cubic turns begin/end at the mapped boundary; two seeded interior bends
-    // and a soft lateral wave articulate the body without sharp reversals.
-    const QPointF a(.28+.18*random(seed,2),.22+.28*random(seed,3));
-    const QPointF b(.52+.2*random(seed,4),.5+.26*random(seed,5));
+    // Linked openings use a common mapped heading; unlinked endpoints retain
+    // seeded interior bends. The lateral wave has zero endpoint derivative.
+    const QPointF a=stop.entryBend.x()>=0?stop.entryBend:QPointF(.28+.18*random(seed,2),.22+.28*random(seed,3));
+    const QPointF b=stop.exitBend.x()>=0?stop.exitBend:QPointF(.52+.2*random(seed,4),.5+.26*random(seed,5));
     const double q=1-t;
     QPointF p=entry*(q*q*q)+a*(3*q*q*t)+b*(3*q*t*t)+exit*(t*t*t);
-    const double wave=std::sin(pi*t)*std::sin(3*pi*t+random(seed,6)*2*pi)*.075;
+    const double envelope=std::sin(pi*t);
+    const double wave=envelope*envelope*std::sin(3*pi*t+random(seed,6)*2*pi)*.075;
     p+=QPointF(wave,-wave*.7);
     return clipped(p);
 }
-void snake(Builder &builder,const Surface &s,const Stop &stop,const Settings &settings,double progress,double opacity) {
-    const quint32 seed=idSeed(s.id,settings.seed);
+void snake(Builder &builder,const QVector<Surface> &surfaces,const QVector<Stop> &stops,const Settings &settings,double position,double opacity) {
     constexpr int segments=25;
     for(int j=segments-1;j>=0;--j) {
-        const double t=progress-j*.012;
-        if(t<0 || t>1) continue;
+        const double trailing=position-j*.012;
+        const int index=int(std::floor(trailing));
+        if(index<0 || index>=stops.size()) continue;
+        const double t=trailing-index;
+        const auto &stop=stops[index];const auto &s=surfaces[stop.index];
+        const quint32 seed=idSeed(s.id,settings.seed);
         const QPointF center=path(stop,t,seed);
         QPointF direction=path(stop,t+.004,seed)-path(stop,t-.004,seed);
         const double angle=std::atan2(direction.y(),direction.x()*std::clamp(s.aspect,.1,10.0));
@@ -188,7 +249,10 @@ void snake(Builder &builder,const Surface &s,const Stop &stop,const Settings &se
         builder.add(s,body,ink(settings.palette,j%7==0?1:0,opacity*(.34+.25*taper)),true,.0045);
         if(j%6==0) builder.add(s,regular(s,center,radius*.38,3,angle),ink(settings.palette,2,opacity*.68),false,.0018);
     }
-    if(progress>=0 && progress<=1) {
+    const int headIndex=int(std::floor(position));
+    if(headIndex>=0 && headIndex<stops.size()) {
+        const auto &stop=stops[headIndex];const auto &s=surfaces[stop.index];
+        const quint32 seed=idSeed(s.id,settings.seed);const double progress=position-headIndex;
         const auto head=path(stop,progress,seed);
         const auto v=path(stop,progress+.006,seed)-path(stop,progress-.006,seed);
         const double angle=std::atan2(v.y(),v.x()*std::clamp(s.aspect,.1,10.0));
@@ -334,9 +398,8 @@ Frame frame(const Settings &settings,const QVector<Surface> &input,double elapse
     }
     if(explore) {
         const double progress=unit((time-active*slot)/slot);
-        const auto &stop=stops[active];
-        const double fade=smooth(progress/.07)*(1-smooth((progress-.94)/.06));
-        snake(builder,surfaces[stop.index],stop,settings,progress,fade);
+        const double fade=(active==0?smooth(progress/.07):1)*(active==count-1?1-smooth((progress-.94)/.06):1);
+        snake(builder,surfaces,stops,settings,active+progress,fade);
     } else if(reboot) {
         const double t=(time-times.overloadEnd)/(times.titleEnd-times.overloadEnd);
         out.titleOpacity=smooth((t-.12)/.3)*(1-smooth((t-.72)/.28));
@@ -347,9 +410,8 @@ Frame frame(const Settings &settings,const QVector<Surface> &input,double elapse
         const int current=int(visit/3.1);
         if(current<count) {
             const double progress=fract(visit/3.1);
-            const auto &stop=stops[current];
-            const double fade=smooth(progress/.09)*(1-smooth((progress-.9)/.1));
-            snake(builder,surfaces[stop.index],stop,settings,progress,.72*fade);
+            const double fade=(current==0?smooth(progress/.09):1)*(current==count-1?1-smooth((progress-.9)/.1):1);
+            snake(builder,surfaces,stops,settings,current+progress,.72*fade);
         }
     }
     return out;
