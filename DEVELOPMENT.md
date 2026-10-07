@@ -2,6 +2,20 @@
 
 Read [ROADMAP.md](ROADMAP.md) for current progress and proposed work. Keep its checklist and release status current as described in [AGENTS.md](AGENTS.md).
 
+## Reliability lessons across projects
+
+Continuity handoff, October 7, 2026. Apply these practices incrementally; support and recovery evidence must be checked in each project's own repository.
+
+- **Locate the real files.** Moving a chat into a project does not move its source, tools, executable or data. Check the actual checkout and preserve the original until a relocated copy builds and its extracted distribution runs.
+- **Check the final package.** Compilation can succeed while a package omits UI assets or dependencies. Run the extracted final distribution and exercise actual restart/recovery paths before announcing readiness.
+- **Build before profiling.** Wait for a successful build to exit before starting the executable or profiler. Record which binary was measured; overlapping build/run steps can lock files or measure stale code.
+- **Keep regressions for real failures.** Geometry caches must distinguish accepted duplicate object IDs and invalidate when relevant state changes. Retain focused coverage for those failures, paused reuse and editor/output agreement.
+- **Rehearse the updater handoff.** Before publishing an updater release, use the actual old launcher to install the final runtime and reopen the same managed project. Verify original project/media bytes, the previous runtime and launcher backup remain available. Record failed/interrupted recovery checks and their limits separately from successful installation.
+- **Separate application files from user data.** Retain originals during migration and restore backups into a new copy. Never put live company databases into source, release packages, OneDrive code folders or messages. Document protection and tested recovery; promise only what the evidence supports.
+- **Keep business-data requirements explicit.** Accounting tools require exact money, atomic and idempotent balanced posting, client isolation, immutable posted records, reasoned corrections and validated snapshots. The accounting handoff reports manual backups; automatic backups, a safe schema-migration updater, cloud recovery, tax compliance and production approval remain unimplemented. These are accounting requirements and limits, not mapper features.
+
+Keep progress and recovery evidence in project docs so another developer can resume. Automatic accounting version checks/updates and its public website remain future work; this handoff authorizes documentation only.
+
 ## Stack and source map
 
 C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a native Windows desktop app. No server or account is required to run it.
