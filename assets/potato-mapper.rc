@@ -1,8 +1,8 @@
 IDI_ICON1 ICON "potato-mapper.ico"
 
 1 VERSIONINFO
- FILEVERSION 0,8,4,0
- PRODUCTVERSION 0,8,4,0
+ FILEVERSION 0,8,5,0
+ PRODUCTVERSION 0,8,5,0
 FILETYPE 0x1L
 BEGIN
     BLOCK "StringFileInfo"
@@ -11,8 +11,8 @@ BEGIN
         BEGIN
             VALUE "FileDescription", "Potato Mapper\0"
             VALUE "ProductName", "Potato Mapper\0"
-            VALUE "FileVersion", "0.8.4\0"
-            VALUE "ProductVersion", "0.8.4\0"
+            VALUE "FileVersion", "0.8.5\0"
+            VALUE "ProductVersion", "0.8.5\0"
             VALUE "OriginalFilename", "PotatoMapper.exe\0"
         END
     END
