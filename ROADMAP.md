@@ -4,6 +4,8 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
+- **0.8.4 implemented and packaged — unreleased**, branch `codex/potato-scan-entrance`: Potato Scan output entrance with edge tracing, grid assembly, panel lock and smooth reveal. Replay/Skip, automatic-start toggle, shared preview/output clock and blackout pause. Actual render/state checks, partial-opacity reveal regression, final extracted entrance/FX checks and real 0.8.3 update/reopen passed. Review found no remaining blockers; publication is pending. Camera recognition remains deferred.
+
 - October 7 documentation handoff: [cross-project reliability lessons](DEVELOPMENT.md#reliability-lessons-across-projects) preserve file-location, packaged-runtime, profiling, cache and updater-recovery practices. No application changes or new release were made for this note.
 - Latest published app: [v0.8.3 for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.3).
 - **0.8.3 shipped**, merged in [PR #14](https://github.com/TheGamingDonKey/potato-mapper/pull/14): centred wide openings, continued snake tail and common mapped headings. Focused geometry/actual-renderer checks, final extracted package and real 0.8.2 update/reopen passed; review found no remaining blockers. Public latest metadata and canonical HTTP 200 download match the checked ZIP. Continue with 0.8.x improvements; camera and Pi remain deferred.
@@ -183,3 +185,13 @@ Merged in [PR #14](https://github.com/TheGamingDonKey/potato-mapper/pull/14) and
 - [x] Check partial overlaps, touching and overlapping panels, rotation/winding, rendered handoff brightness and animation performance. Actual output inspected around a crossing. Dense four-surface geometry cost remained roughly 2.3 ms in a same-session 0.8.2 comparison; short desktop FPS remains hardware/window dependent.
 - [x] Final extracted mapping/Dynamic FX checks and real 0.8.2 launcher update/reopen passed, retaining original fixture project/media, previous runtime and root-launcher backup. Focused review found no remaining blockers.
 - [x] Publish and verify the checked portable 0.8.3 update. Public latest metadata and canonical HTTP 200 download match the 27,053,718-byte final ZIP and SHA256 `83e2bc3a1abac3db9c8b99792593a859154020e2760c4cae358523b10ecd6598`. Physical projection remains a user check; corner-based routing still approximates deformed outer mesh edges.
+
+## Potato Scan entrance (0.8.4, implemented — unreleased)
+
+- [x] Eight-second procedural entrance follows actual corners and deformed mesh: acquisition, edge tracing, grid assembly, lock and reveal.
+- [x] Play entrance, Skip and remembered On output start toggle; blackout pauses the shared clock, Stop/Escape and successful project changes end it.
+- [x] Preserve existing media/FX, project settings and Undo; translucent surfaces reveal continuously. Failed project loads retain the current scene.
+- [x] Cache CPU mesh and per-context GPU vertices while only time/reveal uniforms change. Hidden/zero-opacity surfaces excluded; scan respects brightness/opacity.
+- [x] Real renderer/state regression and visual stage inspection; existing mapping, blending and Dynamic FX checks pass. Performance sampled with visible 1080p output/preview and deformed one/four-layer stress scenes.
+- [x] Final extracted portable entrance/FX checks and actual 0.8.3 launcher update to 0.8.4, managed project reopen, retained prior launcher/runtime and unchanged original project/media. Interrupted download, cancelled restart and incomplete payload checks passed.
+- [ ] Publish downloadable 0.8.4 release. Physical projector appearance remains a user check; camera recognition and richer coordinated choreography are deferred.

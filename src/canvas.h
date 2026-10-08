@@ -45,6 +45,11 @@ private:
     QOpenGLBuffer buffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject vao;
     QOpenGLShaderProgram dynamicProgram;
+    QOpenGLShaderProgram entranceProgram;
+    QOpenGLBuffer entranceBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLVertexArrayObject entranceVao;
+    quint64 entranceUploadedRevision=0;
+    void drawEntrance();
     QOpenGLBuffer dynamicBuffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject dynamicVao;
     GLuint profileQueries[4]{};
