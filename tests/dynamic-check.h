@@ -10,6 +10,17 @@
 #include <QTimer>
 #include <QSpinBox>
 
+template<class SceneType> bool findDynamicHandoff(SceneType &scene,int destination,double &handoff){
+    const double end=PotatoDynamic::timeline(scene.dynamic,int(scene.dynamicSurfaces.size())).exploreEnd;
+    auto arrived=[&](double time){scene.setDynamicTime(time);const auto &shapes=scene.dynamicFrame.shapes;
+        return !shapes.isEmpty()&&shapes.back().surfaceInstance==destination&&std::abs(shapes.back().width-.0055)<1e-9;};
+    double low=0,high=0;bool found=false;
+    for(int i=1;i<128;++i){const double time=end*i/128;if(arrived(time)){high=time;found=true;break;}low=time;}
+    if(!found)return false;
+    for(int i=0;i<24;++i){const double middle=(low+high)/2;if(arrived(middle))high=middle;else low=middle;}
+    handoff=(low+high)/2;return true;
+}
+
 template<class Window> void runDynamicChecks(Window &window,QApplication &app,const QStringList &args){
     window.output->resize(960,540);window.output->show();
     QTimer::singleShot(650,&window,[&window,&app,args]{
@@ -65,16 +76,38 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
             scene.surfaces[0].corners={{0,0},{.4,0},{.4,1},{0,1}};scene.surfaces.append(second);scene.touch(true);scene.dynamicFrame.shapes={line};
             const auto duplicate=window.output->grabFramebuffer();
             require(duplicate.pixelColor(qRound(duplicate.width()*.2),qRound(duplicate.height()*.65)).red()>60&&duplicate.pixelColor(qRound(duplicate.width()*.8),qRound(duplicate.height()*.35)).red()>60,"accepted duplicate surface IDs retain distinct mesh geometry");
+            // Use the actual generator, not an injected shared-ID line. At t=0
+            // only resting cells render, making saved-ID renaming pixel-neutral.
+            const QSize previousOutputSize=scene.outputSize;
+            scene.newProject();scene.outputSize={1200,1000};scene.surfaces[0].id="duplicate";
+            scene.surfaces[0].corners={{40.0/1200,.1},{240.0/1200,.1},{240.0/1200,.3},{40.0/1200,.3}};
+            auto largeDuplicate=scene.surfaces[0];largeDuplicate.corners={{340.0/1200,.1},{1140.0/1200,.1},{1140.0/1200,.9},{340.0/1200,.9}};scene.surfaces.append(largeDuplicate);
+            PotatoDynamic::Settings duplicateSettings;duplicateSettings.effect=1;duplicateSettings.playing=false;duplicateSettings.palette=1;duplicateSettings.cellSize=56;duplicateSettings.density=80;duplicateSettings.members={"duplicate"};scene.setDynamic(duplicateSettings);scene.setDynamicTime(0);
+            int generatedCells[2]={0,0};bool correctSizes=true;
+            for(const auto &shape:scene.dynamicFrame.shapes)if(shape.points.size()==4&&std::abs(shape.width-.0016)<1e-9){
+                if(shape.surfaceInstance<0||shape.surfaceInstance>1){correctSizes=false;continue;}
+                ++generatedCells[shape.surfaceInstance];const auto &surface=scene.surfaces[shape.surfaceInstance];
+                auto pixel=[&](QPointF uv){const auto p=surface.transform().map(surface.sample(uv.x(),uv.y()));return QPointF(p.x()*1200,p.y()*1000);};
+                for(int edge=0;edge<4;++edge)correctSizes&=std::abs(QLineF(pixel(shape.points[edge]),pixel(shape.points[(edge+1)%4])).length()-56)<.02;
+            }
+            require(correctSizes&&generatedCells[0]>0&&generatedCells[1]>generatedCells[0],"actual generator keeps 56px cells and distinct membership on 200px/800px duplicate-ID panels");
+            const auto generatedDuplicateImage=window.output->grabFramebuffer();
+            scene.surfaces[1].id="distinct";duplicateSettings.members={"duplicate","distinct"};scene.setDynamic(duplicateSettings);scene.setDynamicTime(0);
+            const auto generatedDistinctImage=window.output->grabFramebuffer();
+            require(generatedDuplicateImage==generatedDistinctImage,"unequal duplicate-ID panels render the same cells as distinct-ID panels");
+            scene.outputSize=previousOutputSize;
             scene.newProject();scene.surfaces[0].corners={{0,0},{1,0},{1,1},{0,1}};deformation.members={scene.surfaces[0].id};scene.setDynamic(deformation);
             auto edgeLine=line;edgeLine.surfaceId=scene.surfaces[0].id;edgeLine.points={{-.3,.3},{.1,.7}};edgeLine.outputWidth=3;scene.dynamicFrame.shapes={edgeLine};
             const auto clippedStroke=window.output->grabFramebuffer();
             require(clippedStroke.pixelColor(qRound(clippedStroke.width()*.05),qRound(clippedStroke.height()*.65)).red()>60,
                     "output-pixel stroke remains visible when its midpoint is beyond a clipped edge");
-            scene.newProject();scene.surfaces[0].id="A";scene.surfaces[0].corners={{.05,.1},{.5,.1},{.5,.7},{.05,.7}};
-            scene.add();scene.surfaces[1].id="B";scene.surfaces[1].corners={{.5,.3},{.95,.3},{.95,.9},{.5,.9}};scene.touch(true);
+            scene.newProject();scene.surfaces[0].id="A";scene.surfaces[0].corners={{.05,.1},{.6,.1},{.6,.9},{.05,.9}};
+            scene.add();scene.surfaces[1].id="B";scene.surfaces[1].corners={{.6,.35},{.85,.35},{.85,.65},{.6,.65}};scene.touch(true);
             PotatoDynamic::Settings connected;connected.effect=1;connected.playing=false;connected.palette=1;connected.members={"A","B"};scene.setDynamic(connected);
-            const double handoff=PotatoDynamic::timeline(connected,2).exploreEnd/2;
-            const auto portalLit=[](const QImage &image){int bright=0;for(int y=qRound(image.height()*.485);y<=qRound(image.height()*.515);++y)for(int x=qRound(image.width()*.49);x<=qRound(image.width()*.51);++x)if(image.pixelColor(x,y).red()>100)++bright;return bright>12;};
+            double handoff=0;const bool crossingFound=findDynamicHandoff(scene,1,handoff);
+            require(crossingFound,"unequal panel tour has a discoverable head crossing");
+            require(crossingFound&&std::abs(handoff-PotatoDynamic::timeline(connected,2).exploreEnd/2)>.1,"unequal crossing fixture rejects equal panel-duration timing");
+            const auto portalLit=[](const QImage &image){int bright=0;for(int y=qRound(image.height()*.485);y<=qRound(image.height()*.515);++y)for(int x=qRound(image.width()*.59);x<=qRound(image.width()*.61);++x)if(image.pixelColor(x,y).red()>100)++bright;return bright>12;};
             scene.setDynamicTime(handoff-.001);const auto beforePortal=window.output->grabFramebuffer();
             scene.setDynamicTime(handoff+.001);const auto afterPortal=window.output->grabFramebuffer();
             require(portalLit(beforePortal)&&portalLit(afterPortal),"connected snake stays bright at the shared opening before and after handoff");
@@ -91,13 +124,14 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
                 scene.surfaces[2].corners={{.71,.39},{.93,.24},{.99,.53},{.77,.70}};
                 for(auto &s:scene.surfaces){s.subdivide(4);for(auto &p:s.mesh)p.setY(p.y()+.06*std::sin(p.x()*3.141592653589793)*std::sin(p.y()*3.141592653589793));}}
             PotatoDynamic::Settings settings;settings.effect=1;settings.members={"A","B","C"};settings.playing=false;scene.setDynamic(settings);
+            double previewHandoff=0;if(portals&&!findDynamicHandoff(scene,1,previewHandoff)){qInfo()<<"DYNAMIC preview crossing not found";app.exit(2);return;}
             if(fluid){auto demo=settings;demo.playing=true;scene.setDynamic(demo);QString demoError;
                 if(!scene.save(QDir(folder).filePath("../fluid-snake-demo.pmap"),demoError)){qInfo()<<"DYNAMIC demo save failed"<<demoError;app.exit(2);return;}
                 scene.setDynamic(settings);scene.setDynamicTime(6);window.showDynamicControls();QApplication::processEvents();
                 window.grab().save(QDir(folder).filePath("../fluid-controls.png"));}
             auto index=std::make_shared<int>(0);auto capture=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weak=capture;
             const bool reference=args.contains("--reference-frames");
-            *capture=[&window,&app,folder,index,weak,reference,portals,fluid]{auto keep=weak.lock();if(*index==(fluid?240:portals?24:reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=(fluid||portals)?1:*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(fluid?*index*.07+.3:portals?6.2+*index*.08:reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
+            *capture=[&window,&app,folder,index,weak,reference,portals,fluid,previewHandoff]{auto keep=weak.lock();if(*index==(fluid?240:portals?24:reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=(fluid||portals)?1:*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(fluid?*index*.07+.3:portals?previewHandoff-.96+*index*.08:reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
                 const auto file=QDir(folder).filePath(QString("frame-%1.png").arg(*index,3,10,QChar('0')));if(!window.output->grabFramebuffer().save(file)){app.exit(2);return;}++*index;QTimer::singleShot(30,&window,[keep]{(*keep)();});};(*capture)();
         });
     });

@@ -89,7 +89,7 @@ struct Builder {
             else if(std::abs(p.x())>5||std::abs(p.y())>5)return;
         }
         const bool closePolygon=closed && points.size()>2;
-        out.shapes.append({s.id,std::move(points),color,filled,width,closePolygon,outputWidth});
+        out.shapes.append({s.id,std::move(points),color,filled,width,closePolygon,outputWidth,s.instanceIndex});
     }
 };
 // Physical-length offsets expressed in UV. This preserves polygon proportions
@@ -215,7 +215,7 @@ const QVector<Stop> &cachedTour(const QVector<Surface> &surfaces,quint32 seed) {
     static thread_local Cache cache;
     bool same=cache.seed==seed && cache.surfaces.size()==surfaces.size();
     if(same) for(qsizetype i=0;i<surfaces.size();++i) {
-        if(cache.surfaces[i].id!=surfaces[i].id || cache.surfaces[i].boundary!=surfaces[i].boundary) {same=false;break;}
+        if(cache.surfaces[i].id!=surfaces[i].id || cache.surfaces[i].instanceIndex!=surfaces[i].instanceIndex || cache.surfaces[i].boundary!=surfaces[i].boundary) {same=false;break;}
     }
     if(!same) {cache.surfaces=surfaces;cache.seed=seed;cache.stops=tour(surfaces,seed);}
     return cache.stops;
@@ -246,7 +246,7 @@ const Motion &cachedMotion(const QVector<Surface> &surfaces,quint32 seed) {
     static thread_local Cache cache;
     bool same=cache.seed==seed&&cache.surfaces.size()==surfaces.size();
     for(qsizetype i=0;same&&i<surfaces.size();++i){const auto &a=cache.surfaces[i],&b=surfaces[i];
-        same=a.id==b.id&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
+        same=a.id==b.id&&a.instanceIndex==b.instanceIndex&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
     if(same)return cache.motion;
     cache.surfaces=surfaces;cache.seed=seed;auto &m=cache.motion;m={};m.stops=cachedTour(surfaces,seed);
     for(const auto &stop:m.stops){
@@ -318,7 +318,7 @@ struct Cell {QPointF uv;double distance=0,lateral=0;};
 const QVector<QVector<Cell>> &cellLayout(const QVector<Surface> &surfaces,const Motion &m,const Settings &settings,int budget){
     struct Cache {QVector<Surface> surfaces;int size=0,density=0,budget=0;quint32 seed=0;QVector<QVector<Cell>> cells;};static thread_local Cache cache;
     bool same=cache.size==settings.cellSize&&cache.density==settings.density&&cache.budget==budget&&cache.seed==settings.seed&&cache.surfaces.size()==surfaces.size();
-    for(qsizetype i=0;same&&i<surfaces.size();++i){const auto &a=cache.surfaces[i],&b=surfaces[i];same=a.id==b.id&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
+    for(qsizetype i=0;same&&i<surfaces.size();++i){const auto &a=cache.surfaces[i],&b=surfaces[i];same=a.id==b.id&&a.instanceIndex==b.instanceIndex&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
     if(same)return cache.cells;
     cache.surfaces=surfaces;cache.size=settings.cellSize;cache.density=settings.density;cache.budget=budget;cache.seed=settings.seed;cache.cells.clear();
     const double spacing=settings.cellSize*1.8;
@@ -445,8 +445,8 @@ Frame frame(const Settings &settings,const QVector<Surface> &input,double elapse
         if(sanitized.mesh.isEmpty())QTransform::quadToQuad({{0,0},{1,0},{1,1},{0,1}},sanitized.boundary,sanitized.projection);
         surfaces.append(std::move(sanitized));
     }
-    std::sort(surfaces.begin(),surfaces.end(),[](const Surface &a,const Surface &b){return a.id<b.id;});
-    surfaces.erase(std::unique(surfaces.begin(),surfaces.end(),[](const Surface &a,const Surface &b){return a.id==b.id;}),surfaces.end());
+    std::sort(surfaces.begin(),surfaces.end(),[](const Surface &a,const Surface &b){return a.id==b.id?a.instanceIndex<b.instanceIndex:a.id<b.id;});
+    surfaces.erase(std::unique(surfaces.begin(),surfaces.end(),[](const Surface &a,const Surface &b){return a.id==b.id&&a.instanceIndex==b.instanceIndex;}),surfaces.end());
     // The practical mapper has small groups. Limit exceptional/malformed input
     // so route search and the minimum per-surface geometry are also bounded.
     if(surfaces.size()>128) surfaces.resize(128);

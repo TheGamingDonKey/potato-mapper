@@ -38,7 +38,7 @@ static bool same(const Frame &a, const Frame &b) {
     if(a.stage != b.stage || a.titleOpacity != b.titleOpacity || a.shapes.size() != b.shapes.size()) return false;
     for(qsizetype i=0; i<a.shapes.size(); ++i) {
         const auto &x=a.shapes[i]; const auto &y=b.shapes[i];
-        if(x.surfaceId!=y.surfaceId || x.points!=y.points || x.color!=y.color || x.filled!=y.filled || x.width!=y.width || x.closed!=y.closed || x.outputWidth!=y.outputWidth) return false;
+        if(x.surfaceId!=y.surfaceId || x.points!=y.points || x.color!=y.color || x.filled!=y.filled || x.width!=y.width || x.closed!=y.closed || x.outputWidth!=y.outputWidth || x.surfaceInstance!=y.surfaceInstance) return false;
     }
     return true;
 }
@@ -82,6 +82,10 @@ int main(int argc, char **argv) {
         const auto countCells=[](const Frame &f){int count=0;for(const auto &p:f.shapes)if(p.points.size()==4&&std::abs(p.width-.0016)<1e-9&&p.outputWidth>0)++count;return count;};
         check(countCells(PotatoDynamic::frame(settings,{big},1))>countCells(PotatoDynamic::frame(settings,{small},1)),
               "smaller panels contain fewer cells instead of squeezing all cells");
+        auto duplicateSmall=small,duplicateBig=big;duplicateSmall.instanceIndex=3;duplicateBig.instanceIndex=8;duplicateBig.boundary.translate(300,0);
+        const auto duplicateFrame=PotatoDynamic::frame(settings,{duplicateSmall,duplicateBig},0);
+        QSet<int> addressedInstances;for(const auto &shape:duplicateFrame.shapes)addressedInstances.insert(shape.surfaceInstance);
+        check(addressedInstances==QSet<int>{3,8},"duplicate saved IDs retain both transient instance addresses in generated geometry");
         QJsonObject malformed{{"effect",99},{"speed",-20},{"density",10000},{"palette",90},{"glitch",-1},
             {"members",QJsonArray{"A","A","",4}},{"seed",4294967295.0}};
         const auto normalized=Settings::fromJson(malformed);

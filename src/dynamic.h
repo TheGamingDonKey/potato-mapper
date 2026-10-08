@@ -32,6 +32,7 @@ struct Surface {
     QTransform projection; // Deformed local coordinates to output pixels.
     int cells = 1;
     QVector<QPointF> mesh; // Empty means a regular mesh derived from boundary.
+    int instanceIndex = -1; // Transient Scene surface index, never serialized.
 };
 struct Primitive {
     QString surfaceId;
@@ -41,6 +42,7 @@ struct Primitive {
     double width = .002; // Local surface units; renderer may draw a soft glow.
     bool closed = true; // Two-point strokes are open; perimeter arcs set false.
     double outputWidth = 0; // Optional output-pixel stroke; zero retains legacy UV width.
+    int surfaceInstance = -1; // -1 retains legacy ID-based dispatch for injected geometry.
 };
 struct Frame {
     QVector<Primitive> shapes;
