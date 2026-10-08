@@ -32,6 +32,7 @@ C++17, Qt Widgets, Qt Multimedia, OpenGL 3.3 Core, and GLSL 330. CMake builds a 
 | `src/launcher-files.h`, `src/launcher-refresh.cpp/.h` | Retained runtime inventory, native root launcher refresh and replacement backup |
 | `src/projects.cpp/.h` | Managed portable project copies, media collection, recent paths and previous-save backups |
 | `src/dynamic.cpp/.h`, `src/dynamic-ui.h` | Scene-wide procedural geometry, route/stages and Dynamic FX controls |
+| `src/dynamic-metric.h` | Output-pixel mapping/inverse metrics for snake/cells and stroke thickness |
 | `src/mesh-geometry.h` | Clips Dynamic FX triangles to mesh cells before mapping their vertices |
 | `src/branding.h` | Startup splash drawn with the existing potato logo |
 | `src/ui.h`, `src/style.h` | Collapsible inspector sections, filename elision and the shared widget theme |
@@ -226,3 +227,47 @@ Release handoff: 0.8.4 merged in PR #15 and published at https://github.com/TheG
 ### Entrance from blackout (0.8.5)
 
 Starting an entrance clears blackout in Scene before resetting its clock and issuing one repaint notification. The Play entrance callback synchronizes the Blackout button and output status immediately; automatic entrances reuse the same transition. Output start without an entrance retains blackout, and manual blackout still pauses a running scan. No-visible-surface starts keep blackout unchanged. The actual UI regression first reproduced the two blocked entrance failures and checks the synchronized controls, clean saved state and continued blackout pause. Release build and final extracted entrance checks passed. Actual 0.8.4 launcher upgrade/reopen retained original project/media and prior runtime/launcher; focused review found no blockers. Published as 0.8.5 in PR #16: https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.5. Public latest metadata and canonical HTTP 200 download match the checked 27,070,792-byte ZIP and SHA256 `db5ab19895371347656384565a2b3c37be8a5df4e1bb981f9c0994a1b4804afa`. Final extracted copy: `out/entrance-unblackout-check/final/PotatoMapper-0.8.5-windows-x64`.
+
+### Fluid snake candidate (implemented, unreleased)
+
+October 7 assignment from the established mapper chat, verified against Shane's direct collaboration request. Source remains C:\Users\mrbos\Downloads\Potato Mapper; branch `codex/fluid-snake-cells`, implementation commit `2de9ad3`. Build with the documented cached CMake and `--build out/build-desktop --config Release --parallel 4`. This candidate is locally committed and packaged; nothing is pushed, merged or released. Parent chat owns review/integration and numbering the future 0.8.6 release.
+
+Hot-Ass Potato keeps Explore/Overload/Reboot/Ambient, replay/skip/palettes and the shared clock. A cached 96-interval mapped arc-length table per leg replaces equal panel-duration movement; quintic acceleration applies at the whole tour's start/end. A connected 36-part tapering ribbon follows earlier route distances and splits at openings; three terminal slots preserve the head/portal copies under the 500-primitive cap. Existing widest-opening greedy routing remains. Strongly bent outer edges still use the corner-outline approximation, although actual meshes influence travel distance/direction and render all geometry.
+
+Cells use a cached output-coordinate grid, nominal spacing 1.8 times the square side, with fewer cells on small panels. Shapes and fixed geometry budgets can thin a large field. Nearest route distance and lateral delay drive a deterministic eased rotation/stretch ripple, smooth settling and gentle micro-motion. Small output-pixel fragments drift to the inside perimeter. There is no accumulated per-frame particle state or new dependency; Potato Focus retains its previous appearance.
+
+Optional integer JSON fields `dynamic.snakeWidth` and `dynamic.cellSize` have ranges 8-96 / 24-160 and defaults 40/56 for earlier projects. Width describes the body; Cell size describes the resting square side. Scene setting changes use Undo/Redo; ticks/seeking preserve clean saved state. Older apps ignore these fields and discard them if they save. Project format stays version 1, with no schema migration.
+
+Pixel offsets/strokes use the inverse local output Jacobian: exact within an affine region, approximate across strong perspective or several mesh triangles. Scene still clips/maps final triangles through the actual mesh. Boundary metrics extrapolate the nearest mesh triangle before clipping; review found clamped probes could erase a visible crossing outline. A renderer line from UV (-.3,.3) to (.1,.7) failed at visible point (.05,.65), then passed after correction. Existing output-display handling sets Scene outputSize to physical display pixels; diagnostic/preview windows uniformly scale that resolution.
+
+Candidate artifacts under `out/fluid-snake-check`:
+
+- `extracted/PotatoMapper-fluid-snake-CANDIDATE-0.8.5/Run-fluid-snake.cmd` opens the synthetic three-panel demo; the root `PotatoMapper.exe` also works. Keep this explicitly labelled 0.8.5-metadata candidate separate from public installations. It is not offered by the updater.
+- `PotatoMapper-fluid-snake-CANDIDATE-0.8.5.zip`, 31,032,918 bytes, SHA256 `dc3580e35993515fa515510206c70395e170415e9c414fbb1f9dbfb9f29c9fcd`.
+- `fluid-snake-preview.gif`: 240 actual OpenGL framebuffer exports at 70 ms of scene time; `preview.html` supports seeking, `final-frames` holds originals and `fluid-controls.png` shows the real UI. Unequal touching/rotated panels have deformed meshes; the separate gap stays dark.
+- `geometry-results.txt`, `storage-results.txt`, `recollection-investigation.txt`, profile files and the extracted candidate's `mapper.log` retain evidence.
+
+Release build and 34 geometry assertions passed: 200/800-pixel head sizing, fewer cells on smaller panels, touching tangent/speed, overlap/rotation, stage bounds and determinism. Extracted `--smoke-dynamic`, `--smoke-entrance`, `--smoke-fx` and `--smoke` passed with system directories only on PATH, covering controls/Undo/Redo/save-reopen, clean ticks, pause CPU/GPU reuse, deformation, duplicate IDs, crossing brightness and the shipped blackout fix. Root-launcher verification checked actual child completion, not launcher exit alone. The real ZIP passed digest/manifest, incomplete-payload, extraction, interrupted-download, cancelled-restart and synthetic project/media-preservation checks. Actual old-launcher install/reopen is deferred until the parent assigns the release version.
+
+Parent review reproduced the collection failure at the final staged-directory rename, with Windows error 5 (access denied). Original edited project bytes and the index remained intact. The external process causing that denial has not been identified. `projects-publish.h` now publishes without replacing an existing destination and retries only access/sharing/lock errors for at most 400 ms. A deterministic real Windows directory handle without delete sharing reproduced failure before retry and passed afterwards; persistent locks fail visibly and retain source bytes, and occupied destinations are never overwritten. This is bounded recovery from temporary denial, not proof that every possible collection failure is fixed. Diagnostics retain synthetic fixtures on failure. A separate existing limitation remains: import identity uses media path/size/timestamp, so a replacement with identical size and timestamp can reuse a stale collected copy.
+
+Short same-machine AMD Radeon 840M samples, 1920x1080 output plus 960x540 preview, density 80, 16x16 deformed meshes, two seconds per one/four-layer case:
+
+| Measurement | Shipped baseline | Final extracted candidate |
+| --- | ---: | ---: |
+| Output repaints/s, one / four | 16.2 / 14.4 | 22.9 / 18.9 |
+| Output mesh ms/frame, one / four | 2.740 / 10.841 | 2.264 / 9.736 |
+| Output GPU ms/native pass, one / four | 0.075 / 0.288 | 0.058 / 0.204 |
+| Heartbeat p95 lateness ms, one / four | 68 / 80 | 43 / 53 |
+
+An earlier candidate sample measured 17.4/14.7 repaints/s and 2.342/10.102 mesh ms/frame. The variation limits conclusions: these are short desktop measurements, not guaranteed FPS, total GPU utilization or physical-projector proof. The published 0.8.5 ZIP still matches `db5ab19895371347656384565a2b3c37be8a5df4e1bb981f9c0994a1b4804afa`; installed app/projects/media were not replaced. Next step is parent visual/code review, storage-result classification, coordinated integration/update release gates, then Shane's projector check.
+
+## Fluid snake 0.8.6 release checks
+
+Parent and intern shared `C:\Users\mrbos\Downloads\Potato Mapper` with explicit source/build ownership handoffs; chat folders are not additional checkouts. Intern chat **Investigate Potato Mapper intern** (`01a11977-6a21-7720-bde9-c40341128b4b`) implemented the candidate and review corrections. Parent owns publication and future assignments. No global relay authorization is implied.
+
+Review corrections in `3edf7f8` retain a transient Scene index through generation, cache keys and dispatch, while preserving ID-based legacy injected primitives. New actual-generator coverage checks 56-pixel cells on unequal 200/800-pixel duplicate-ID panels and exact framebuffer equivalence after assigning distinct IDs. It failed under the old deduplication/dispatch, then passed after correction. The portal renderer check finds the actual head crossing on unequal panels and rejects the old equal-duration assumption.
+
+The final numbered Release build passed 35 geometry assertions and 32 project-storage assertions. Extracted `out/fluid-snake-check/final/PotatoMapper-0.8.6-windows-x64` passed mapping, Dynamic FX, entrance and FX checks with only Windows system directories on PATH. A real 0.8.5 launcher installed 0.8.6, refreshed its root executable, reopened the same managed synthetic mapping and retained original project/media bytes, the previous runtime and launcher backup. Real ZIP hash/manifest and incomplete-payload checks passed; interrupted download and cancelled restart retained selected version/project/media. These fixtures are under ignored `out/fluid-snake-check/update-*`; installed user data was not replaced.
+
+The original separately labelled 0.8.5 candidate and 240-frame preview remain historical review artifacts. The final numbered package carries the reviewed source. Physical projector appearance remains a user acceptance check; approximate perspective sizing, corner-based outer-edge routing, bounded geometry and media path/size/timestamp fingerprint limitations remain documented. Camera and Raspberry Pi are deferred. Continue 0.8.x increments after Shane's feedback rather than expanding the roadmap indiscriminately.

@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QPolygonF>
 #include <QStringList>
+#include <QTransform>
 #include <QVector>
 
 namespace PotatoDynamic {
@@ -14,6 +15,8 @@ struct Settings {
     int density = 36;
     int palette = 0; // Holographic, White, Cyan, Violet, Amber, Mint (0..5).
     int glitch = 35;
+    int snakeWidth = 40; // Projector-output pixels, independent of panel size.
+    int cellSize = 56; // Cell side in output pixels; spacing is 1.8 times this.
     bool playing = true;
     quint32 seed = 0x504f5441u;
     QStringList members;
@@ -26,6 +29,10 @@ struct Surface {
     QString id;
     QPolygonF boundary; // Mapped output positions, used only to choose the tour.
     double aspect = 1; // Mapped physical width/height, including output aspect.
+    QTransform projection; // Deformed local coordinates to output pixels.
+    int cells = 1;
+    QVector<QPointF> mesh; // Empty means a regular mesh derived from boundary.
+    int instanceIndex = -1; // Transient Scene surface index, never serialized.
 };
 struct Primitive {
     QString surfaceId;
@@ -34,6 +41,8 @@ struct Primitive {
     bool filled = false;
     double width = .002; // Local surface units; renderer may draw a soft glow.
     bool closed = true; // Two-point strokes are open; perimeter arcs set false.
+    double outputWidth = 0; // Optional output-pixel stroke; zero retains legacy UV width.
+    int surfaceInstance = -1; // -1 retains legacy ID-based dispatch for injected geometry.
 };
 struct Frame {
     QVector<Primitive> shapes;

@@ -1,6 +1,8 @@
 #include "projects.h"
+#include "projects-publish.h"
 #include <QCoreApplication>
 #include <QDir>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -9,6 +11,8 @@
 #include <QTemporaryDir>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
+#include <chrono>
 
 static void check(bool pass, const char *label) {
     std::cout << (pass ? "PASS " : "FAIL ") << label << std::endl;
@@ -42,6 +46,46 @@ int main(int argc, char **argv) {
     try {
         QTemporaryDir fixture;
         check(fixture.isValid(), "temporary fixture root");
+#ifdef Q_OS_WIN
+        if (!app.arguments().contains("--recollection-only")) {
+            const auto staged = fixture.filePath("locked-staging");
+            const auto published = fixture.filePath("published");
+            write(QDir(staged).filePath("saved.pmap"), "retained bytes");
+            const auto native = QDir::toNativeSeparators(staged).toStdWString();
+            HANDLE handle = CreateFileW(native.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+            check(handle != INVALID_HANDLE_VALUE, "temporary directory lock acquired");
+            std::thread unlock([handle] { std::this_thread::sleep_for(std::chrono::milliseconds(120)); CloseHandle(handle); });
+            QString publishError;
+            const bool publishedOk = PotatoProjectsDetail::publishDirectory(staged, published, publishError);
+            unlock.join();
+            check(publishedOk && bytes(QDir(published).filePath("saved.pmap")) == "retained bytes",
+                "temporary Windows directory lock is retried without losing saved bytes");
+            QDir().mkpath(staged);
+            write(QDir(staged).filePath("saved.pmap"), "new staged bytes");
+            check(!PotatoProjectsDetail::publishDirectory(staged, published, publishError)
+                && bytes(QDir(staged).filePath("saved.pmap")) == "new staged bytes"
+                && bytes(QDir(published).filePath("saved.pmap")) == "retained bytes",
+                "publication never replaces an existing project directory");
+            handle = CreateFileW(native.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+            check(handle != INVALID_HANDLE_VALUE, "persistent directory lock acquired");
+            const bool blocked = !PotatoProjectsDetail::publishDirectory(staged, fixture.filePath("blocked-publication"), publishError);
+            CloseHandle(handle);
+            check(blocked && publishError.contains("Windows error")
+                && bytes(QDir(staged).filePath("saved.pmap")) == "new staged bytes"
+                && !QFileInfo::exists(fixture.filePath("blocked-publication")),
+                "persistent lock fails visibly with staged and original bytes intact");
+            QString deep = fixture.path();
+            for (int i = 0; i < 4; ++i) deep += '/' + QString(70, QChar('a' + i));
+            const auto deepSource = QDir(deep).filePath("staged");
+            const auto deepDestination = QDir(deep).filePath("published");
+            write(QDir(deepSource).filePath("saved.pmap"), "long path bytes");
+            check(deepSource.size() > 260 && PotatoProjectsDetail::publishDirectory(deepSource, deepDestination, publishError)
+                && bytes(QDir(deepDestination).filePath("saved.pmap")) == "long path bytes",
+                "publication preserves Qt long-path support beyond MAX_PATH");
+        }
+#endif
         const QString root = fixture.filePath("install"), source = fixture.filePath("source/show.pmap");
         const QString firstMedia = fixture.filePath("source/a/clip.bin"), secondMedia = fixture.filePath("source/b/clip.bin");
         write(firstMedia, "first clip"); write(secondMedia, "second clip");
@@ -66,11 +110,29 @@ int main(int argc, char **argv) {
         auto externalSurface = externalSurfaces[0].toObject(); externalSurface["media"] = firstMedia;
         externalSurfaces[0] = externalSurface; externalEdit["surfaces"] = externalSurfaces;
         writeMapping(collected, externalEdit); const auto externalBytes = bytes(collected);
+        const auto indexBefore = bytes(QDir(root).filePath("Projects/.projects-index.json"));
         const QString recollected = PotatoProjects::collect(source, root, error);
-        check(!recollected.isEmpty() && recollected != collected && bytes(collected) == externalBytes
-            && !QDir::isAbsolutePath(QJsonDocument::fromJson(bytes(recollected)).object()["surfaces"].toArray()[0].toObject()["media"].toString()),
+        const auto returnedSurfaces = QJsonDocument::fromJson(bytes(recollected)).object()["surfaces"].toArray();
+        const QString returnedMedia = returnedSurfaces.isEmpty() ? QString() : returnedSurfaces[0].toObject()["media"].toString();
+        const bool returned=!recollected.isEmpty(),different=recollected!=collected,retained=bytes(collected)==externalBytes;
+        const bool relative=!returnedMedia.isEmpty()&&!QDir::isAbsolutePath(returnedMedia);
+        const bool good=returned&&different&&retained&&relative;
+        if(!good||app.arguments().contains("--recollection-only")){
+            std::cout<<"RECOLLECT returned="<<returned<<" different="<<different<<" original-retained="<<retained<<" relative-media="<<relative
+                <<" error="<<error.toStdString()<<" source="<<source.toStdString()<<" edited="<<collected.toStdString()<<" result="<<recollected.toStdString()<<" reference="<<returnedMedia.toStdString()<<std::endl;
+        }
+        if(!good){
+            fixture.setAutoRemove(false);
+            std::cout<<"RECOLLECT FIXTURE RETAINED "<<fixture.path().toStdString()<<std::endl;
+            for(const auto &path:QStringList{source,collected,recollected,firstMedia,secondMedia}){const QFileInfo info(path);
+                std::cout<<"META "<<path.toStdString()<<" exists="<<info.exists()<<" size="<<info.size()<<" modified-ms="<<info.lastModified().toMSecsSinceEpoch()<<std::endl;}
+            std::cout<<"INDEX BEFORE "<<indexBefore.toStdString()<<"\nINDEX AFTER "<<bytes(QDir(root).filePath("Projects/.projects-index.json")).toStdString()<<std::endl;
+            if(returned)std::cout<<"RETURNED DOCUMENT "<<bytes(recollected).toStdString()<<std::endl;
+        }
+        check(good,
             "new external media in an edited import is collected without overwriting edits");
         check(PotatoProjects::collect(source, root, error) == recollected, "recollected edits are also deduplicated");
+        if(app.arguments().contains("--recollection-only"))return 0;
         write(collected, editedBytes);
         auto changed = original; changed["width"] = 640; writeMapping(source, changed);
         const QString updated = PotatoProjects::collect(source, root, error);

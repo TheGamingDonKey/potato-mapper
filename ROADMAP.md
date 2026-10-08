@@ -4,6 +4,8 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
+- **0.8.6 release candidate — checked, awaiting publication.** Fluid Hot-Ass Potato travel, connected tapered ribbon, delayed reactive cells and output-pixel size controls. Duplicate saved IDs retain independent geometry. Release build, 35 geometry and 32 storage assertions pass; the final extracted mapping/Dynamic FX/entrance/FX checks and actual 0.8.5 launcher upgrade/reopen pass. Temporary/persistent Windows locks and long paths have focused storage coverage. Interrupted download, cancelled restart and incomplete payload checks retain synthetic saved work. Parent owns integration/release; physical projector appearance remains Shane's check. ZIP: 27092946 bytes, SHA256 `0bb0bd4843ab7bb7b68525126108e824d1d4141a2083b873b8504f712da34d04`.
+
 - **0.8.5 shipped**, merged in [PR #16](https://github.com/TheGamingDonKey/potato-mapper/pull/16): Play entrance clears blackout and restarts Potato Scan in one action, with synchronized Blackout/output indicators. The regression reproduced the blocked entrance, then passed after the fix. Final extracted entrance check and actual 0.8.4 launcher upgrade/reopen passed, retaining original project/media and previous runtime/launcher. Focused review found no blockers. Public latest metadata and canonical HTTP 200 download match the 27,070,792-byte ZIP and SHA256 `db5ab19895371347656384565a2b3c37be8a5df4e1bb981f9c0994a1b4804afa`.
 
 - **0.8.4 shipped**, merged in [PR #15](https://github.com/TheGamingDonKey/potato-mapper/pull/15): Potato Scan output entrance with edge tracing, grid assembly, panel lock and smooth reveal. Replay/Skip, automatic-start toggle, shared preview/output clock and blackout pause. Actual render/state checks, partial-opacity reveal regression, final extracted entrance/FX checks and real 0.8.3 update/reopen passed. Review found no remaining blockers. Public latest metadata and canonical HTTP 200 download match the final ZIP. Next step: Shane's projector appearance check and feedback; camera recognition and richer choreography remain deferred.
@@ -25,6 +27,14 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - Check an item only after its completion condition is met and relevant checks pass. Include a short evidence note and the implementation PR or commit.
 - If merged code is not in a downloadable app yet, label it **Implemented — unreleased**. Add the release link when it ships. Merging and publishing are separate steps.
 - Record unperformed checks honestly. A local output window is not evidence of a physical projector test.
+
+## Fluid snake and reactive cells — candidate review
+
+- [x] **Smooth travel and articulated tail — implemented, unreleased.** Mapped arc length and whole-tour easing preserve speed/tangent through the existing widest openings. Tail/head continue across touching or overlapping panels; gaps remain dark. Geometry checks and actual motion exports passed.
+- [x] **Reactive cells and output sizing — implemented, unreleased.** Delayed square stretch/rotation settles smoothly; small fragments drift to the inner perimeter. Width/cell controls have optional 40/56-pixel defaults, save/load and Undo/Redo. Fourfold size, fewer-cell, pause/cache, clean-tick and persistence checks passed. Strong perspective/mesh sizing remains approximate.
+- [x] **Separate portable candidate checked.** Extracted runtime, root-launcher child, real ZIP/extraction/interruption/cancel checks passed. Review's boundary-outline defect reproduced and passed after correction; short same-machine measurements recorded.
+- [ ] **Parent review, integration and release.** Assign 0.8.6 after acceptance, then run actual old-version update/reopen/preservation gates. Classify the intermittent storage result before claiming a universally green release suite.
+- [ ] **Physical projector acceptance.** Local moving renders establish no hardware appearance proof; strongly deformed edges retain a routing approximation. Camera/Pi and the earlier unidentified File/Open failure remain outside this increment.
 - Update this file in the same change as the feature or fix. After publishing, update release links and the handoff above. Keep completed entries as history.
 - A checked item is not a guarantee against every future bug. Reopen it or link a follow-up issue when a concrete problem remains.
 - Use GitHub Issues for detailed bug reports or larger discussions when useful; link them here. Keep this file as the short overview.

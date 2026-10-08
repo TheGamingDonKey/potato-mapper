@@ -1,4 +1,5 @@
 #include "model.h"
+#include "dynamic-metric.h"
 #include "projects.h"
 #include "mesh-geometry.h"
 #include <QImageReader>
@@ -206,8 +207,9 @@ const Scene::DynamicGeometry &Scene::dynamicGeometry(){
             if(regular&&std::min({a.x(),b.x(),c.x(),a.y(),b.y(),c.y()})>=0&&std::max({a.x(),b.x(),c.x(),a.y(),b.y(),c.y()})<=1){vertex(a,colour,alpha);vertex(b,colour,alpha);vertex(c,colour,alpha);return;}
             potatoEachMeshVertex(a,b,c,regular?1:s.cells,[&](QPointF p){vertex(p,colour,alpha);});
         };
-        double aspect=1;for(const auto &surface:dynamicSurfaces)if(surface.id==s.id){aspect=surface.aspect;break;}
-        for(const auto &shape:dynamicFrame.shapes)if(shape.surfaceId==s.id&&shape.points.size()>=2){
+        double aspect=1;for(const auto &surface:dynamicSurfaces)if(surface.instanceIndex==surfaceIndex||(surface.instanceIndex<0&&surface.id==s.id)){aspect=surface.aspect;break;}
+        PotatoDynamic::Surface physical;physical.projection=s.transform()*QTransform::fromScale(outputSize.width(),outputSize.height());physical.cells=s.cells;physical.mesh=s.mesh;
+        for(const auto &shape:dynamicFrame.shapes)if(shape.surfaceId==s.id&&(shape.surfaceInstance<0||shape.surfaceInstance==surfaceIndex)&&shape.points.size()>=2){
             const auto &points=shape.points;
             if(shape.filled)for(int i=1;i+1<points.size();++i)triangle(points[0],points[i],points[i+1],shape.color,1);
             for(int layer=0;layer<2;++layer){
@@ -216,7 +218,10 @@ const Scene::DynamicGeometry &Scene::dynamicGeometry(){
                 for(int i=0;i<count;++i){
                     const auto a=points[i],b=points[(i+1)%points.size()];const auto delta=b-a;
                     const double dx=delta.x()*aspect,dy=delta.y(),length=std::hypot(dx,dy);if(length<1e-8)continue;
-                    const QPointF normal(-dy/length*width/aspect/2,dx/length*width/2);
+                    QPointF normal(-dy/length*width/aspect/2,dx/length*width/2);
+                    if(shape.outputWidth>0){const auto centre=(a+b)/2;const auto mappedDelta=PotatoDynamic::mappedPoint(physical,b)-PotatoDynamic::mappedPoint(physical,a);const double pixels=std::hypot(mappedDelta.x(),mappedDelta.y());
+                        if(pixels<1e-8)continue;const double half=shape.outputWidth*(layer?1:3.2)/2;
+                        normal=PotatoDynamic::pixelOffset(physical,centre,{-mappedDelta.y()/pixels*half,mappedDelta.x()/pixels*half});}
                     triangle(a+normal,b+normal,b-normal,shape.color,alpha);triangle(a+normal,b-normal,a-normal,shape.color,alpha);
                 }
             }
@@ -229,13 +234,13 @@ void Scene::rebuildDynamic(){
     ++mappingRevision;
     QStringList previous;for(const auto &s:dynamicSurfaces)previous<<s.id;
     dynamicSurfaces.clear();
-    for(const auto &s:surfaces)if(s.visible&&dynamic.members.contains(s.id)){
+    for(int surfaceIndex=0;surfaceIndex<surfaces.size();++surfaceIndex){const auto &s=surfaces[surfaceIndex];if(!s.visible||!dynamic.members.contains(s.id))continue;
         const auto pixel=[this](QPointF p){return QPointF(p.x()*outputSize.width(),p.y()*outputSize.height());};
         const auto t=s.transform();QPolygonF boundary;
         for(const auto uv:QPolygonF{{0,0},{1,0},{1,1},{0,1}})boundary<<pixel(t.map(s.sample(uv.x(),uv.y())));
         const double w=(QLineF(boundary[0],boundary[1]).length()+QLineF(boundary[3],boundary[2]).length())/2;
         const double h=(QLineF(boundary[0],boundary[3]).length()+QLineF(boundary[1],boundary[2]).length())/2;
-        dynamicSurfaces.append({s.id,boundary,std::clamp(w/std::max(h,.001),.05,20.0)});
+        dynamicSurfaces.append({s.id,boundary,std::clamp(w/std::max(h,.001),.05,20.0),t*QTransform::fromScale(outputSize.width(),outputSize.height()),s.cells,s.mesh,surfaceIndex});
     }
     QStringList next;for(const auto &s:dynamicSurfaces)next<<s.id;
     previous.sort();next.sort();
