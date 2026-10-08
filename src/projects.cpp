@@ -1,4 +1,5 @@
 #include "projects.h"
+#include "projects-publish.h"
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDebug>
@@ -283,7 +284,7 @@ QString collect(const QString &source, const QString &installRoot, QString &erro
     project["surfaces"] = surfaces;
     if (!writeAtomic(QDir(staging.path()).filePath(name + ".pmap"), QJsonDocument(project).toJson(), error)) return {};
     // Only the new staging folder is renamed; original projects/media remain untouched.
-    if (!QDir().rename(staging.path(), folder)) { error = "Cannot finish collected project: " + folder; return {}; }
+    if (!PotatoProjectsDetail::publishDirectory(staging.path(), folder, error)) return {};
     staging.setAutoRemove(false);
     const QJsonObject record{{"source", key}, {"fingerprint", digest}, {"project", QDir(projects).relativeFilePath(destination)}};
     if (replacementRecord >= 0) imports[replacementRecord] = record;

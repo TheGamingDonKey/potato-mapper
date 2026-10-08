@@ -6,7 +6,7 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS Widgets OpenGLWidgets Multimedia Network)
 qt_add_executable(PotatoMapper WIN32
     src/main.cpp src/model.h src/model.cpp src/canvas.h src/canvas.cpp src/branding.h src/updates.h src/updates.cpp src/ui.h src/style.h src/patterns.h
-    src/dynamic.h src/dynamic.cpp src/dynamic-metric.h src/projects.h src/projects.cpp)
+    src/dynamic.h src/dynamic.cpp src/dynamic-metric.h src/projects.h src/projects.cpp src/projects-publish.h)
 set_target_properties(PotatoMapper PROPERTIES OUTPUT_NAME PotatoMapperApp)
 target_compile_definitions(PotatoMapper PRIVATE POTATO_VERSION="${PROJECT_VERSION}")
 target_link_libraries(PotatoMapper PRIVATE Qt6::Widgets Qt6::OpenGLWidgets Qt6::Multimedia Qt6::Network)

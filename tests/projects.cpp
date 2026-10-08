@@ -1,4 +1,5 @@
 #include "projects.h"
+#include "projects-publish.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QDateTime>
@@ -10,6 +11,8 @@
 #include <QTemporaryDir>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
+#include <chrono>
 
 static void check(bool pass, const char *label) {
     std::cout << (pass ? "PASS " : "FAIL ") << label << std::endl;
@@ -43,6 +46,46 @@ int main(int argc, char **argv) {
     try {
         QTemporaryDir fixture;
         check(fixture.isValid(), "temporary fixture root");
+#ifdef Q_OS_WIN
+        if (!app.arguments().contains("--recollection-only")) {
+            const auto staged = fixture.filePath("locked-staging");
+            const auto published = fixture.filePath("published");
+            write(QDir(staged).filePath("saved.pmap"), "retained bytes");
+            const auto native = QDir::toNativeSeparators(staged).toStdWString();
+            HANDLE handle = CreateFileW(native.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+            check(handle != INVALID_HANDLE_VALUE, "temporary directory lock acquired");
+            std::thread unlock([handle] { std::this_thread::sleep_for(std::chrono::milliseconds(120)); CloseHandle(handle); });
+            QString publishError;
+            const bool publishedOk = PotatoProjectsDetail::publishDirectory(staged, published, publishError);
+            unlock.join();
+            check(publishedOk && bytes(QDir(published).filePath("saved.pmap")) == "retained bytes",
+                "temporary Windows directory lock is retried without losing saved bytes");
+            QDir().mkpath(staged);
+            write(QDir(staged).filePath("saved.pmap"), "new staged bytes");
+            check(!PotatoProjectsDetail::publishDirectory(staged, published, publishError)
+                && bytes(QDir(staged).filePath("saved.pmap")) == "new staged bytes"
+                && bytes(QDir(published).filePath("saved.pmap")) == "retained bytes",
+                "publication never replaces an existing project directory");
+            handle = CreateFileW(native.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+            check(handle != INVALID_HANDLE_VALUE, "persistent directory lock acquired");
+            const bool blocked = !PotatoProjectsDetail::publishDirectory(staged, fixture.filePath("blocked-publication"), publishError);
+            CloseHandle(handle);
+            check(blocked && publishError.contains("Windows error")
+                && bytes(QDir(staged).filePath("saved.pmap")) == "new staged bytes"
+                && !QFileInfo::exists(fixture.filePath("blocked-publication")),
+                "persistent lock fails visibly with staged and original bytes intact");
+            QString deep = fixture.path();
+            for (int i = 0; i < 4; ++i) deep += '/' + QString(70, QChar('a' + i));
+            const auto deepSource = QDir(deep).filePath("staged");
+            const auto deepDestination = QDir(deep).filePath("published");
+            write(QDir(deepSource).filePath("saved.pmap"), "long path bytes");
+            check(deepSource.size() > 260 && PotatoProjectsDetail::publishDirectory(deepSource, deepDestination, publishError)
+                && bytes(QDir(deepDestination).filePath("saved.pmap")) == "long path bytes",
+                "publication preserves Qt long-path support beyond MAX_PATH");
+        }
+#endif
         const QString root = fixture.filePath("install"), source = fixture.filePath("source/show.pmap");
         const QString firstMedia = fixture.filePath("source/a/clip.bin"), secondMedia = fixture.filePath("source/b/clip.bin");
         write(firstMedia, "first clip"); write(secondMedia, "second clip");
