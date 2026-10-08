@@ -4,6 +4,8 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
+- **0.8.5 implemented — unreleased**, branch `codex/entrance-unblackout`: Play entrance clears blackout and restarts Potato Scan in one action, with synchronized Blackout/output indicators. The regression reproduced the blocked entrance, then passed after the fix. Final extracted entrance check and actual 0.8.4 launcher upgrade/reopen passed, retaining original project/media and previous runtime/launcher. Focused review found no blockers; publication pending.
+
 - **0.8.4 shipped**, merged in [PR #15](https://github.com/TheGamingDonKey/potato-mapper/pull/15): Potato Scan output entrance with edge tracing, grid assembly, panel lock and smooth reveal. Replay/Skip, automatic-start toggle, shared preview/output clock and blackout pause. Actual render/state checks, partial-opacity reveal regression, final extracted entrance/FX checks and real 0.8.3 update/reopen passed. Review found no remaining blockers. Public latest metadata and canonical HTTP 200 download match the final ZIP. Next step: Shane's projector appearance check and feedback; camera recognition and richer choreography remain deferred.
 
 - October 7 documentation handoff: [cross-project reliability lessons](DEVELOPMENT.md#reliability-lessons-across-projects) preserve file-location, packaged-runtime, profiling, cache and updater-recovery practices. No application changes or new release were made for this note.

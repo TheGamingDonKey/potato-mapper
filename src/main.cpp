@@ -99,11 +99,11 @@ public:
         outputLayout->addLayout(outputControls);outputBar->addWidget(outputPanel);outputPanel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Preferred);
         auto *entranceControls=new QHBoxLayout;entranceControls->setSpacing(8);
         auto *scanLabel=new QLabel("POTATO SCAN");scanLabel->setStyleSheet("color:#91d6d8;font-size:11px;font-weight:600;");entranceControls->addWidget(scanLabel);
-        entrancePlay=new QPushButton("Play entrance");entrancePlay->setObjectName("entrancePlay");entrancePlay->setToolTip("Trace your mapped surfaces, build a scan grid, then reveal their content.");entranceControls->addWidget(entrancePlay);
+        entrancePlay=new QPushButton("Play entrance");entrancePlay->setObjectName("entrancePlay");entrancePlay->setToolTip("Turn off blackout and trace your mapped surfaces, build a scan grid, then reveal their content.");entranceControls->addWidget(entrancePlay);
         entranceSkip=new QPushButton("Skip");entranceSkip->setObjectName("entranceSkip");entranceControls->addWidget(entranceSkip);
         entranceAutomatic=new QCheckBox("On output start");entranceAutomatic->setObjectName("entranceAutomatic");entranceAutomatic->setChecked(QSettings().value("output/entrance",true).toBool());entranceControls->addWidget(entranceAutomatic);
         entranceInfo=new QLabel("8-second mapping reveal");entranceInfo->setObjectName("entranceInfo");entranceInfo->setStyleSheet("color:#9caab6;font-size:11px;");entranceControls->addWidget(entranceInfo,1);outputLayout->addLayout(entranceControls);
-        connect(entrancePlay,&QPushButton::clicked,this,[this]{scene.playEntrance();});
+        connect(entrancePlay,&QPushButton::clicked,this,[this]{scene.playEntrance();updateOutputStatus();});
         connect(entranceSkip,&QPushButton::clicked,this,[this]{scene.skipEntrance();});
         connect(entranceAutomatic,&QCheckBox::toggled,this,[this](bool enabled){if(!smoke)QSettings().setValue("output/entrance",enabled);});
         connect(&scene,&Scene::changed,this,[this]{updateEntranceStatus();});

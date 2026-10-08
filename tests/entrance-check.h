@@ -18,7 +18,8 @@ template<class Window> void runEntranceChecks(Window &window,QApplication &app,c
         auto *start=window.template findChild<QPushButton*>("outputStart");
         auto *stop=window.template findChild<QPushButton*>("outputStop");
         auto *displays=window.template findChild<QComboBox*>("outputDisplays");
-        if(!play||!skip||!automatic||!start||!stop||!displays){qInfo()<<"ENTRANCE FAIL replay, skip and output-start controls missing";app.exit(2);return;}
+        QPushButton *blackoutToggle=nullptr;for(auto *button:window.template findChildren<QPushButton*>())if(button->text()=="Blackout  [B]")blackoutToggle=button;
+        if(!play||!skip||!automatic||!start||!stop||!displays||!blackoutToggle){qInfo()<<"ENTRANCE FAIL replay, skip and output-start controls missing";app.exit(2);return;}
         struct State{QStringList errors;QTemporaryDir temp;QJsonObject saved;QImage content;};auto state=std::make_shared<State>();
         auto require=[state](bool good,const QString &label){if(!good)state->errors<<label;};
         auto &scene=window.scene;scene.newProject();
@@ -59,10 +60,13 @@ template<class Window> void runEntranceChecks(Window &window,QApplication &app,c
         QFile invalid(state->temp.filePath("invalid.pmap"));require(invalid.open(QIODevice::WriteOnly),"create invalid project");invalid.write("{broken");invalid.close();
         require(!scene.load(invalid.fileName(),error)&&scene.entranceActive&&scene.json()==state->saved,"failed load preserves current mapping and entrance");
         require(scene.load(project,error)&&!scene.entranceActive&&scene.json()==state->saved,"successful reopen keeps mapped media and ends entrance");
-        automatic->setChecked(true);displays->setCurrentIndex(1);start->click();require(window.output->isVisible()&&scene.entranceActive,"Start output plays enabled entrance");
+        automatic->setChecked(true);displays->setCurrentIndex(1);blackoutToggle->setChecked(true);start->click();require(window.output->isVisible()&&scene.entranceActive&&!scene.blackout&&!blackoutToggle->isChecked(),"Start output plays enabled entrance and clears blackout");
         stop->click();require(!scene.entranceActive&&!window.output->isVisible(),"Stop cancels entrance");
-        automatic->setChecked(false);start->click();require(window.output->isVisible()&&!scene.entranceActive,"automatic entrance can be disabled");
-        play->click();scene.entranceElapsed=3;scene.blackout=true;emit scene.changed();const auto blackout=window.output->grabFramebuffer();
+        automatic->setChecked(false);blackoutToggle->setChecked(true);start->click();require(window.output->isVisible()&&!scene.entranceActive&&scene.blackout,"output without automatic entrance preserves blackout");
+        const auto beforePlay=scene.json();const bool dirtyBeforePlay=scene.dirty;
+        play->click();require(scene.entranceActive&&scene.entrancePlaying&&scene.entranceElapsed==0&&!scene.blackout&&!blackoutToggle->isChecked(),"Play entrance starts immediately and clears blackout indicator");
+        require(scene.json()==beforePlay&&scene.dirty==dirtyBeforePlay,"starting from blackout preserves saved project state");
+        scene.entranceElapsed=3;blackoutToggle->setChecked(true);const auto blackout=window.output->grabFramebuffer();
         bool black=true;for(int y=0;y<blackout.height();y+=13)for(int x=0;x<blackout.width();x+=13){const auto c=blackout.pixelColor(x,y);black=black&&c.red()==0&&c.green()==0&&c.blue()==0;}
         require(black,"blackout hides all scan ink");
         QTimer::singleShot(160,&window,[&window,&app,state,require]{
@@ -70,7 +74,7 @@ template<class Window> void runEntranceChecks(Window &window,QApplication &app,c
             QTimer::singleShot(180,&window,[&window,&app,state,require]{
                 auto &scene=window.scene;require(!scene.entranceActive&&!scene.dirty,"timed entrance finishes without dirtying project");
                 scene.playEntrance();scene.newProject();require(!scene.entranceActive,"new project ends entrance");
-                scene.surfaces.clear();scene.playEntrance();require(!scene.entranceActive,"no entrance without visible mapped surfaces");
+                scene.surfaces.clear();scene.blackout=true;scene.playEntrance();require(!scene.entranceActive&&scene.blackout,"empty scene keeps blackout without starting entrance");
                 qInfo()<<"ENTRANCE CHECK"<<(state->errors.isEmpty()?"PASS":"FAIL")<<state->errors;app.exit(state->errors.isEmpty()?0:2);
             });
         });

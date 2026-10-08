@@ -83,6 +83,8 @@ Shipped in [0.8.4](https://github.com/TheGamingDonKey/potato-mapper/releases/tag
 
 Under **PROJECTOR OUTPUT**, click **Play entrance** to preview or replay Potato Scan across your visible mapped surfaces. **On output start** is enabled by default; clear it if Start output should immediately show your normal projection. **Skip** restores the projection immediately. Blackout hides the scan and pauses its clock; Stop or Escape ends it. Opening a different project also ends it.
 
+Starting an entrance turns blackout off automatically, so **Play entrance** can reveal the scan in one click. You can still switch blackout on during the entrance to pause it. With **On output start** disabled, Start output retains your blackout setting.
+
 The scan follows your actual corners and mesh deformation. It is a theatrical entrance using the mappings you already made; it does not use a camera or recognize walls. Your media, individual FX and Dynamic FX remain assigned, and the entrance does not edit the saved project. Animation clocks continue behind the entrance so the revealed content is current.
 
 ### Dynamic FX

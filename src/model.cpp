@@ -158,6 +158,7 @@ Scene::Scene(QObject *parent):QObject(parent){
 Surface *Scene::current(){return selected>=0&&selected<surfaces.size()?&surfaces[selected]:nullptr;}
 void Scene::playEntrance(){
     entranceActive=std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.visible&&s.opacity>0;});
+    if(entranceActive)blackout=false;
     entranceElapsed=0;entrancePlaying=true;emit changed();
 }
 void Scene::skipEntrance(){
