@@ -33,6 +33,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
+- **Potato Scan:** an eight-second entrance that traces the mapped edges, assembles a scan grid, locks the panels and smoothly reveals their media or FX. Replay and Skip controls, with an optional entrance on output start.
 - Right-click a surface to load/clear media or rename it. Clearing keeps the mesh and supports Undo.
 - Branded startup splash, surface content labels, File/Edit/Help menus, and an About/version display.
 - Resizable sidebar, persistent surface list, collapsible settings, themed scrollbars and full-path filename tooltips.
@@ -75,6 +76,12 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on an animation surface switches it back to media playback. **Clear media** returns an image, video, or animation surface to the white grid. Double-click a surface's list entry to rename it.
 
 Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100% and Blend to Normal. Screen gives a softer bright overlay; Add adds light and can clip to white. Move the overlay above the other surface using **Forward**, overlap their mapped areas, then choose Screen/Add. Open Potato FX and choose a flowing effect. Start with White, Soft edge 0%, Speed 100% and Flow 70%. Increase Density for smaller elements, then adjust Cell size or Line width. SquareWave uses dense stretching cells; Diagonals uses rotating strokes; CubicCircles morphs filled cells into circles/rings; SquareArray moves rows of changing blocks. Waterlight draws a shimmering light web; Contour Flow drifts landscape-like lines; Curve Maze joins curved paths; Depth Tunnel creates a perspective grid. Older dots, stripes, rings and the former square waves (now labelled Stepped waves) remain available. Earlier app versions ignore the new appearance settings and do not retain them when saving.
+
+### Potato Scan entrance
+
+Under **PROJECTOR OUTPUT**, click **Play entrance** to preview or replay Potato Scan across your visible mapped surfaces. **On output start** is enabled by default; clear it if Start output should immediately show your normal projection. **Skip** restores the projection immediately. Blackout hides the scan and pauses its clock; Stop or Escape ends it. Opening a different project also ends it.
+
+The scan follows your actual corners and mesh deformation. It is a theatrical entrance using the mappings you already made; it does not use a camera or recognize walls. Your media, individual FX and Dynamic FX remain assigned, and the entrance does not edit the saved project. Animation clocks continue behind the entrance so the revealed content is current.
 
 ### Dynamic FX
 

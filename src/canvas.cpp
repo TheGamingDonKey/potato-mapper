@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "entrance.h"
 #include <QPainter>
 #include <QFile>
 #include <QMimeData>
@@ -21,7 +22,8 @@ void Canvas::cleanup(){
     for(auto &t:textures){if(t.id)glDeleteTextures(1,&t.id);if(t.chroma)glDeleteTextures(1,&t.chroma);}
     if(profileQueries[0])glDeleteQueries(4,profileQueries);
     std::fill(std::begin(profileQueries),std::end(profileQueries),0u);std::fill(std::begin(profilePending),std::end(profilePending),false);activeProfileQuery=-1;
-    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();dynamicBuffer.destroy();dynamicVao.destroy();dynamicProgram.removeAllShaders();dynamicUploadedRevision=0;doneCurrent();graphicsReady=false;
+    textures.clear();buffer.destroy();vao.destroy();program.removeAllShaders();dynamicBuffer.destroy();dynamicVao.destroy();dynamicProgram.removeAllShaders();dynamicUploadedRevision=0;
+    entranceBuffer.destroy();entranceVao.destroy();entranceProgram.removeAllShaders();entranceUploadedRevision=0;doneCurrent();graphicsReady=false;
 }
 void Canvas::initializeGL(){
     if(!initializeOpenGLFunctions()){graphicsError="OpenGL 3.3 could not be initialized.";emit graphicsInitialized(graphicsError);return;}
@@ -54,7 +56,33 @@ void main(){vec4 c=vec4(ink.rgb*brightness,ink.a*opacity);if(blendMode==1)c.rgb*
     if(!dynamicProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,dynamicVertex)||!dynamicProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,dynamicFragment)||!dynamicProgram.link()){
         graphicsError=dynamicProgram.log();emit graphicsInitialized(graphicsError);return;
     }
-    vao.create();buffer.create();dynamicVao.create();dynamicBuffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
+    QFile entranceFile(":/assets/entrance.frag");
+    if(!entranceFile.open(QIODevice::ReadOnly)||!entranceProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!entranceProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,entranceFile.readAll())||!entranceProgram.link()){
+        graphicsError="Potato Scan: "+entranceProgram.log();emit graphicsInitialized(graphicsError);return;
+    }
+    vao.create();buffer.create();dynamicVao.create();dynamicBuffer.create();entranceVao.create();entranceBuffer.create();graphicsReady=true;emit graphicsInitialized(graphicsDescription);
+}
+void Canvas::drawEntrance(){
+    const auto &geometry=scene->entranceGeometry();
+    program.release();buffer.release();vao.release();entranceProgram.bind();entranceVao.bind();entranceBuffer.bind();
+    if(entranceUploadedRevision!=geometry.revision){entranceBuffer.allocate(geometry.vertices.constData(),int(geometry.vertices.size()*sizeof(float)));entranceUploadedRevision=geometry.revision;if(profileRendering)++renderStats.uploads;}
+    entranceProgram.enableAttributeArray(0);entranceProgram.enableAttributeArray(1);
+    entranceProgram.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));entranceProgram.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
+    entranceProgram.setUniformValue("seconds",float(scene->entranceElapsed));entranceProgram.setUniformValue("reveal",float(PotatoEntrance::reveal(scene->entranceElapsed)));
+    glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+    for(int i=0;i<scene->surfaces.size();++i){
+        const auto &s=scene->surfaces[i];if(!s.visible||s.opacity==0)continue;
+        const auto transform=s.transform();QMatrix3x3 m;
+        m(0,0)=float(transform.m11());m(0,1)=float(transform.m21());m(0,2)=float(transform.m31());m(1,0)=float(transform.m12());m(1,1)=float(transform.m22());m(1,2)=float(transform.m32());m(2,0)=float(transform.m13());m(2,1)=float(transform.m23());m(2,2)=float(transform.m33());
+        entranceProgram.setUniformValue("mapping",m);
+        auto pixel=[this](QPointF point){return QPointF(point.x()*scene->outputSize.width(),point.y()*scene->outputSize.height());};
+        const double w=(QLineF(pixel(s.corners[0]),pixel(s.corners[1])).length()+QLineF(pixel(s.corners[3]),pixel(s.corners[2])).length())*.5;
+        const double h=(QLineF(pixel(s.corners[0]),pixel(s.corners[3])).length()+QLineF(pixel(s.corners[1]),pixel(s.corners[2])).length())*.5;
+        entranceProgram.setUniformValue("surfacePixels",QVector2D(float(w),float(h)));entranceProgram.setUniformValue("rank",float(i%8)/8.f);entranceProgram.setUniformValue("surfaceOpacity",s.opacity/100.f);
+        entranceProgram.setUniformValue("brightness",s.brightness/100.f);
+        const auto range=geometry.ranges.value(i);glDrawArrays(GL_TRIANGLES,range.first,range.second);
+    }
+    entranceBuffer.release();entranceVao.release();entranceProgram.release();
 }
 void Canvas::drawDynamic(const Surface &s,int surfaceIndex){
     const auto &geometry=scene->dynamicGeometry();
@@ -63,7 +91,7 @@ void Canvas::drawDynamic(const Surface &s,int surfaceIndex){
     dynamicProgram.setAttributeBuffer(0,GL_FLOAT,0,2,6*sizeof(float));dynamicProgram.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),4,6*sizeof(float));
     const auto t=s.transform();QMatrix3x3 m;
     m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());
-    dynamicProgram.setUniformValue("mapping",m);dynamicProgram.setUniformValue("brightness",s.brightness/100.f);dynamicProgram.setUniformValue("opacity",s.opacity/100.f);dynamicProgram.setUniformValue("blendMode",s.blend);
+    dynamicProgram.setUniformValue("mapping",m);dynamicProgram.setUniformValue("brightness",s.brightness/100.f*float(scene->entranceActive?PotatoEntrance::reveal(scene->entranceElapsed):1.0));dynamicProgram.setUniformValue("opacity",s.opacity/100.f);dynamicProgram.setUniformValue("blendMode",s.blend);
     if(dynamicUploadedRevision!=geometry.revision){
         dynamicBuffer.allocate(geometry.vertices.constData(),int(geometry.vertices.size()*sizeof(float)));dynamicUploadedRevision=geometry.revision;if(profileRendering)++renderStats.uploads;
     }
@@ -97,7 +125,8 @@ int Canvas::hitSurface(const QPointF &pos)const{
 void Canvas::paintGL(){
     ++paintedFrames;
     if(!graphicsReady){QPainter p(this);p.fillRect(rect(),Qt::black);p.setPen(Qt::white);if(editor)p.drawText(rect(),Qt::AlignCenter,graphicsError);return;}
-    if((editor||!scene->blackout)&&scene->dynamic.effect&&!scene->dynamicSurfaces.isEmpty()){
+    const bool showContent=!scene->entranceActive||PotatoEntrance::reveal(scene->entranceElapsed)>0;
+    if(showContent&&(editor||!scene->blackout)&&scene->dynamic.effect&&!scene->dynamicSurfaces.isEmpty()){
         // Prepare once before the native pass so profiling excludes CPU meshing.
         QElapsedTimer meshTimer;if(profileRendering)meshTimer.start();const auto builds=scene->dynamicGeometryBuilds;
         scene->dynamicGeometry();
@@ -126,7 +155,7 @@ void Canvas::paintGL(){
     program.setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(float));program.setAttributeBuffer(1,GL_FLOAT,2*sizeof(float),2,4*sizeof(float));
     program.setUniformValue("picture",0);
     program.setUniformValue("chromaPicture",1);
-    if(editor||!scene->blackout)for(int surfaceIndex=0;surfaceIndex<scene->surfaces.size();++surfaceIndex){
+    if(showContent&&(editor||!scene->blackout))for(int surfaceIndex=0;surfaceIndex<scene->surfaces.size();++surfaceIndex){
         const auto &s=scene->surfaces[surfaceIndex];
         if(!s.visible)continue;
         if(s.blend==1)glBlendFuncSeparate(GL_ONE,GL_ONE_MINUS_SRC_COLOR,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
@@ -178,7 +207,7 @@ void Canvas::paintGL(){
         QVector2D uvScale(1,1),uvOffset(0,0);
         program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,10000.0)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
         program.setUniformValue("density",float(s.fx.density));program.setUniformValue("flow",s.fx.flow/100.0f);program.setUniformValue("angle",s.fx.angle*float(3.141592653589793/180.0));program.setUniformValue("palette",s.fx.palette);program.setUniformValue("edgeFade",s.fx.edge/100.0f);
-        program.setUniformValue("brightness",s.brightness/100.0f);program.setUniformValue("opacity",s.opacity/100.0f);
+        program.setUniformValue("brightness",s.brightness/100.0f*float(scene->entranceActive?PotatoEntrance::reveal(scene->entranceElapsed):1.0));program.setUniformValue("opacity",s.opacity/100.0f);
         {
             const auto pixel=[this](QPointF p){return QPointF(p.x()*scene->outputSize.width(),p.y()*scene->outputSize.height());};
             double sw=(QLineF(pixel(s.corners[0]),pixel(s.corners[1])).length()+QLineF(pixel(s.corners[3]),pixel(s.corners[2])).length())/2;
@@ -197,12 +226,13 @@ void Canvas::paintGL(){
         for(int y=0;y<s.cells;y++)for(int x=0;x<s.cells;x++){int a=y*(s.cells+1)+x,b=a+1,c=a+s.cells+1,d=c+1;add(a);add(b);add(d);add(a);add(d);add(c);}
         buffer.allocate(vertices.constData(),int(vertices.size()*sizeof(float)));glDrawArrays(GL_TRIANGLES,0,int(vertices.size()/4));
     }
+    if(scene->entranceActive&&(editor||!scene->blackout))drawEntrance();
     buffer.release();vao.release();program.release();glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,0);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,0);glDisable(GL_SCISSOR_TEST);
     glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
     if(activeProfileQuery>=0){glEndQuery(GL_TIME_ELAPSED);profilePending[activeProfileQuery]=true;activeProfileQuery=-1;}
     p.endNativePainting();
-    if((editor||!scene->blackout)&&scene->dynamicFrame.titleOpacity>0){
-        p.save();p.setClipRect(r);p.setRenderHint(QPainter::Antialiasing);p.setOpacity(scene->dynamicFrame.titleOpacity);
+    if((editor||!scene->blackout)&&scene->dynamicFrame.titleOpacity>0&&showContent){
+        p.save();p.setClipRect(r);p.setRenderHint(QPainter::Antialiasing);p.setOpacity(scene->dynamicFrame.titleOpacity*(scene->entranceActive?PotatoEntrance::reveal(scene->entranceElapsed):1.0));
         QFont font("Segoe UI");font.setBold(true);font.setPixelSize(qMax(12,int(r.height()*.065)));font.setLetterSpacing(QFont::AbsoluteSpacing,r.height()*.004);p.setFont(font);p.setPen(QColor("#bcfaff"));p.drawText(r,Qt::AlignCenter,"POTATO MAPPER");p.restore();
     }
     if(!editor)return;

@@ -69,6 +69,12 @@ public:
     int selected = -1;
     QSize outputSize{1920,1080};
     bool blackout = false;
+    // One transient clock is shared by preview/output. Never saved or added to Undo.
+    bool entranceActive=false,entrancePlaying=true;
+    double entranceElapsed=0;
+    void playEntrance();
+    void skipEntrance();
+    void setEntranceTime(double seconds);
     bool dirty = false;
     QString projectPath;
     PotatoDynamic::Settings dynamic;
@@ -80,6 +86,7 @@ public:
         QHash<int,QPair<int,int>> ranges;
         quint64 revision=0;
     };
+    const DynamicGeometry &entranceGeometry(); // Cached mesh, four floats per vertex.
     const DynamicGeometry &dynamicGeometry();
     quint64 dynamicGeometryBuilds=0;
     void setDynamic(PotatoDynamic::Settings settings);
@@ -116,6 +123,8 @@ private:
     QHash<QString, MediaSource*> mediaSources;
     QVector<QJsonObject> history, future;
     DynamicGeometry cachedDynamicGeometry;
+    DynamicGeometry cachedEntranceGeometry;
+    quint64 mappingRevision=1;
     quint64 dynamicRevision=1;
     void updateDynamicFrame();
 };

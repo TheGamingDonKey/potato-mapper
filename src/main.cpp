@@ -7,10 +7,12 @@
 #include "dynamic-ui.h"
 #include "projects.h"
 #include "launcher-refresh.h"
+#include "entrance.h"
 #include "../tests/appearance-check.h"
 #include "../tests/fx-check.h"
 #include "../tests/fx-profile.h"
 #include "../tests/dynamic-check.h"
+#include "../tests/entrance-check.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QInputDialog>
@@ -85,22 +87,32 @@ public:
         auto *outputPanel=new QWidget;auto *outputLayout=new QVBoxLayout(outputPanel);outputLayout->setContentsMargins(4,2,4,2);outputLayout->setSpacing(5);
         auto *outputRow=new QHBoxLayout;outputRow->setSpacing(8);
         outputRow->addWidget(new QLabel("PROJECTOR OUTPUT"));
-        displays=new QComboBox;displays->setMinimumWidth(160);displays->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);outputRow->addWidget(displays,1);
+        displays=new QComboBox;displays->setObjectName("outputDisplays");displays->setMinimumWidth(160);displays->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);outputRow->addWidget(displays,1);
         auto *refreshButton=new QPushButton("Refresh");outputRow->addWidget(refreshButton);
         auto *settingsButton=new QPushButton("Display settings");outputRow->addWidget(settingsButton);
         outputLayout->addLayout(outputRow);
         auto *outputControls=new QHBoxLayout;outputControls->setSpacing(8);
-        startOutputButton=new QPushButton("Start output");startOutputButton->setStyleSheet("background:#286250;color:#eafff7;font-weight:600;");outputControls->addWidget(startOutputButton);
-        stopOutputButton=new QPushButton("Stop");outputControls->addWidget(stopOutputButton);
+        startOutputButton=new QPushButton("Start output");startOutputButton->setObjectName("outputStart");startOutputButton->setStyleSheet("background:#286250;color:#eafff7;font-weight:600;");outputControls->addWidget(startOutputButton);
+        stopOutputButton=new QPushButton("Stop");stopOutputButton->setObjectName("outputStop");outputControls->addWidget(stopOutputButton);
         blackoutButton=new QPushButton("Blackout  [B]");blackoutButton->setCheckable(true);outputControls->addWidget(blackoutButton);
         outputInfo=new QLabel;outputInfo->setMinimumWidth(0);outputInfo->setWordWrap(true);outputInfo->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);outputControls->addWidget(outputInfo,1);
         outputLayout->addLayout(outputControls);outputBar->addWidget(outputPanel);outputPanel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Preferred);
+        auto *entranceControls=new QHBoxLayout;entranceControls->setSpacing(8);
+        auto *scanLabel=new QLabel("POTATO SCAN");scanLabel->setStyleSheet("color:#91d6d8;font-size:11px;font-weight:600;");entranceControls->addWidget(scanLabel);
+        entrancePlay=new QPushButton("Play entrance");entrancePlay->setObjectName("entrancePlay");entrancePlay->setToolTip("Trace your mapped surfaces, build a scan grid, then reveal their content.");entranceControls->addWidget(entrancePlay);
+        entranceSkip=new QPushButton("Skip");entranceSkip->setObjectName("entranceSkip");entranceControls->addWidget(entranceSkip);
+        entranceAutomatic=new QCheckBox("On output start");entranceAutomatic->setObjectName("entranceAutomatic");entranceAutomatic->setChecked(QSettings().value("output/entrance",true).toBool());entranceControls->addWidget(entranceAutomatic);
+        entranceInfo=new QLabel("8-second mapping reveal");entranceInfo->setObjectName("entranceInfo");entranceInfo->setStyleSheet("color:#9caab6;font-size:11px;");entranceControls->addWidget(entranceInfo,1);outputLayout->addLayout(entranceControls);
+        connect(entrancePlay,&QPushButton::clicked,this,[this]{scene.playEntrance();});
+        connect(entranceSkip,&QPushButton::clicked,this,[this]{scene.skipEntrance();});
+        connect(entranceAutomatic,&QCheckBox::toggled,this,[this](bool enabled){if(!smoke)QSettings().setValue("output/entrance",enabled);});
+        connect(&scene,&Scene::changed,this,[this]{updateEntranceStatus();});
         connect(refreshButton,&QPushButton::clicked,this,[this]{updateDisplays();});
         connect(startOutputButton,&QPushButton::clicked,this,[this]{showOutput();});
         connect(stopOutputButton,&QPushButton::clicked,this,[this]{output->hide();updateOutputStatus();});
         connect(blackoutButton,&QPushButton::toggled,this,[this](bool v){scene.blackout=v;emit scene.changed();updateOutputStatus();});
         connect(settingsButton,&QPushButton::clicked,this,[]{QDesktopServices::openUrl(QUrl("ms-settings:display"));});
-        connect(displays,&QComboBox::currentIndexChanged,this,[this]{selectedDisplay=displays->currentData().toString();if(!selectedDisplay.isEmpty())QSettings().setValue("output/display",selectedDisplay);updateOutputStatus();});
+        connect(displays,&QComboBox::currentIndexChanged,this,[this]{selectedDisplay=displays->currentData().toString();if(!smoke&&!selectedDisplay.isEmpty())QSettings().setValue("output/display",selectedDisplay);updateOutputStatus();});
         auto *blackShortcut=new QShortcut(QKeySequence("B"),this);connect(blackShortcut,&QShortcut::activated,blackoutButton,&QPushButton::click);
         auto *outBlack=new QShortcut(QKeySequence("B"),output);connect(outBlack,&QShortcut::activated,blackoutButton,&QPushButton::click);
         selectedDisplay=QSettings().value("output/display").toString();
@@ -255,12 +267,15 @@ public:
         output->hide();activeOutputScreen=target;
         const QSize size=target->size()*target->devicePixelRatio();
         if(scene.outputSize!=size){scene.outputSize=size;scene.touch();}else emit scene.changed();
-        output->winId();output->windowHandle()->setScreen(target);output->setGeometry(target->geometry());output->showFullScreen();
+        output->winId();output->windowHandle()->setScreen(target);output->setGeometry(target->geometry());
+        if(entranceAutomatic->isChecked())scene.playEntrance();else scene.skipEntrance();
+        output->showFullScreen();
         if(target==this->screen()){output->raise();output->activateWindow();}else{raise();activateWindow();}
         updateOutputStatus();
     }
 protected:
     bool eventFilter(QObject *obj,QEvent *event)override{
+        if(obj==output&&event->type()==QEvent::Hide)scene.skipEntrance();
         if(obj==output&&(event->type()==QEvent::Show||event->type()==QEvent::Hide))QTimer::singleShot(0,this,[this]{updateOutputStatus();});
         return QMainWindow::eventFilter(obj,event);
     }
@@ -288,6 +303,9 @@ private:
     QPointer<UpdateDialog> updateDialog;
     QPushButton *clearButton=nullptr,*playButton=nullptr,*restartButton=nullptr;
     QPushButton *startOutputButton=nullptr,*stopOutputButton=nullptr,*blackoutButton=nullptr;
+    QPushButton *entrancePlay=nullptr,*entranceSkip=nullptr;
+    QCheckBox *entranceAutomatic=nullptr;
+    QLabel *entranceInfo=nullptr;
     QLabel *outputInfo=nullptr;
     QString selectedDisplay;
     QPointer<QScreen> activeOutputScreen;
@@ -345,6 +363,13 @@ private:
             else outputInfo->setText("OUTPUT OFF · Select your projector above, then Start output. Keep Windows set to Extend so the editor stays on your computer screen.");
         }
     }
+    void updateEntranceStatus(){
+        if(!entrancePlay)return;
+        entrancePlay->setEnabled(std::any_of(scene.surfaces.begin(),scene.surfaces.end(),[](const Surface &s){return s.visible&&s.opacity>0;}));
+        entranceSkip->setEnabled(scene.entranceActive);
+        const auto label=scene.entranceActive?(scene.blackout?QString("Paused for blackout"):PotatoEntrance::stage(scene.entranceElapsed)):QString("8-second mapping reveal");
+        if(entranceInfo->text()!=label)entranceInfo->setText(label);
+    }
     void refresh(){
         QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity),b13(blendPicker),b14(patternDensity),b15(patternFlow),b16(patternAngle),b17(patternPalette),b18(patternEdge),b19(patternReverse);
         const int listScroll=list->verticalScrollBar()->value();const auto previousId=list->currentItem()?list->currentItem()->data(Qt::UserRole).toString():QString();
@@ -399,6 +424,7 @@ int main(int argc,char **argv){
     const int mediaArgument=args.indexOf("--media");
     if(mediaArgument>=0&&mediaArgument+1<args.size())window.scene.assignMedia(0,args[mediaArgument+1]);
     if(args.contains("--smoke-dynamic"))runDynamicChecks(window,app,args);
+    if(args.contains("--smoke-entrance"))runEntranceChecks(window,app,args);
     if(args.contains("--test-dynamic-motion"))runDynamicChecks(window,app,args);
     if(args.contains("--smoke-fx")){window.smoke=true;runFxChecks(window,app,args);}
     if(args.contains("--profile-fx")){window.smoke=true;profileFx(window,app,args);}

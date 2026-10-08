@@ -11,6 +11,7 @@
 #include <QSaveFile>
 #include <QFile>
 #include <QTimer>
+#include "entrance.h"
 #include <QCoreApplication>
 #include <cmath>
 #include <algorithm>
@@ -141,6 +142,11 @@ Scene::Scene(QObject *parent):QObject(parent){
     animationClock.start();auto *timer=new QTimer(this);timer->setTimerType(Qt::PreciseTimer);
     connect(timer,&QTimer::timeout,this,[this]{
         const double dt=std::min(animationClock.restart()/1000.0,.1);bool animated=false;
+        if(entranceActive&&entrancePlaying&&!blackout){
+            entranceElapsed=std::min(PotatoEntrance::duration,entranceElapsed+dt);
+            if(entranceElapsed>=PotatoEntrance::duration)entranceActive=false;
+            animated=true;
+        }
         for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);if(!dynamicSurface(s.id))animated=true;}
         if(dynamic.effect&&dynamic.playing&&!dynamicSurfaces.isEmpty()){
             dynamicElapsed+=dt*dynamic.speed/100.0;
@@ -150,6 +156,31 @@ Scene::Scene(QObject *parent):QObject(parent){
     });timer->start(16);
 }
 Surface *Scene::current(){return selected>=0&&selected<surfaces.size()?&surfaces[selected]:nullptr;}
+void Scene::playEntrance(){
+    entranceActive=std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.visible&&s.opacity>0;});
+    entranceElapsed=0;entrancePlaying=true;emit changed();
+}
+void Scene::skipEntrance(){
+    if(!entranceActive)return;
+    entranceActive=false;entranceElapsed=PotatoEntrance::duration;emit changed();
+}
+void Scene::setEntranceTime(double seconds){
+    entranceElapsed=std::clamp(std::isfinite(seconds)?seconds:0.0,0.0,PotatoEntrance::duration);
+    entranceActive=entranceElapsed<PotatoEntrance::duration&&std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.visible&&s.opacity>0;});emit changed();
+}
+const Scene::DynamicGeometry &Scene::entranceGeometry(){
+    auto &geometry=cachedEntranceGeometry;
+    if(geometry.revision==mappingRevision)return geometry;
+    geometry.vertices.clear();geometry.ranges.clear();
+    for(int i=0;i<surfaces.size();++i){
+        const auto &s=surfaces[i];if(!s.visible||s.opacity==0)continue;
+        const int first=int(geometry.vertices.size()/4);
+        auto vertex=[&](int index){const auto p=s.mesh[index];geometry.vertices<<float(p.x())<<float(p.y())<<float(index%(s.cells+1))/s.cells<<float(index/(s.cells+1))/s.cells;};
+        for(int y=0;y<s.cells;++y)for(int x=0;x<s.cells;++x){const int a=y*(s.cells+1)+x,b=a+1,c=a+s.cells+1,d=c+1;vertex(a);vertex(b);vertex(d);vertex(a);vertex(d);vertex(c);}
+        geometry.ranges.insert(i,{first,int(geometry.vertices.size()/4)-first});
+    }
+    geometry.revision=mappingRevision;return geometry;
+}
 bool Scene::dynamicSurface(const QString &id) const {return dynamic.effect&&dynamic.members.contains(id);}
 void Scene::updateDynamicFrame(){
     dynamicFrame=PotatoDynamic::frame(dynamic,dynamicSurfaces,dynamicElapsed);++dynamicRevision;
@@ -194,6 +225,7 @@ const Scene::DynamicGeometry &Scene::dynamicGeometry(){
     geometry.revision=dynamicRevision;++dynamicGeometryBuilds;return geometry;
 }
 void Scene::rebuildDynamic(){
+    ++mappingRevision;
     QStringList previous;for(const auto &s:dynamicSurfaces)previous<<s.id;
     dynamicSurfaces.clear();
     for(const auto &s:surfaces)if(s.visible&&dynamic.members.contains(s.id)){
@@ -235,6 +267,7 @@ void Scene::touch(bool structure){
     emit changed();if(structure)emit structureChanged();
 }
 void Scene::newProject(){
+    skipEntrance();
     for(auto *s:mediaSources)if(s->player)s->player->stop();
     surfaces.clear();projectPath.clear();dynamic={};dynamicElapsed=0;selected=-1;add();history.clear();future.clear();dirty=false;emit structureChanged();
 }
@@ -322,5 +355,6 @@ bool Scene::load(const QString &path,QString &error){
     QJsonParseError parse;auto doc=QJsonDocument::fromJson(file.readAll(),&parse);
     if(parse.error!=QJsonParseError::NoError){error=parse.errorString();return false;}
     if(!restore(doc.object(),QFileInfo(path).absolutePath(),error,true))return false;
+    skipEntrance();
     projectPath=path;history.clear();future.clear();dirty=false;emit structureChanged();return true;
 }
