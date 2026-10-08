@@ -1,6 +1,7 @@
 #include "projects.h"
 #include <QCoreApplication>
 #include <QDir>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -66,11 +67,29 @@ int main(int argc, char **argv) {
         auto externalSurface = externalSurfaces[0].toObject(); externalSurface["media"] = firstMedia;
         externalSurfaces[0] = externalSurface; externalEdit["surfaces"] = externalSurfaces;
         writeMapping(collected, externalEdit); const auto externalBytes = bytes(collected);
+        const auto indexBefore = bytes(QDir(root).filePath("Projects/.projects-index.json"));
         const QString recollected = PotatoProjects::collect(source, root, error);
-        check(!recollected.isEmpty() && recollected != collected && bytes(collected) == externalBytes
-            && !QDir::isAbsolutePath(QJsonDocument::fromJson(bytes(recollected)).object()["surfaces"].toArray()[0].toObject()["media"].toString()),
+        const auto returnedSurfaces = QJsonDocument::fromJson(bytes(recollected)).object()["surfaces"].toArray();
+        const QString returnedMedia = returnedSurfaces.isEmpty() ? QString() : returnedSurfaces[0].toObject()["media"].toString();
+        const bool returned=!recollected.isEmpty(),different=recollected!=collected,retained=bytes(collected)==externalBytes;
+        const bool relative=!returnedMedia.isEmpty()&&!QDir::isAbsolutePath(returnedMedia);
+        const bool good=returned&&different&&retained&&relative;
+        if(!good||app.arguments().contains("--recollection-only")){
+            std::cout<<"RECOLLECT returned="<<returned<<" different="<<different<<" original-retained="<<retained<<" relative-media="<<relative
+                <<" error="<<error.toStdString()<<" source="<<source.toStdString()<<" edited="<<collected.toStdString()<<" result="<<recollected.toStdString()<<" reference="<<returnedMedia.toStdString()<<std::endl;
+        }
+        if(!good){
+            fixture.setAutoRemove(false);
+            std::cout<<"RECOLLECT FIXTURE RETAINED "<<fixture.path().toStdString()<<std::endl;
+            for(const auto &path:QStringList{source,collected,recollected,firstMedia,secondMedia}){const QFileInfo info(path);
+                std::cout<<"META "<<path.toStdString()<<" exists="<<info.exists()<<" size="<<info.size()<<" modified-ms="<<info.lastModified().toMSecsSinceEpoch()<<std::endl;}
+            std::cout<<"INDEX BEFORE "<<indexBefore.toStdString()<<"\nINDEX AFTER "<<bytes(QDir(root).filePath("Projects/.projects-index.json")).toStdString()<<std::endl;
+            if(returned)std::cout<<"RETURNED DOCUMENT "<<bytes(recollected).toStdString()<<std::endl;
+        }
+        check(good,
             "new external media in an edited import is collected without overwriting edits");
         check(PotatoProjects::collect(source, root, error) == recollected, "recollected edits are also deduplicated");
+        if(app.arguments().contains("--recollection-only"))return 0;
         write(collected, editedBytes);
         auto changed = original; changed["width"] = 640; writeMapping(source, changed);
         const QString updated = PotatoProjects::collect(source, root, error);
