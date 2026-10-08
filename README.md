@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.3/PotatoMapper-0.8.3-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.4/PotatoMapper-0.8.4-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -78,6 +78,8 @@ Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected ha
 Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100% and Blend to Normal. Screen gives a softer bright overlay; Add adds light and can clip to white. Move the overlay above the other surface using **Forward**, overlap their mapped areas, then choose Screen/Add. Open Potato FX and choose a flowing effect. Start with White, Soft edge 0%, Speed 100% and Flow 70%. Increase Density for smaller elements, then adjust Cell size or Line width. SquareWave uses dense stretching cells; Diagonals uses rotating strokes; CubicCircles morphs filled cells into circles/rings; SquareArray moves rows of changing blocks. Waterlight draws a shimmering light web; Contour Flow drifts landscape-like lines; Curve Maze joins curved paths; Depth Tunnel creates a perspective grid. Older dots, stripes, rings and the former square waves (now labelled Stepped waves) remain available. Earlier app versions ignore the new appearance settings and do not retain them when saving.
 
 ### Potato Scan entrance
+
+Shipped in [0.8.4](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.4).
 
 Under **PROJECTOR OUTPUT**, click **Play entrance** to preview or replay Potato Scan across your visible mapped surfaces. **On output start** is enabled by default; clear it if Start output should immediately show your normal projection. **Skip** restores the projection immediately. Blackout hides the scan and pauses its clock; Stop or Escape ends it. Opening a different project also ends it.
 
