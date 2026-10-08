@@ -8,6 +8,7 @@
 #include <QFile>
 #include <memory>
 #include <QTimer>
+#include <QSpinBox>
 
 template<class Window> void runDynamicChecks(Window &window,QApplication &app,const QStringList &args){
     window.output->resize(960,540);window.output->show();
@@ -15,6 +16,8 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
         auto *picker=window.template findChild<QComboBox*>("dynamicEffect");
         auto *members=window.template findChild<QListWidget*>("dynamicMembers");
         auto *pause=window.template findChild<QCheckBox*>("dynamicPause");
+        auto *snakeWidth=window.template findChild<QSpinBox*>("dynamicSnakeWidth");
+        auto *cellSize=window.template findChild<QSpinBox*>("dynamicCellSize");
         if(!picker||!members||!pause||picker->findText("Hot-Ass Potato")<0||picker->findText("Potato Focus")<0){qInfo()<<"DYNAMIC FAIL controls missing";app.exit(2);return;}
         auto &scene=window.scene;scene.newProject();scene.surfaces[0].id="A";
         scene.surfaces[0].corners={{.06,.12},{.34,.09},{.36,.50},{.08,.53}};
@@ -25,6 +28,10 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
         auto require=[state](bool good,const QString &label){if(!good)state->errors<<label;};
         require(scene.dynamic.effect==1&&scene.dynamic.members.size()==3,"effect selector includes all visible surfaces");
         require(!scene.dynamic.playing,"pause control freezes shared clock");
+        require(snakeWidth&&cellSize,"output-pixel size controls exist");
+        if(snakeWidth&&cellSize){snakeWidth->setValue(44);cellSize->setValue(64);
+            require(scene.dynamic.snakeWidth==44&&scene.dynamic.cellSize==64,"size controls update scene settings");
+            scene.undo();require(scene.dynamic.cellSize==56,"cell size has Undo");scene.redo();require(scene.dynamic.cellSize==64,"cell size has Redo");scene.dirty=false;}
         require(window.canvas->graphicsReady&&window.output->graphicsReady,"both OpenGL renderers initialized");
         window.output->profileRendering=true;state->paused=window.output->grabFramebuffer();state->pausedBuilds=window.output->renderStats.meshBuilds;state->pausedPaints=window.output->paintedFrames;state->pausedUploads=window.output->renderStats.uploads;state->saved=scene.json();
         QTimer::singleShot(160,&window,[&window,&app,args,picker,pause,state,require]{
@@ -58,6 +65,11 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
             scene.surfaces[0].corners={{0,0},{.4,0},{.4,1},{0,1}};scene.surfaces.append(second);scene.touch(true);scene.dynamicFrame.shapes={line};
             const auto duplicate=window.output->grabFramebuffer();
             require(duplicate.pixelColor(qRound(duplicate.width()*.2),qRound(duplicate.height()*.65)).red()>60&&duplicate.pixelColor(qRound(duplicate.width()*.8),qRound(duplicate.height()*.35)).red()>60,"accepted duplicate surface IDs retain distinct mesh geometry");
+            scene.newProject();scene.surfaces[0].corners={{0,0},{1,0},{1,1},{0,1}};deformation.members={scene.surfaces[0].id};scene.setDynamic(deformation);
+            auto edgeLine=line;edgeLine.surfaceId=scene.surfaces[0].id;edgeLine.points={{-.3,.3},{.1,.7}};edgeLine.outputWidth=3;scene.dynamicFrame.shapes={edgeLine};
+            const auto clippedStroke=window.output->grabFramebuffer();
+            require(clippedStroke.pixelColor(qRound(clippedStroke.width()*.05),qRound(clippedStroke.height()*.65)).red()>60,
+                    "output-pixel stroke remains visible when its midpoint is beyond a clipped edge");
             scene.newProject();scene.surfaces[0].id="A";scene.surfaces[0].corners={{.05,.1},{.5,.1},{.5,.7},{.05,.7}};
             scene.add();scene.surfaces[1].id="B";scene.surfaces[1].corners={{.5,.3},{.95,.3},{.95,.9},{.5,.9}};scene.touch(true);
             PotatoDynamic::Settings connected;connected.effect=1;connected.playing=false;connected.palette=1;connected.members={"A","B"};scene.setDynamic(connected);
@@ -72,11 +84,20 @@ template<class Window> void runDynamicChecks(Window &window,QApplication &app,co
             const int argument=args.indexOf("--frames");const QString folder=argument>=0&&argument+1<args.size()?args[argument+1]:QString();
             if(folder.isEmpty()||!QDir().mkpath(folder)){app.exit(2);return;}
             const bool portals=args.contains("--portal-frames");
+            const bool fluid=args.contains("--fluid-frames");
             scene.newProject();scene.surfaces.clear();for(int i=0;i<(portals?2:3);++i){Surface surface;surface.id=QString(QChar('A'+i));surface.name="Surface "+QString::number(i+1);surface.corners=portals?(i==0?QPolygonF{{.05,.1},{.5,.1},{.5,.7},{.05,.7}}:QPolygonF{{.5,.3},{.95,.3},{.95,.9},{.5,.9}}):i==0?QPolygonF{{.06,.12},{.34,.09},{.36,.50},{.08,.53}}:i==1?QPolygonF{{.53,.06},{.94,.17},{.86,.49},{.45,.38}}:QPolygonF{{.27,.60},{.73,.56},{.81,.91},{.22,.95}};scene.surfaces<<surface;}
+            if(fluid){scene.surfaces[0].corners={{.06,.12},{.46,.12},{.46,.84},{.06,.84}};
+                scene.surfaces[1].corners={{.46,.28},{.70,.30},{.70,.68},{.46,.66}};
+                scene.surfaces[2].corners={{.71,.39},{.93,.24},{.99,.53},{.77,.70}};
+                for(auto &s:scene.surfaces){s.subdivide(4);for(auto &p:s.mesh)p.setY(p.y()+.06*std::sin(p.x()*3.141592653589793)*std::sin(p.y()*3.141592653589793));}}
             PotatoDynamic::Settings settings;settings.effect=1;settings.members={"A","B","C"};settings.playing=false;scene.setDynamic(settings);
+            if(fluid){auto demo=settings;demo.playing=true;scene.setDynamic(demo);QString demoError;
+                if(!scene.save(QDir(folder).filePath("../fluid-snake-demo.pmap"),demoError)){qInfo()<<"DYNAMIC demo save failed"<<demoError;app.exit(2);return;}
+                scene.setDynamic(settings);scene.setDynamicTime(6);window.showDynamicControls();QApplication::processEvents();
+                window.grab().save(QDir(folder).filePath("../fluid-controls.png"));}
             auto index=std::make_shared<int>(0);auto capture=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weak=capture;
             const bool reference=args.contains("--reference-frames");
-            *capture=[&window,&app,folder,index,weak,reference,portals]{auto keep=weak.lock();if(*index==(portals?24:reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=portals?1:*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(portals?6.2+*index*.08:reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
+            *capture=[&window,&app,folder,index,weak,reference,portals,fluid]{auto keep=weak.lock();if(*index==(fluid?240:portals?24:reference?8:60)){app.exit(0);return;}auto settings=window.scene.dynamic;settings.effect=(fluid||portals)?1:*index<(reference?6:48)?1:2;window.scene.setDynamic(settings);const double phases[]={5*.58,14*.58,30*.58,34*.58,38*.58,46*.58,0,8*.35};window.scene.setDynamicTime(fluid?*index*.07+.3:portals?6.2+*index*.08:reference?phases[*index]:*index<48?*index*.58:(*index-48)*.35);
                 const auto file=QDir(folder).filePath(QString("frame-%1.png").arg(*index,3,10,QChar('0')));if(!window.output->grabFramebuffer().save(file)){app.exit(2);return;}++*index;QTimer::singleShot(30,&window,[keep]{(*keep)();});};(*capture)();
         });
     });

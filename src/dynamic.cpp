@@ -1,5 +1,6 @@
 #include "dynamic.h"
 #include "dynamic-geometry.h"
+#include "dynamic-metric.h"
 #include <QJsonArray>
 #include <QSet>
 #include <QTransform>
@@ -10,12 +11,14 @@
 namespace PotatoDynamic {
 bool Settings::operator==(const Settings &o) const {
     return effect==o.effect && speed==o.speed && density==o.density && palette==o.palette
-        && glitch==o.glitch && playing==o.playing && seed==o.seed && members==o.members;
+        && glitch==o.glitch && snakeWidth==o.snakeWidth && cellSize==o.cellSize
+        && playing==o.playing && seed==o.seed && members==o.members;
 }
 QJsonObject Settings::json() const {
     QJsonArray ids; for(const auto &id:members) ids.append(id);
     return {{"effect",effect},{"speed",speed},{"density",density},{"palette",palette},
-            {"glitch",glitch},{"playing",playing},{"seed",double(seed)},{"members",ids}};
+            {"glitch",glitch},{"snakeWidth",snakeWidth},{"cellSize",cellSize},
+            {"playing",playing},{"seed",double(seed)},{"members",ids}};
 }
 Settings Settings::fromJson(const QJsonObject &o) {
     Settings s;
@@ -24,6 +27,8 @@ Settings Settings::fromJson(const QJsonObject &o) {
     s.density=std::clamp(o.value("density").toInt(36),8,80);
     s.palette=std::clamp(o.value("palette").toInt(0),0,5);
     s.glitch=std::clamp(o.value("glitch").toInt(35),0,100);
+    s.snakeWidth=std::clamp(o.value("snakeWidth").toInt(40),8,96);
+    s.cellSize=std::clamp(o.value("cellSize").toInt(56),24,160);
     s.playing=o.value("playing").toBool(true);
     const auto value=o.value("seed");
     const double seedNumber=value.toDouble(double(s.seed));
@@ -76,14 +81,15 @@ QColor ink(int palette,int index,double alpha) {
 }
 struct Builder {
     Frame &out;
-    void add(const Surface &s,QPolygonF points,QColor color,bool filled=false,double width=.002,bool closed=true) {
+    void add(const Surface &s,QPolygonF points,QColor color,bool filled=false,double width=.002,bool closed=true,double outputWidth=0) {
         if(out.shapes.size()>=maxShapes || points.size()<2 || color.alpha()==0) return;
         for(auto &p:points) {
             if(!std::isfinite(p.x()) || !std::isfinite(p.y())) return;
-            p=clipped(p);
+            if(outputWidth<=0)p=clipped(p);
+            else if(std::abs(p.x())>5||std::abs(p.y())>5)return;
         }
         const bool closePolygon=closed && points.size()>2;
-        out.shapes.append({s.id,std::move(points),color,filled,width,closePolygon});
+        out.shapes.append({s.id,std::move(points),color,filled,width,closePolygon,outputWidth});
     }
 };
 // Physical-length offsets expressed in UV. This preserves polygon proportions
@@ -228,35 +234,115 @@ QPointF path(const Stop &stop,double t,quint32 seed) {
     p+=QPointF(wave,-wave*.7);
     return clipped(p);
 }
-void snake(Builder &builder,const QVector<Surface> &surfaces,const QVector<Stop> &stops,const Settings &settings,double position,double opacity) {
-    constexpr int segments=25;
-    for(int j=segments-1;j>=0;--j) {
-        const double trailing=position-j*.012;
-        const int index=int(std::floor(trailing));
-        if(index<0 || index>=stops.size()) continue;
-        const double t=trailing-index;
-        const auto &stop=stops[index];const auto &s=surfaces[stop.index];
-        const quint32 seed=idSeed(s.id,settings.seed);
-        const QPointF center=path(stop,t,seed);
-        QPointF direction=path(stop,t+.004,seed)-path(stop,t-.004,seed);
-        const double angle=std::atan2(direction.y(),direction.x()*std::clamp(s.aspect,.1,10.0));
-        const double taper=.22+.78*(1-double(j)/segments);
-        const double radius=.038*taper*(1+.13*std::sin(t*34-j*.45));
-        QPolygonF body;
-        const QPointF forward=metric(s,{std::cos(angle)*radius,std::sin(angle)*radius});
-        const QPointF side=metric(s,{-std::sin(angle)*radius*.78,std::cos(angle)*radius*.78});
-        body<<center+forward<<center+side<<center-forward*.85<<center-side;
-        builder.add(s,body,ink(settings.palette,j%7==0?1:0,opacity*(.34+.25*taper)),true,.0045);
-        if(j%6==0) builder.add(s,regular(s,center,radius*.38,3,angle),ink(settings.palette,2,opacity*.68),false,.0018);
+struct Motion {
+    QVector<Stop> stops;
+    QVector<QVector<double>> lengths;
+    QVector<QVector<QPointF>> pixels;
+    QVector<double> offsets;
+    double total=0;
+};
+const Motion &cachedMotion(const QVector<Surface> &surfaces,quint32 seed) {
+    struct Cache {QVector<Surface> surfaces;quint32 seed=0;Motion motion;};
+    static thread_local Cache cache;
+    bool same=cache.seed==seed&&cache.surfaces.size()==surfaces.size();
+    for(qsizetype i=0;same&&i<surfaces.size();++i){const auto &a=cache.surfaces[i],&b=surfaces[i];
+        same=a.id==b.id&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
+    if(same)return cache.motion;
+    cache.surfaces=surfaces;cache.seed=seed;auto &m=cache.motion;m={};m.stops=cachedTour(surfaces,seed);
+    for(const auto &stop:m.stops){
+        const auto &s=surfaces[stop.index];const auto routeSeed=idSeed(s.id,seed);
+        QVector<double> lengths{0};QVector<QPointF> pixels{mappedPoint(s,path(stop,0,routeSeed))};
+        for(int i=1;i<=96;++i){pixels<<mappedPoint(s,path(stop,double(i)/96,routeSeed));lengths<<lengths.back()+std::sqrt(lengthSquared(pixels.back()-pixels[pixels.size()-2]));}
+        m.offsets<<m.total;m.total+=std::max(.001,lengths.back());m.lengths<<lengths;m.pixels<<pixels;
     }
-    const int headIndex=int(std::floor(position));
-    if(headIndex>=0 && headIndex<stops.size()) {
-        const auto &stop=stops[headIndex];const auto &s=surfaces[stop.index];
-        const quint32 seed=idSeed(s.id,settings.seed);const double progress=position-headIndex;
-        const auto head=path(stop,progress,seed);
-        const auto v=path(stop,progress+.006,seed)-path(stop,progress-.006,seed);
-        const double angle=std::atan2(v.y(),v.x()*std::clamp(s.aspect,.1,10.0));
-        builder.add(s,regular(s,head,.043,3,angle),ink(settings.palette,0,opacity*.92),false,.0055);
+    m.offsets<<m.total;return m;
+}
+// Quintic acceleration only at the beginning/end of the whole tour; no pause
+// or change of speed at a panel boundary. Arc length accounts for actual mesh.
+double travel(double t){t=unit(t);return t*t*t*(10+t*(-15+6*t));}
+double travelTime(double distance,double total,double duration){
+    double low=0,high=1;for(int i=0;i<24;++i){const double middle=(low+high)/2;if(travel(middle)*total<distance)low=middle;else high=middle;}return (low+high)*.5*duration;
+}
+struct Pose {int stop=0;double t=0;QPointF uv,pixel,direction;};
+Pose pose(const Motion &m,const QVector<Surface> &surfaces,quint32 seed,double distance,int forced=-1){
+    const int index=forced>=0?forced:std::clamp(int(std::upper_bound(m.offsets.begin(),m.offsets.end(),distance)-m.offsets.begin())-1,0,int(m.stops.size())-1);
+    const auto &lengths=m.lengths[index];const double d=std::clamp(distance-m.offsets[index],0.0,lengths.back());
+    const int sample=std::clamp(int(std::upper_bound(lengths.begin(),lengths.end(),d)-lengths.begin())-1,0,int(lengths.size())-2);
+    const double t=(sample+(d-lengths[sample])/std::max(1e-9,lengths[sample+1]-lengths[sample]))/96;
+    const auto &stop=m.stops[index];const auto &s=surfaces[stop.index];const auto routeSeed=idSeed(s.id,seed);
+    const auto uv=path(stop,t,routeSeed);const auto direction=normalized(mappedPoint(s,path(stop,t+.001,routeSeed))-mappedPoint(s,path(stop,t-.001,routeSeed)));
+    return {index,t,uv,mappedPoint(s,uv),direction};
+}
+QPolygonF pixelPolygon(const Surface &s,QPointF center,double radius,int sides,double angle,double stretch=1){
+    QPolygonF p;for(int i=0;i<sides;++i){const double a=2*pi*i/sides;const QPointF v(std::cos(a)*radius*stretch,std::sin(a)*radius/stretch);
+        const QPointF rotated(v.x()*std::cos(angle)-v.y()*std::sin(angle),v.x()*std::sin(angle)+v.y()*std::cos(angle));p<<center+pixelOffset(s,center,rotated);}return p;
+}
+void snake(Builder &builder,const QVector<Surface> &surfaces,const Motion &m,const Settings &settings,double distance,double opacity){
+    constexpr int segments=36;const double tailLength=settings.snakeWidth*7.5,step=tailLength/segments;
+    auto ribbon=[&](double back,double front,double radiusBack,double radiusFront,int stop){
+        if(front<=back||builder.out.shapes.size()>=maxShapes-3)return;const auto a=pose(m,surfaces,settings.seed,back,stop),b=pose(m,surfaces,settings.seed,front,stop);
+        const auto &s=surfaces[m.stops[stop].index];
+        const QPointF na=pixelOffset(s,a.uv,{-a.direction.y()*radiusBack,a.direction.x()*radiusBack});
+        const QPointF nb=pixelOffset(s,b.uv,{-b.direction.y()*radiusFront,b.direction.x()*radiusFront});
+        builder.add(s,{a.uv+na,b.uv+nb,b.uv-nb,a.uv-na},ink(settings.palette,0,opacity*.32),true,.0045,true,.8);
+    };
+    for(int j=segments-1;j>=0;--j){
+        const double front=distance-j*step,back=std::max(0.0,front-step);if(front<=0)continue;
+        const double rf=settings.snakeWidth*.5*(.09+.91*std::pow(1-double(j)/segments,.85));
+        const double rb=settings.snakeWidth*.5*(.09+.91*std::pow(1-double(j+1)/segments,.85));
+        const auto a=pose(m,surfaces,settings.seed,back),b=pose(m,surfaces,settings.seed,front);
+        if(a.stop==b.stop)ribbon(back,front,rb,rf,a.stop);
+        else for(int stop=a.stop;stop<=b.stop;++stop){const double lo=std::max(back,m.offsets[stop]),hi=std::min(front,m.offsets[stop+1]);
+            const double f0=(lo-back)/step,f1=(hi-back)/step;ribbon(lo,hi,rb+(rf-rb)*f0,rb+(rf-rb)*f1,stop);}
+        if(j%6==2&&builder.out.shapes.size()<maxShapes-3){const auto &s=surfaces[m.stops[b.stop].index];builder.add(s,pixelPolygon(s,b.uv,rf*.38,3,std::atan2(b.direction.y(),b.direction.x())),ink(settings.palette,2,opacity*.48),false,.0018,true,.8);}
+    }
+    const auto head=pose(m,surfaces,settings.seed,distance);const auto &s=surfaces[m.stops[head.stop].index];
+    const double angle=std::atan2(head.direction.y(),head.direction.x());
+    const auto polygon=pixelPolygon(s,head.uv,settings.snakeWidth*.54,3,angle);
+    // Duplicate only the portion crossing a touching/overlapping opening.
+    // UV clipping in the renderer leaves real physical gaps completely dark.
+    for(int neighbour:{head.stop-1,head.stop+1})if(neighbour>=0&&neighbour<m.stops.size()){
+        const int edge=std::max(neighbour,head.stop);if(std::abs(distance-m.offsets[edge])>settings.snakeWidth*1.4)continue;
+        const auto &other=surfaces[m.stops[neighbour].index];
+        const auto portal=neighbour<head.stop?m.stops[neighbour].exit:m.stops[neighbour].entry;
+        const auto currentPortal=neighbour<head.stop?m.stops[head.stop].entry:m.stops[head.stop].exit;
+        if(std::sqrt(lengthSquared(mappedPoint(other,portal)-mappedPoint(s,currentPortal)))>.75)continue;
+        QPolygonF copy;for(int i=0;i<polygon.size();++i){const double a=angle+2*pi*i/3;
+            const QPointF pixel=head.pixel+QPointF(std::cos(a),std::sin(a))*settings.snakeWidth*.54;
+            copy<<portal+pixelOffset(other,portal,pixel-mappedPoint(other,portal));}
+        builder.add(other,copy,ink(settings.palette,0,opacity*.92),false,.0055,true,1.6);
+    }
+    builder.add(s,polygon,ink(settings.palette,0,opacity*.92),false,.0055,true,1.6);
+}
+struct Cell {QPointF uv;double distance=0,lateral=0;};
+const QVector<QVector<Cell>> &cellLayout(const QVector<Surface> &surfaces,const Motion &m,const Settings &settings,int budget){
+    struct Cache {QVector<Surface> surfaces;int size=0,density=0,budget=0;quint32 seed=0;QVector<QVector<Cell>> cells;};static thread_local Cache cache;
+    bool same=cache.size==settings.cellSize&&cache.density==settings.density&&cache.budget==budget&&cache.seed==settings.seed&&cache.surfaces.size()==surfaces.size();
+    for(qsizetype i=0;same&&i<surfaces.size();++i){const auto &a=cache.surfaces[i],&b=surfaces[i];same=a.id==b.id&&a.boundary==b.boundary&&a.projection==b.projection&&a.cells==b.cells&&a.mesh==b.mesh;}
+    if(same)return cache.cells;
+    cache.surfaces=surfaces;cache.size=settings.cellSize;cache.density=settings.density;cache.budget=budget;cache.seed=settings.seed;cache.cells.clear();
+    const double spacing=settings.cellSize*1.8;
+    for(int stop=0;stop<m.stops.size();++stop){const auto &s=surfaces[m.stops[stop].index];QVector<Cell> candidates;
+        const auto rect=s.boundary.boundingRect();const int columns=std::clamp(int(rect.width()/spacing),1,128),rows=std::clamp(int(rect.height()/spacing),1,128);
+        const QPointF origin=rect.center()-QPointF((columns-1)*spacing/2,(rows-1)*spacing/2);
+        for(int row=0;row<rows;++row)for(int col=0;col<columns;++col){const QPointF pixel=origin+QPointF(col*spacing,row*spacing);QPointF uv;
+            if(!localPoint(s,pixel,uv))continue;
+            Cell cell{uv,0,std::numeric_limits<double>::max()};
+            for(int k=0;k<m.pixels[stop].size();++k){const double lateral=std::sqrt(lengthSquared(pixel-m.pixels[stop][k]));if(lateral<cell.lateral){cell.lateral=lateral;cell.distance=m.offsets[stop]+m.lengths[stop][k];}}
+            candidates<<cell;
+        }
+        QVector<Cell> cells;const int limit=std::min({int(candidates.size()),settings.density,std::max(0,budget)});
+        for(int i=0;i<limit;++i)cells<<candidates[int((i+.5)*candidates.size()/limit)];cache.cells<<cells;
+    }
+    return cache.cells;
+}
+void reactiveCells(Builder &builder,const Surface &s,const QVector<Cell> &cells,const Settings &settings,const Motion &m,double phaseTime,double duration,double time,double alpha){
+    for(int i=0;i<cells.size();++i){const auto &cell=cells[i];
+        const double age=phaseTime-travelTime(cell.distance,m.total,duration)-cell.lateral/220-.08;
+        const double response=age>=0&&age<3?smooth(age/.45)*(1-smooth((age-.9)/1.7))*std::exp(-age*.35)*std::exp(-cell.lateral/(settings.cellSize*3.0)):0;
+        const double angle=pi/4+response*.68+std::sin(time*.36+cell.uv.x()*4+cell.uv.y()*3)*.025;
+        builder.add(s,pixelPolygon(s,cell.uv,settings.cellSize/std::sqrt(2.0),4,angle,1+response*.75),
+                    ink(settings.palette,i%11==0?1:0,alpha*(.17+response*.48)),false,.0016,true,1.0+response*.6);
     }
 }
 void trace(Builder &builder,const Surface &s,const Settings &settings,double time,double alpha) {
@@ -304,8 +390,8 @@ void fragments(Builder &builder,const Surface &s,const Stop &stop,const Settings
             radius=radius*(1-assemble)+.014*assemble;
         }
         const int sides=random(seed,i+320)<.5?3:4;
-        const auto shape=regular(s,center,radius,sides,rotation);
-        builder.add(s,shape,ink(settings.palette,i%5==0?2:i%2,(.36+.24*pulse)*fade),i%4==0,.0034);
+        const auto shape=settings.effect==1?pixelPolygon(s,clipped(center),(5+5*random(seed,i+280))*(.88+.17*pulse),sides,rotation):regular(s,center,radius,sides,rotation);
+        builder.add(s,shape,ink(settings.palette,i%5==0?2:i%2,(.36+.24*pulse)*fade),i%4==0,.0034,true,settings.effect==1?.85:0);
         if(overload && settings.glitch>0 && i%4==0 && builder.out.shapes.size()<maxShapes) {
             QPolygonF echo=shape; const auto offset=metric(s,{.008*std::sin(time*27+i),.004});
             for(auto &point:echo) point+=offset;
@@ -356,6 +442,7 @@ Frame frame(const Settings &settings,const QVector<Surface> &input,double elapse
     for(const auto &s:input) if(!s.id.isEmpty()) {
         auto sanitized=s;
         sanitized.aspect=std::isfinite(s.aspect)?std::clamp(s.aspect,.1,10.0):1.0;
+        if(sanitized.mesh.isEmpty())QTransform::quadToQuad({{0,0},{1,0},{1,1},{0,1}},sanitized.boundary,sanitized.projection);
         surfaces.append(std::move(sanitized));
     }
     std::sort(surfaces.begin(),surfaces.end(),[](const Surface &a,const Surface &b){return a.id<b.id;});
@@ -372,46 +459,46 @@ Frame frame(const Settings &settings,const QVector<Surface> &input,double elapse
         for(const auto &s:surfaces) field(builder,s,settings,time,budget,1,true);
         return out;
     }
-    const auto &stops=cachedTour(surfaces,settings.seed);
+    const auto &motion=cachedMotion(surfaces,settings.seed);const auto &stops=motion.stops;
     const auto times=timeline(settings,count);
     const bool explore=time<times.exploreEnd;
     const bool overload=!explore && time<times.overloadEnd;
     const bool reboot=!explore && !overload && time<times.titleEnd;
     out.stage=explore?"Explore":overload?"Overload":reboot?"Reboot":"Ambient";
-    const double slot=times.exploreEnd/count;
-    const int active=std::min(count-1,int(time/slot));
-    const int surfaceBudget=(maxShapes-40)/count;
+    const double ambient=time-times.titleEnd;
+    const double cycle=std::max(18.0,count*3.1+5.0),visit=ambient>=0?std::fmod(ambient,cycle):0;
+    const double duration=explore?times.exploreEnd:count*3.1;
+    const double phaseTime=explore?time:visit;
+    const double distance=travel(phaseTime/duration)*motion.total;
+    const auto active=pose(motion,surfaces,settings.seed,distance);
+    const int surfaceBudget=(maxShapes-90)/count;
+    const auto &cells=cellLayout(surfaces,motion,settings,std::max(0,surfaceBudget-20));
     for(int i=0;i<count;++i) {
         const auto &stop=stops[i];const auto &s=surfaces[stop.index];
-        const double progress=explore?unit((time-i*slot)/slot):1;
-        const double age=std::max(0.0,time-(i+1)*slot);
+        const double progress=explore?(i<active.stop?1:i==active.stop?active.t:0):1;
+        const double age=std::max(0.0,time-travelTime(motion.offsets[i+1],motion.total,times.exploreEnd));
         const double fade=reboot?.32+.25*(1-smooth((time-times.overloadEnd)/3.0)):1;
-        int fragmentBudget=surfaceBudget;
+        int fragmentBudget=std::min(12,surfaceBudget);
         if(explore && surfaceBudget>=4) fragmentBudget-=3;
-        if(!explore && !overload && !reboot) fragmentBudget=std::max(2,surfaceBudget/3);
         // Reserve chromatic duplicate slots during overload.
         if(overload) fragmentBudget=fragmentBudget*4/5;
         const double rebootProgress=reboot?(time-times.overloadEnd)/(times.titleEnd-times.overloadEnd):-1;
+        if(explore||(!overload&&!reboot))reactiveCells(builder,s,cells[i],settings,motion,phaseTime,duration,time,explore?1:.8);
         fragments(builder,s,stop,settings,progress,age,time,fragmentBudget,overload,fade,rebootProgress);
         if(explore && progress>0 && surfaceBudget>=4) trace(builder,s,settings,time,.2*progress);
-        if(!explore && !overload && !reboot) field(builder,s,settings,time,surfaceBudget-fragmentBudget,.55,false);
     }
     if(explore) {
-        const double progress=unit((time-active*slot)/slot);
-        const double fade=(active==0?smooth(progress/.07):1)*(active==count-1?1-smooth((progress-.94)/.06):1);
-        snake(builder,surfaces,stops,settings,active+progress,fade);
+        const double progress=unit(time/duration);
+        const double fade=smooth(progress/.025)*(1-smooth((progress-.975)/.025));
+        snake(builder,surfaces,motion,settings,distance,fade);
     } else if(reboot) {
         const double t=(time-times.overloadEnd)/(times.titleEnd-times.overloadEnd);
         out.titleOpacity=smooth((t-.12)/.3)*(1-smooth((t-.72)/.28));
     } else if(!overload) {
-        const double ambient=time-times.titleEnd;
-        const double cycle=std::max(18.0,count*3.1+5.0);
-        const double visit=std::fmod(ambient,cycle);
-        const int current=int(visit/3.1);
-        if(current<count) {
-            const double progress=fract(visit/3.1);
-            const double fade=(current==0?smooth(progress/.09):1)*(current==count-1?1-smooth((progress-.9)/.1):1);
-            snake(builder,surfaces,stops,settings,current+progress,.72*fade);
+        if(visit<duration) {
+            const double progress=unit(visit/duration);
+            const double fade=smooth(progress/.025)*(1-smooth((progress-.975)/.025));
+            snake(builder,surfaces,motion,settings,distance,.8*fade);
         }
     }
     return out;
