@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.5/PotatoMapper-0.8.5-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.6/PotatoMapper-0.8.6-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -34,6 +34,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
 - **Potato Scan:** an eight-second entrance that traces the mapped edges, assembles a scan grid, locks the panels and smoothly reveals their media or FX. Replay and Skip controls, with an optional entrance on output start.
+- **Dynamic FX:** Hot-Ass Potato sends a curved, tapered snake between mapped surfaces. Nearby cells unfold, stretch and rotate, then settle into coordinated motion. Snake width and Cell size use projector pixels, so smaller panels contain fewer cells. Potato Focus provides a coordinated holographic field.
 - Right-click a surface to load/clear media or rename it. Clearing keeps the mesh and supports Undo.
 - Branded startup splash, surface content labels, File/Edit/Help menus, and an About/version display.
 - Resizable sidebar, persistent surface list, collapsible settings, themed scrollbars and full-path filename tooltips.
