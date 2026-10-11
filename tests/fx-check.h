@@ -37,6 +37,8 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         if(!blend||!picker||!speed||!size||!pause||!density||!flow||!angle||!palette||!edge||!reverse){qInfo()<<"FX FAIL controls missing";app.exit(2);return;}
         const int hex=picker->findText("Hex Tide",Qt::MatchStartsWith);
         require(hex>=0,"Hex Tide selectable in Potato FX");
+        require(picker->findText("Maple Supper",Qt::MatchStartsWith)>=0,"Maple Supper selectable in Potato FX");
+        require(picker->findText("Harvest Lanterns",Qt::MatchStartsWith)>=0,"Harvest Lanterns selectable in Potato FX");
         auto sample=[](Canvas *canvas){auto image=canvas->grabFramebuffer();return image.pixelColor(image.width()/2,image.height()/2);};
         auto near=[](QColor a,QColor b){return std::max({std::abs(a.red()-b.red()),std::abs(a.green()-b.green()),std::abs(a.blue()-b.blue())})<=4;};
         auto fixture=[&](const QString &name,QColor colour){QImage img(32,32,QImage::Format_RGBA8888);img.fill(colour);const auto path=state->temp.filePath(name);require(img.save(path),"write "+name);return path;};

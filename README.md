@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.6/PotatoMapper-0.8.6-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.7/PotatoMapper-0.8.7-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -29,7 +29,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Multiple surfaces with draggable corners and a subdivided mesh.
 - Images and looping video, with stretch, fit, and crop options.
 - Transparent white alignment grids.
-- Potato FX: thirteen animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. Waterlight, Contour Flow, Curve Maze and Depth Tunnel ship in v0.7.0. **Hex Tide**, added in v0.8.0, makes small hexagons breathe in coordinated travelling waves.
+- Potato FX: fifteen animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. **Maple Supper** and **Harvest Lanterns** add warm Thanksgiving scenes with drifting foliage, pumpkins and soft lantern light.
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
@@ -77,6 +77,14 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on an animation surface switches it back to media playback. **Clear media** returns an image, video, or animation surface to the white grid. Double-click a surface's list entry to rename it.
 
 Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100% and Blend to Normal. Screen gives a softer bright overlay; Add adds light and can clip to white. Move the overlay above the other surface using **Forward**, overlap their mapped areas, then choose Screen/Add. Open Potato FX and choose a flowing effect. Start with White, Soft edge 0%, Speed 100% and Flow 70%. Increase Density for smaller elements, then adjust Cell size or Line width. SquareWave uses dense stretching cells; Diagonals uses rotating strokes; CubicCircles morphs filled cells into circles/rings; SquareArray moves rows of changing blocks. Waterlight draws a shimmering light web; Contour Flow drifts landscape-like lines; Curve Maze joins curved paths; Depth Tunnel creates a perspective grid. Older dots, stripes, rings and the former square waves (now labelled Stepped waves) remain available. Earlier app versions ignore the new appearance settings and do not retain them when saving.
+
+### Thanksgiving and autumn scenes
+
+Open **File → Examples → Maple Supper** for drifting red/gold maple leaves, uncarved pumpkins and a friendly scarf-wearing potato. **Harvest Lanterns** offers a quieter scene with candle lanterns and gently breathing amber halos. Both also appear in the **Potato FX → Animation** picker for any surface you already mapped.
+
+Start with **Original** colours, **Speed 100%**, **Scene size 24%** and **Flow 70%**. Scene size changes the illustrated elements, Density changes the amount of foliage, and Flow changes sway and glow. Each scene repeats over twelve seconds at 100% speed; Pause and Reverse work as usual. Colour choices retain shading, so faces and lantern details remain readable. Brightness, opacity, Screen/Add and soft edges still apply.
+
+The examples are self-contained and travel with the update; no media download is needed. These presets require 0.8.7 or later. Earlier apps do not recognize the new IDs and can replace them with an older effect if you save there. Existing effect IDs and project formats remain unchanged.
 
 ### Potato Scan entrance
 

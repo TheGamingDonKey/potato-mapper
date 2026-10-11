@@ -49,7 +49,11 @@ vec3 selectedTint(vec3 original){
 }
 void finishColor(){
     if(pattern>0){
-        color.rgb=selectedTint(color.rgb);
+        // Seasonal illustrations keep their shadows, ribs and facial detail
+        // when a colour preset is selected. Older effects retain their tint.
+        if((pattern==14||pattern==15)&&palette!=0)
+            color.rgb=selectedTint(vec3(1.0))*dot(color.rgb,vec3(.25,.60,.15));
+        else color.rgb=selectedTint(color.rgb);
         if(edgeFade>0.0){float edge=min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y));color.a*=smoothstep(0.0,edgeFade,edge);}
     }
     color.rgb*=brightness;color.a*=opacity;
@@ -57,9 +61,163 @@ void finishColor(){
     // pixels must neither brighten nor darken the layer below.
     if(blendMode==1)color.rgb*=color.a;
 }
+float harvestSegment(vec2 p,vec2 a,vec2 b){
+    vec2 edge=b-a;
+    return length(p-a-edge*clamp(dot(p-a,edge)/dot(edge,edge),0.0,1.0));
+}
+float harvestEllipse(vec2 p,vec2 radii){
+    return (length(p/radii)-1.0)*min(radii.x,radii.y);
+}
+// Five pointed lobes and deep notches, rather than an oval autumn leaf.
+// Six instances below bound the work to 72 outline edges per fragment.
+float harvestMaple(vec2 p){
+    const vec2 outline[12]=vec2[12](
+        vec2(0.0,-1.0),vec2(.22,-.43),vec2(.55,-.65),vec2(.52,-.08),
+        vec2(1.0,-.15),vec2(.55,.35),vec2(0.0,.44),vec2(-.55,.35),
+        vec2(-1.0,-.15),vec2(-.52,-.08),vec2(-.55,-.65),vec2(-.22,-.43));
+    float distance=10.0,side=1.0;
+    for(int i=0;i<12;++i){
+        vec2 a=outline[i],b=outline[(i+1)%12],edge=b-a;
+        vec2 nearest=p-a-edge*clamp(dot(p-a,edge)/dot(edge,edge),0.0,1.0);
+        distance=min(distance,dot(nearest,nearest));
+        float safeY=edge.y+(edge.y>=0.0?.00001:-.00001);
+        if((a.y>p.y)!=(b.y>p.y))
+            if(p.x<a.x+edge.x*(p.y-a.y)/safeY)side=-side;
+    }
+    return min(sqrt(distance)*side,harvestSegment(p,vec2(0.0,.36),vec2(0.0,.74))-.045);
+}
+void harvestLeaves(inout vec3 ink,vec2 p,float cycle,bool silhouettes){
+    float count=clamp(2.0+density*.055,2.0,6.0);
+    for(int i=0;i<6;++i){
+        float index=float(i),seed=fract(index*.618034+.21);
+        float presence=1.0-smoothstep(count-.35,count+.35,index+.5);
+        if(presence<=0.0)continue;
+        // The wrap happens beyond the panel, so falling leaves never pop in
+        // its visible area. Every movement repeats at phase + 12 seconds.
+        float fall=fract(phase/12.0+index*.173+.08);
+        float radius=dotRadius*(.19+.085*seed);
+        float panelExtent=.5*abs(sin(angle))+.5*abs(cos(angle))/surfaceAspect;
+        float travelExtent=panelExtent+radius*1.3+.025;
+        vec2 centre=vec2(seed*.98-.49+flow*.055*sin(cycle+index*1.7),
+                         mix(-travelExtent,travelExtent,fall));
+        vec2 q=rotatePoint((p-centre)/radius,seed*6.2831853+(.18+.65*flow)*sin(cycle+index));
+        q.x/=mix(.68,1.0,.5+.5*cos(cycle+index*1.9));
+        float distance=harvestMaple(q),mask=shapeMask(distance*radius)*presence;
+        vec3 leaf=mix(vec3(.72,.065,.025),vec3(1.0,.54,.055),seed);
+        leaf*=.65+.28*(1.0-smoothstep(-.8,.5,q.y))+.07*sin(q.x*5.0+q.y*3.0);
+        float vein=min(harvestSegment(q,vec2(0.0,.45),vec2(0.0,-.86)),
+                       min(harvestSegment(q,vec2(0.0,.12),vec2(.78,-.14)),
+                           harvestSegment(q,vec2(0.0,.12),vec2(-.78,-.14))));
+        leaf=mix(leaf,leaf*.38,shapeMask((vein-.024)*radius)*.75);
+        if(silhouettes)leaf=vec3(.025,.012,.005);
+        ink=mix(ink,leaf,mask*(silhouettes?.62:.94));
+    }
+}
+void harvestPumpkin(inout vec3 ink,vec2 p,vec2 centre,float radius,float light){
+    vec2 q=(p-centre)/radius;
+    float shadow=shapeMask(harvestEllipse(q-vec2(.04,.76),vec2(1.15,.13))*radius);
+    ink=mix(ink,ink*.35,shadow*.65);
+    float distance=harvestEllipse(q,vec2(1.0,.75))-.025*cos(atan(q.y/.75,q.x)*10.0);
+    float mask=shapeMask(distance*radius);
+    float ribs=.68+.32*pow(.5+.5*cos(q.x*11.5+q.y*q.y*.9),2.0);
+    float shade=.43+.48*clamp(1.0-length((q-vec2(-.34,-.28))/vec2(1.6,1.3)),0.0,1.0);
+    vec3 pumpkin=vec3(.98,.34,.035)*ribs*shade*light;
+    pumpkin+=vec3(.15,.075,.012)*exp(-dot(q-vec2(-.32,-.36),q-vec2(-.32,-.36))*14.0);
+    ink=mix(ink,pumpkin,mask);
+    vec2 stem=rotatePoint(q-vec2(.015,-.86),-.19);
+    float stemMask=shapeMask(boxDistance(stem,vec2(.075,.18))*radius);
+    ink=mix(ink,vec3(.22,.24,.075)*(.72+.28*cos(stem.x*31.0)),stemMask);
+}
+void harvestPotato(inout vec3 ink,vec2 p,vec2 centre,float radius,float cycle){
+    vec2 q=rotatePoint((p-centre)/radius,.035*flow*sin(cycle));
+    vec3 skin=vec3(.84,.62,.34),shadow=vec3(.29,.14,.055);
+    float feet=min(harvestSegment(q,vec2(-.32,.88),vec2(-.53,1.06)),
+                   harvestSegment(q,vec2(.32,.88),vec2(.53,1.06)));
+    ink=mix(ink,shadow,shapeMask((feet-.105)*radius));
+    vec2 shoulder=vec2(.61,.04);
+    vec2 hand=shoulder+rotatePoint(vec2(.43,-.43),(.08+.28*flow)*sin(cycle*2.0));
+    float arms=min(harvestSegment(q,shoulder,hand),
+                   harvestSegment(q,vec2(-.61,.18),vec2(-.94,.42)));
+    ink=mix(ink,skin*.82,shapeMask((arms-.095)*radius));
+    ink=mix(ink,skin,shapeMask(harvestEllipse(q-hand,vec2(.12,.12))*radius));
+    float width=.70+.035*sin(q.y*7.0)+.025*sin(q.y*11.0);
+    float body=shapeMask(harvestEllipse(q,vec2(width,1.0))*radius);
+    float shade=.58+.40*clamp(1.0-length((q-vec2(-.29,-.35))/vec2(1.4,1.8)),0.0,1.0);
+    ink=mix(ink,skin*shade,body);
+    float spots=min(harvestEllipse(q-vec2(-.37,.35),vec2(.052,.032)),
+                    min(harvestEllipse(q-vec2(.37,.39),vec2(.045,.030)),
+                        harvestEllipse(q-vec2(-.11,-.76),vec2(.032,.050))));
+    ink=mix(ink,skin*.55,shapeMask(spots*radius)*body*.45);
+    float cheeks=min(harvestEllipse(q-vec2(-.40,.035),vec2(.105,.065)),
+                     harvestEllipse(q-vec2(.40,.035),vec2(.105,.065)));
+    ink=mix(ink,vec3(.80,.30,.19),shapeMask(cheeks*radius)*body*.48);
+    float eyes=min(length(q-vec2(-.24,-.20)),length(q-vec2(.24,-.20)))-.064;
+    ink=mix(ink,vec3(.065,.030,.015),shapeMask(eyes*radius)*body);
+    float glints=min(length(q-vec2(-.258,-.219)),length(q-vec2(.222,-.219)))-.017;
+    ink=mix(ink,vec3(1.0,.92,.70),shapeMask(glints*radius)*body);
+    float smile=abs(harvestEllipse(q-vec2(0.0,-.06),vec2(.25,.20)))-.019;
+    ink=mix(ink,vec3(.17,.06,.028),shapeMask(smile*radius)*smoothstep(-.05,-.015,q.y)*body);
+    float scarf=min(boxDistance(q-vec2(0.0,.56),vec2(.76,.135)),
+                    boxDistance(rotatePoint(q-vec2(.40,.85),-.16),vec2(.12,.29)));
+    vec3 cranberry=mix(vec3(.38,.025,.050),vec3(.68,.085,.13),.5+.5*sin(q.y*14.0+q.x*2.0));
+    ink=mix(ink,cranberry,shapeMask(scarf*radius));
+}
+void harvestLantern(inout vec3 ink,vec2 p,vec2 centre,float radius,float breath){
+    vec2 q=(p-centre)/radius;
+    float halo=exp(-dot(q/vec2(2.7,2.5),q/vec2(2.7,2.5)));
+    ink+=vec3(.25,.095,.018)*halo*breath;
+    float glass=shapeMask(boxDistance(q,vec2(.64,.83))*radius);
+    vec3 amber=vec3(.16,.055,.009)+vec3(.28,.13,.020)*exp(-dot(q,q)*1.8)*breath;
+    ink=mix(ink,amber,glass*.72);
+    float frame=abs(boxDistance(q,vec2(.68,.87)))-.045;
+    float roof=min(harvestSegment(q,vec2(-.76,-.88),vec2(0.0,-1.15)),
+                   harvestSegment(q,vec2(0.0,-1.15),vec2(.76,-.88)))-.045;
+    float base=boxDistance(q-vec2(0.0,.90),vec2(.78,.075));
+    float handle=abs(length(q-vec2(0.0,-1.29))-.18)-.035;
+    float iron=shapeMask(min(min(frame,roof),min(base,handle))*radius);
+    ink=mix(ink,vec3(.38,.20,.060)*(.80+.20*breath),iron);
+    float candle=shapeMask(boxDistance(q-vec2(0.0,.40),vec2(.14,.32))*radius);
+    ink=mix(ink,vec3(.86,.56,.24),candle);
+    float flame=shapeMask(harvestEllipse(q-vec2(.025,-.055),vec2(.10,.21))*radius);
+    ink=mix(ink,vec3(1.0,.77,.31)*(.92+.08*breath),flame);
+    float core=shapeMask(harvestEllipse(q-vec2(.02,.0),vec2(.045,.105))*radius);
+    ink=mix(ink,vec3(1.0,.93,.66),core);
+}
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern==14){
+        float cycle=phase*(6.2831853/12.0),ground=.32/surfaceAspect;
+        float texture=.80+.12*sin(metric.x*43.0+sin(metric.y*17.0))+.08*cos(metric.x*19.0-metric.y*31.0);
+        float floorLight=smoothstep(.08/surfaceAspect,.44/surfaceAspect,metric.y);
+        vec3 ink=vec3(.012,.006,.003)+vec3(.065,.024,.005)*floorLight*texture;
+        vec2 glowPoint=metric-vec2(-.16,ground-.13);
+        ink+=vec3(.060,.023,.004)*exp(-dot(glowPoint,glowPoint)*9.0)*(.92+.08*flow*sin(cycle));
+        harvestLeaves(ink,metric,cycle,false);
+        float pumpkinSize=.034+dotRadius*.25;
+        harvestPumpkin(ink,metric,vec2(-.31,ground-pumpkinSize*.73),pumpkinSize,1.0);
+        harvestPumpkin(ink,metric,vec2(-.105,ground-pumpkinSize*.49),pumpkinSize*.67,.94);
+        harvestPumpkin(ink,metric,vec2(.36,ground-pumpkinSize*.54),pumpkinSize*.74,.92);
+        float potatoSize=.045+dotRadius*.28;
+        harvestPotato(ink,metric,vec2(.13,ground-potatoSize*1.08),potatoSize,cycle);
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
+    if(pattern==15){
+        float cycle=phase*(6.2831853/12.0),ground=.34/surfaceAspect;
+        float texture=.88+.07*sin(metric.x*37.0+metric.y*13.0)+.05*cos(metric.y*31.0);
+        vec3 ink=vec3(.010,.005,.002)+vec3(.028,.011,.002)*smoothstep(0.0,ground,metric.y)*texture;
+        float lanternSize=.035+dotRadius*.27;
+        for(int i=0;i<3;++i){
+            float index=float(i),breath=.88+(.04+.08*flow)*sin(cycle+index*1.5);
+            vec2 centre=vec2((index-1.0)*.31+flow*.013*sin(cycle+index),-.035/surfaceAspect);
+            harvestLantern(ink,metric,centre,lanternSize*(i==1?1.10:.88),breath);
+        }
+        harvestLeaves(ink,metric,cycle,true);
+        float pumpkinSize=.030+dotRadius*.19;
+        harvestPumpkin(ink,metric,vec2(-.30,ground-pumpkinSize*.73),pumpkinSize,.78);
+        harvestPumpkin(ink,metric,vec2(.31,ground-pumpkinSize*.52),pumpkinSize*.72,.82);
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
     if(pattern==13){
         // Two staggered lattices give the nearest hexagon centre. The shared
         // field bends the whole lattice gently and offsets neighbouring pulses.

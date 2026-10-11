@@ -29,6 +29,12 @@ several surfaces with Hot-Ass Potato or Potato Focus. File > Examples opens
 ready-made three-surface demos. Choose participating surfaces in Dynamic FX;
 select Off to restore their original content. Replay intro restarts the snake.
 
+THANKSGIVING / AUTUMN
+File > Examples > Maple Supper opens warm maple leaves, pumpkins and a potato
+in an autumn scarf. Harvest Lanterns is a quieter candle-and-amber scene.
+Use Potato FX > Animation to put either effect on your existing mapped surface.
+Start with Original colours, Speed 100%, Scene size 24% and Flow 70%.
+
 UPDATES
 Use Help > Check for updates to download a newer stable Windows release.
 Save your work when asked, then let the launcher install and reopen the app.
