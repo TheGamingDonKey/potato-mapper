@@ -1,0 +1,187 @@
+{
+  "height": 1080,
+  "dynamic": {
+    "effect": 0,
+    "playing": true,
+    "members": []
+  },
+  "surfaces": [
+    {
+      "fxEdge": 3,
+      "fxReverse": false,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxDensity": 16,
+      "cells": 1,
+      "locked": false,
+      "brightness": 100,
+      "id": "harvest-A",
+      "media": "",
+      "blend": 0,
+      "fit": 0,
+      "patternSpeed": 100,
+      "patternPlaying": true,
+      "patternSize": 24,
+      "name": "Harvest table",
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "opacity": 100,
+      "pattern": 15,
+      "visible": true,
+      "fxFlow": 70,
+      "corners": [
+        [
+          0.045,
+          0.08
+        ],
+        [
+          0.59,
+          0.055
+        ],
+        [
+          0.575,
+          0.92
+        ],
+        [
+          0.06,
+          0.94
+        ]
+      ]
+    },
+    {
+      "fxEdge": 3,
+      "fxReverse": false,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxDensity": 16,
+      "cells": 1,
+      "locked": false,
+      "brightness": 100,
+      "id": "harvest-B",
+      "media": "",
+      "blend": 0,
+      "fit": 0,
+      "patternSpeed": 100,
+      "patternPlaying": true,
+      "patternSize": 24,
+      "name": "Upper lantern",
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "opacity": 100,
+      "pattern": 15,
+      "visible": true,
+      "fxFlow": 70,
+      "corners": [
+        [
+          0.65,
+          0.09
+        ],
+        [
+          0.94,
+          0.14
+        ],
+        [
+          0.92,
+          0.47
+        ],
+        [
+          0.64,
+          0.44
+        ]
+      ]
+    },
+    {
+      "fxEdge": 3,
+      "fxReverse": false,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxDensity": 16,
+      "cells": 1,
+      "locked": false,
+      "brightness": 100,
+      "id": "harvest-C",
+      "media": "",
+      "blend": 0,
+      "fit": 0,
+      "patternSpeed": 100,
+      "patternPlaying": true,
+      "patternSize": 24,
+      "name": "Lower lantern",
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "opacity": 100,
+      "pattern": 15,
+      "visible": true,
+      "fxFlow": 70,
+      "corners": [
+        [
+          0.655,
+          0.56
+        ],
+        [
+          0.92,
+          0.54
+        ],
+        [
+          0.95,
+          0.9
+        ],
+        [
+          0.645,
+          0.94
+        ]
+      ]
+    }
+  ],
+  "format": "PotatoMapper",
+  "version": 1,
+  "width": 1920
+}
