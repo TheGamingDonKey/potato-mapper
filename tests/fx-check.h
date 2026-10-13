@@ -39,6 +39,9 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
         require(hex>=0,"Hex Tide selectable in Potato FX");
         require(picker->findText("Maple Supper",Qt::MatchStartsWith)>=0,"Maple Supper selectable in Potato FX");
         require(picker->findText("Harvest Lanterns",Qt::MatchStartsWith)>=0,"Harvest Lanterns selectable in Potato FX");
+        require(picker->findText("Pumpkin Mischief",Qt::MatchStartsWith)==16,"Pumpkin Mischief selectable with stable ID 16");
+        require(picker->findText("Ghost Parade",Qt::MatchStartsWith)==17,"Ghost Parade selectable with stable ID 17");
+        require(picker->findText("Rainlit Window",Qt::MatchStartsWith)==18,"Rainlit Window selectable with stable ID 18");
         auto sample=[](Canvas *canvas){auto image=canvas->grabFramebuffer();return image.pixelColor(image.width()/2,image.height()/2);};
         auto near=[](QColor a,QColor b){return std::max({std::abs(a.red()-b.red()),std::abs(a.green()-b.green()),std::abs(a.blue()-b.blue())})<=4;};
         auto fixture=[&](const QString &name,QColor colour){QImage img(32,32,QImage::Format_RGBA8888);img.fill(colour);const auto path=state->temp.filePath(name);require(img.save(path),"write "+name);return path;};
@@ -121,7 +124,7 @@ template<class Window> void runFxChecks(Window &window,QApplication &app,const Q
                 correct=correct&&std::max({std::abs(expected.red()-actual.red()),std::abs(expected.green()-actual.green()),std::abs(expected.blue()-actual.blue())})<=4;
             }
             require(correct,"Screen respects pattern alpha "+potatoPatterns()[pattern]);scene.surfaces[0].visible=false;scene.setBlend(1,0);scene.setAppearance(1,100,100);
-            size->setValue(32);const auto wide=window.output->grabFramebuffer();require(wide!=still&&energy(wide)>energy(still),"width control "+potatoPatterns()[pattern]);size->setValue(18);
+            size->setValue(32);const auto wide=window.output->grabFramebuffer();require(wide!=still&&(pattern>=16||energy(wide)>energy(still)),"size control "+potatoPatterns()[pattern]);size->setValue(18);
             const int firstPreview=std::max(5,int(potatoPatterns().size())-4);
             if(pattern>=firstPreview){size->setValue(potatoPatternDefaultSize(pattern));const auto preview=window.output->grabFramebuffer();size->setValue(18);QPainter painter(&state->sheet);const int x=((pattern-firstPreview)%2)*640,y=((pattern-firstPreview)/2)*384;painter.setPen(Qt::white);painter.drawText(x+12,y+18,potatoPatterns()[pattern]);painter.drawImage(QRect(x,y+24,640,360),preview);}
             pause->setChecked(false);scene.dirty=false;const auto saved=scene.json();const double phase=scene.current()->patternPhase;const auto editor=window.canvas->grabFramebuffer();

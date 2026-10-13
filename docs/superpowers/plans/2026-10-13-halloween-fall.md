@@ -34,13 +34,13 @@
 
 **Interfaces:** `potatoPatternPeriod(int)` returns `double`; `potatoPatternDefaultFlow(int)` returns `int`. `runFallChecks(Window&, QApplication&, QStringList)` implements `--smoke-fall` / `--test-fall-motion`, optional `--frames`, `--snapshot`, `--demo`. Preserve `runHarvestChecks` and its sampling utilities.
 
-- [ ] Add picker assertions for IDs 16/17/18 to the real FX sweep. Add the dedicated renderer fixture before implementing effects; dispatch its diagnostic from main.
-- [ ] Build with cached CMake and run `--smoke-fall` / `--smoke-fx`; retain RED logs naming missing presets rather than unrelated errors.
-- [ ] Implement exactly the selected scene compositions and bounded choreography. Extend shaded palette handling to new IDs. Append list names, defaults and CPU period/Flow helpers, then connect model defaults and example menu routing.
-- [ ] Include three separate scene examples and an October Porch mixed mapping (one panel of each new ID), original colours, playing defaults and Dynamic FX off. Keep all coordinates valid and paths self-contained.
-- [ ] Run `--smoke-fall`; assert all default IDs, finite/visible output, isolated motion, negative/long phase equivalence, seam continuity, representative control extremes, editor/output parity, settings Undo/Redo, clean ticks, Pause/Reverse/Speed-zero and save/reopen. Existing full FX sweep retains brightness/alpha blend assertions. For new illustrated scenes, Size must change rendered content; increasing total RGB energy is not a universal size contract.
-- [ ] Export 96 frames at 0.125-second phase steps and a still from actual mapped output. Inspect the whole moving story and landscape/portrait frames; revise visible defects before accepting art. Encode the final identical frames to a twelve-second GIF without altering artwork.
-- [ ] Commit reviewed scene/test/example changes after the native checks pass.
+- [x] Add picker assertions for IDs 16/17/18 to the real FX sweep. Add the dedicated renderer fixture before implementing effects; dispatch its diagnostic from main.
+- [x] Build with cached CMake and run `--smoke-fall` / `--smoke-fx`; retain RED logs naming missing presets rather than unrelated errors.
+- [x] Implement exactly the selected scene compositions and bounded choreography. Extend shaded palette handling to new IDs. Append list names, defaults and CPU period/Flow helpers, then connect model defaults and example menu routing.
+- [x] Include three separate scene examples and an October Porch mixed mapping (one panel of each new ID), original colours, playing defaults and Dynamic FX off. Keep all coordinates valid and paths self-contained.
+- [x] Run `--smoke-fall`; assert all default IDs, finite/visible output, isolated motion, negative/long phase equivalence, seam continuity, representative control extremes, editor/output parity, settings Undo/Redo, clean ticks, Pause/Reverse/Speed-zero and save/reopen. Existing full FX sweep retains brightness/alpha blend assertions. For new illustrated scenes, Size must change rendered content; increasing total RGB energy is not a universal size contract.
+- [x] Export 96 frames at 0.125-second phase steps and a still from actual mapped output. Inspect the whole moving story and landscape/portrait frames; revise visible defects before accepting art. Encode the final identical frames to a twelve-second GIF without altering artwork.
+- [x] Commit reviewed scene/test/example changes after the native checks pass.
 
 ### Task 2: Performance, compatibility and numbered candidate
 

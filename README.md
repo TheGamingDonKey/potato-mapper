@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.7/PotatoMapper-0.8.7-windows-x64.zip)**
+**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 
 1. Download the app ZIP above, right-click it, and choose **Extract All**.
 2. Open the extracted folder and double-click **PotatoMapper.exe**.
@@ -29,7 +29,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Multiple surfaces with draggable corners and a subdivided mesh.
 - Images and looping video, with stretch, fit, and crop options.
 - Transparent white alignment grids.
-- Potato FX: fifteen animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. **Maple Supper** and **Harvest Lanterns** add warm Thanksgiving scenes with drifting foliage, pumpkins and soft lantern light.
+- Potato FX: eighteen animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. **Maple Supper** and **Harvest Lanterns** add warm Thanksgiving scenes with drifting foliage, pumpkins and soft lantern light.
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
@@ -77,6 +77,18 @@ To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.
 Mouse wheel zooms the editor; middle-drag pans. Arrow keys nudge the selected handle/surface; Shift increases the step. Dropping media on an animation surface switches it back to media playback. **Clear media** returns an image, video, or animation surface to the white grid. Double-click a surface's list entry to rename it.
 
 Drag the divider beside the surface list to resize the sidebar. Click **Media**, **Appearance**, **Potato FX** or **Mapping** headings to expand/collapse their controls. Appearance sliders dim/fade the selected surface; **Reset appearance** restores both to 100% and Blend to Normal. Screen gives a softer bright overlay; Add adds light and can clip to white. Move the overlay above the other surface using **Forward**, overlap their mapped areas, then choose Screen/Add. Open Potato FX and choose a flowing effect. Start with White, Soft edge 0%, Speed 100% and Flow 70%. Increase Density for smaller elements, then adjust Cell size or Line width. SquareWave uses dense stretching cells; Diagonals uses rotating strokes; CubicCircles morphs filled cells into circles/rings; SquareArray moves rows of changing blocks. Waterlight draws a shimmering light web; Contour Flow drifts landscape-like lines; Curve Maze joins curved paths; Depth Tunnel creates a perspective grid. Older dots, stripes, rings and the former square waves (now labelled Stepped waves) remain available. Earlier app versions ignore the new appearance settings and do not retain them when saving.
+
+### Halloween and fall scenes
+
+Open **File → Examples → October Porch** for a mixed three-panel Halloween/autumn composition. **Pumpkin Mischief**, **Ghost Parade** and **Rainlit Window** also have individual examples and appear in **Potato FX → Animation** on your existing surfaces.
+
+- **Pumpkin Mischief:** three glowing jack-o'-lanterns trade glances, a small pumpkin hiccups embers, and the large one answers with a wink.
+- **Ghost Parade:** a lantern guide leads pale ghosts around a gentle closed route; a shy follower lags and catches up while their cloth flutters.
+- **Rainlit Window:** layered rain, an amber reflection and copper leaves on a dark sill create a quieter October/November evening.
+
+Start with **Original** colour and **Speed 100%**. Scene size defaults to **24%**; Density defaults to **24 / 32 / 24** and Flow to **60 / 60 / 50** respectively. Density controls embers, ghost count or rain spacing; Flow changes expressive movement, flutter or gusts. Flow 0 retains basic animation. Pause and Reverse work with the same smooth twelve-second choreography. Choose each effect on any surface; the ghost route stays within that panel.
+
+The examples need no media downloads and arrive with the update. These three presets require **0.8.8 or later**. Earlier apps can replace unrecognized new effects if you save there; keep the original mapping when trying an older runtime.
 
 ### Thanksgiving and autumn scenes
 

@@ -11,6 +11,7 @@
 #include "../tests/appearance-check.h"
 #include "../tests/fx-check.h"
 #include "../tests/harvest-check.h"
+#include "../tests/fall-check.h"
 #include "../tests/fx-profile.h"
 #include "../tests/dynamic-check.h"
 #include "../tests/entrance-check.h"
@@ -223,7 +224,7 @@ public:
         auto *recentMenu=fileMenu->addMenu("Recent projects");
         connect(recentMenu,&QMenu::aboutToShow,this,[this,recentMenu]{recentMenu->clear();for(const auto &path:PotatoProjects::recent(potatoInstallRoot())){auto *a=recentMenu->addAction(QFileInfo(path).fileName());a->setToolTip(path);connect(a,&QAction::triggered,this,[this,path]{openProject(path);});}if(recentMenu->isEmpty())recentMenu->addAction("No recent projects")->setEnabled(false);});
         auto *examplesMenu=fileMenu->addMenu("Examples");
-        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap"));if(name=="Maple Supper"||name=="Harvest Lanterns"){fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}else showDynamicControls();});}
+        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap"));if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
         fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *helpMenu=menuBar()->addMenu("Help");
         helpMenu->addAction("Quick guide",this,[this]{QMessageBox::information(this,"Potato Mapper — Quick guide","1. Connect your projector and extend your desktop.\n2. Add a surface and load or drop media.\n3. Drag corners or choose Mesh points to align it.\n4. Choose your projector and Start output.\n\nRight-click a surface to clear media or rename it.\nClear media keeps the mesh and supports Undo.\nSave your project; media files stay linked on disk.\n\nB: blackout   Esc: stop output   F: fit editor view");});
@@ -429,6 +430,7 @@ int main(int argc,char **argv){
     if(args.contains("--test-dynamic-motion"))runDynamicChecks(window,app,args);
     if(args.contains("--smoke-fx")){window.smoke=true;runFxChecks(window,app,args);}
     if(args.contains("--smoke-harvest")||args.contains("--test-harvest-motion")){window.smoke=true;runHarvestChecks(window,app,args);}
+    if(args.contains("--smoke-fall")||args.contains("--test-fall-motion")){window.smoke=true;runFallChecks(window,app,args);}
     if(args.contains("--profile-fx")){window.smoke=true;profileFx(window,app,args);}
     if(args.contains("--test-fx-motion")){window.smoke=true;const int i=args.indexOf("--frames"),batch=args.indexOf("--first-pattern");renderFxMotion(window,app,i>=0&&i+1<args.size()?args[i+1]:QString(),batch>=0&&batch+1<args.size()?args[batch+1].toInt():5);}
     if(args.contains("--smoke-appearance")){window.smoke=true;runAppearanceChecks(window,app,args);}

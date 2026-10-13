@@ -51,7 +51,7 @@ void finishColor(){
     if(pattern>0){
         // Seasonal illustrations keep their shadows, ribs and facial detail
         // when a colour preset is selected. Older effects retain their tint.
-        if((pattern==14||pattern==15)&&palette!=0)
+        if((pattern==14||pattern==15||pattern==16||pattern==17||pattern==18)&&palette!=0)
             color.rgb=selectedTint(vec3(1.0))*dot(color.rgb,vec3(.25,.60,.15));
         else color.rgb=selectedTint(color.rgb);
         if(edgeFade>0.0){float edge=min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y));color.a*=smoothstep(0.0,edgeFade,edge);}
@@ -183,9 +183,225 @@ void harvestLantern(inout vec3 ink,vec2 p,vec2 centre,float radius,float breath)
     float core=shapeMask(harvestEllipse(q-vec2(.02,.0),vec2(.045,.105))*radius);
     ink=mix(ink,vec3(1.0,.93,.66),core);
 }
+// One circular clock drives every October pose. Envelopes have zero slope
+// outside their event, so neither forward nor negative playback snaps at 12 s.
+float octoberBeat(float seconds,float first,float last){
+    float ramp=(last-first)*.27;
+    return smoothstep(first,first+ramp,seconds)*(1.0-smoothstep(last-ramp,last,seconds));
+}
+float octoberEye(vec2 p){
+    // A broad triangular carved opening, with a horizontal base.
+    return max(abs(p.x)*.92-p.y*.65-.09,p.y-.14);
+}
+void octoberPumpkin(inout vec3 ink,vec2 p,vec2 centre,float radius,
+                    float tilt,float bounce,float gaze,float wink,float hiccup,float cycle){
+    vec2 local=rotatePoint(p-centre+vec2(0.0,bounce*radius),tilt);
+    local/=vec2(1.0+.035*bounce,1.0-.055*bounce);
+    harvestPumpkin(ink,local,vec2(0.0),radius,.94+.035*sin(cycle));
+    vec2 q=local/radius;
+    float body=shapeMask(harvestEllipse(q,vec2(.97,.73))*radius);
+    vec2 left=q-vec2(-.33+gaze,-.15),right=q-vec2(.33+gaze,-.15);
+    left.y/=mix(1.0,.12,wink);
+    float eyes=min(octoberEye(left),octoberEye(right));
+    float grin=max(harvestEllipse(q-vec2(0.0,.19),vec2(.48,.25)),.13-q.y);
+    float teeth=min(boxDistance(q-vec2(-.16,.16),vec2(.045,.075)),
+                    boxDistance(q-vec2(.16,.16),vec2(.045,.075)));
+    grin=max(grin,-teeth);
+    float roundMouth=harvestEllipse(q-vec2(0.0,.25),vec2(.17,.20));
+    float mouth=mix(grin,roundMouth,hiccup);
+    float carved=min(eyes,mouth);
+    float rim=shapeMask((carved-.035)*radius)*body;
+    float openings=shapeMask(carved*radius)*body;
+    ink=mix(ink,vec3(.075,.023,.009),rim);
+    vec3 candle=vec3(1.0,.62,.13)*(.88+.045*sin(cycle*2.0));
+    candle+=vec3(.0,.075,.045)*clamp(-q.y+.30,0.0,.70);
+    ink=mix(ink,candle,openings);
+    // Moving dark pupils make the glance readable within the carved light.
+    float pupils=min(harvestEllipse(q-vec2(-.33+gaze*1.5,-.12),vec2(.043,.060)),
+                     harvestEllipse(q-vec2(.33+gaze*1.5,-.12),vec2(.043,.060)));
+    ink=mix(ink,vec3(.11,.035,.008),shapeMask(pupils*radius)*openings*(1.0-wink*.8));
+}
+vec2 octoberGhostRoute(float turn,vec2 extent){
+    float a=turn*6.2831853;
+    // A closed oval with a slight bend: position and tangent both match.
+    return extent*vec2(.235*cos(a)+.028*sin(a*2.0),.20*sin(a));
+}
+void octoberGhost(inout vec3 ink,vec2 p,vec2 centre,float radius,
+                  float index,float seconds,float cycle,bool guide){
+    float chase=index>=2.0?octoberBeat(seconds,6.0,8.7):0.0;
+    float stretch=1.0+.18*flow*chase;
+    float tilt=.055*flow*sin(cycle+index*1.7);
+    vec2 q=rotatePoint((p-centre)/radius,tilt);
+    q*=vec2(sqrt(stretch),1.0/stretch);
+    float wave=guide?flow*octoberBeat(seconds,8.0,10.2):.0;
+    vec2 leftHand=vec2(-.91,-.02-.48*wave);
+    vec2 rightHand=guide?vec2(.99,.16):vec2(.88,.16+.08*flow*sin(cycle+index));
+    float arms=min(harvestSegment(q,vec2(-.57,-.03),leftHand),
+                   harvestSegment(q,vec2(.57,.01),rightHand))-.102;
+    float cap=max(harvestEllipse(q-vec2(0.0,-.28),vec2(.73,.77)),q.y-.08);
+    float hem=.70+.10*cos(q.x*13.0)+.030*flow*sin(cycle*2.0+index+q.x*4.0);
+    float width=.66-.075*clamp(q.y,0.0,1.0);
+    float cloth=max(max(abs(q.x)-width,q.y-hem),-.13-q.y);
+    float distance=min(min(cap,cloth),arms);
+    float mask=shapeMask(distance*radius);
+    float halo=exp(-max(distance,0.0)*16.0)*(1.0-mask);
+    ink+=vec3(.022,.040,.066)*halo;
+    float light=.65+.29*clamp(1.0-length((q-vec2(-.27,-.40))/vec2(1.6,1.8)),0.0,1.0);
+    float folds=.045*(.5+.5*cos(q.x*15.0+.55*flow*sin(cycle+index)))*smoothstep(-.05,.55,q.y);
+    vec3 sheet=vec3(.83,.89,.92)*(light-folds);
+    sheet=mix(sheet,vec3(.24,.37,.50),smoothstep(.12,.84,q.y)*.20);
+    ink=mix(ink,sheet,mask);
+    float blink=octoberBeat(seconds,1.6+index*3.1,2.12+index*3.1);
+    float eyeHeight=(index>=2.0?.17:.135)*mix(1.0,.14,blink);
+    float look=.025*sin(cycle+index*.9)+.025;
+    float eyes=min(harvestEllipse(q-vec2(-.235+look,-.27),vec2(.092,eyeHeight)),
+                   harvestEllipse(q-vec2(.235+look,-.27),vec2(.092,eyeHeight)));
+    float eyeMask=shapeMask(eyes*radius)*mask;
+    ink=mix(ink,vec3(.020,.033,.050),eyeMask);
+    float glints=min(length(q-vec2(-.253+look,-.304)),length(q-vec2(.217+look,-.304)))-.024;
+    ink=mix(ink,vec3(.94,.99,1.0),shapeMask(glints*radius)*eyeMask*(1.0-blink));
+    float smile=max(abs(harvestEllipse(q-vec2(0.0,-.012),vec2(.18,.14)))-.022,.02-q.y);
+    float shy=abs(harvestEllipse(q-vec2(.015,.08),vec2(.062,.085)))-.022;
+    float mouth=index>=2.0?mix(shy,smile,.35*chase):smile;
+    ink=mix(ink,vec3(.028,.044,.066),shapeMask(mouth*radius)*mask);
+    if(guide){
+        vec2 lantern=centre+rotatePoint(vec2(.99,.50)*radius,-tilt);
+        harvestLantern(ink,p,lantern,radius*.26,.90+.04*sin(cycle));
+    }
+}
+// Four nearby candidates per rain layer. The seed lattice is periodic, and
+// each layer translates exactly its integer vertical period in twelve seconds.
+// No spatial culls: derivative AA runs for every candidate in every fragment.
+void octoberRain(inout vec3 ink,vec2 p,float turn,float cycle,float layer){
+    float grid=(4.5+density*.18)*(layer>.5?1.45:1.0);
+    float gust=.08+.28*flow*sin(cycle);
+    vec2 field=vec2(p.x-gust*p.y,p.y)*grid;
+    float period=layer>.5?13.0:11.0;
+    field.y-=turn*period;
+    vec2 base=floor(field);
+    float lengthInCell=(.16+.52*dotRadius)*(layer>.5?.80:1.0);
+    float width=(.0022+.0095*dotRadius)*(layer>.5?.72:1.0);
+    // Candidate identities change at tile boundaries. Derive the footprint
+    // from continuous panel coordinates, not a discontinuous candidate SDF.
+    float pixel=max(length(fwidth(p)),.001);
+    for(int i=0;i<4;++i){
+        vec2 cell=base+vec2(float(i%2),float(i/2));
+        vec2 id=mod(cell,vec2(7.0,period));
+        float seed=cellSeed(id+vec2(layer*17.0,layer*9.0));
+        float other=cellSeed(id.yx+vec2(5.3+layer*11.0,2.7));
+        vec2 centre=cell+vec2(seed-.5,other-.5)*.30;
+        vec2 local=(field-centre)/grid;
+        local.x+=gust*local.y;
+        float halfLength=lengthInCell*(.76+.24*seed)/grid;
+        vec2 along=vec2(gust*halfLength,halfLength);
+        float distance=harvestSegment(local,-along,along)-width;
+        float mask=1.0-smoothstep(-pixel,pixel,distance);
+        vec3 rain=layer>.5?vec3(.20,.32,.45):vec3(.38,.54,.67);
+        rain*=.82+.18*seed;
+        ink=mix(ink,rain,mask*(layer>.5?.38:.64));
+    }
+}
+void octoberWindowLeaf(inout vec3 ink,vec2 p,vec2 centre,float radius,float index,float seconds,float cycle){
+    float lift=flow*octoberBeat(seconds,4.0,7.8)*.028;
+    centre+=vec2(flow*.012*sin(cycle+index),-lift);
+    vec2 q=rotatePoint((p-centre)/radius,(-.48+index*1.10)+flow*.24*sin(cycle+index*1.4));
+    q.x/=1.0-.10*flow*(1.0-cos(cycle+index))*.5;
+    float distance=harvestMaple(q);
+    float mask=shapeMask(distance*radius);
+    float veins=min(harvestSegment(q,vec2(0.0,.44),vec2(0.0,-.83)),
+                    min(harvestSegment(q,vec2(0.0,.08),vec2(.76,-.14)),
+                        harvestSegment(q,vec2(0.0,.08),vec2(-.76,-.14))));
+    vec3 leaf=vec3(.69,.275,.075)*(.67+.26*clamp(.5-q.y*.38,0.0,1.0));
+    leaf=mix(leaf,vec3(.25,.080,.025),shapeMask((veins-.024)*radius)*.75);
+    ink=mix(ink,leaf,mask);
+}
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern==16){
+        float turn=fract(phase/12.0),seconds=turn*12.0,cycle=turn*6.2831853;
+        float shortAxis=min(1.0,1.0/surfaceAspect);
+        vec2 p=metric/shortAxis,extent=vec2(1.0,1.0/surfaceAspect)/shortAxis;
+        float radius=.086+.245*dotRadius;
+        float ground=.32*extent.y;
+        float floorLight=exp(-pow((p.y-ground)/(.17*extent.y),2.0));
+        vec3 ink=vec3(.004,.003,.008)+vec3(.036,.015,.055)*floorLight;
+        float hiccup=octoberBeat(seconds,3.25,5.65);
+        float answer=octoberBeat(seconds,6.5,8.5);
+        float tilt=(.035+.085*flow)*sin(cycle)+.075*flow*octoberBeat(seconds,4.1,6.35);
+        vec2 little=vec2(-.235*extent.x,.215*extent.y);
+        // Draw the smaller cast first, so the large face stays unobstructed.
+        octoberPumpkin(ink,p,little,radius*.70,-.045*flow*sin(cycle),
+                       .055*flow*hiccup,-.025*hiccup,.0,hiccup,cycle+.5);
+        octoberPumpkin(ink,p,vec2(.235*extent.x,.225*extent.y),radius*.62,
+                       .055*flow*sin(cycle+.8),.050*flow*answer,.035*answer,
+                       octoberBeat(seconds,9.0,9.6),.0,cycle+1.1);
+        octoberPumpkin(ink,p,vec2(.0,.135*extent.y),radius,tilt,
+                       .045*flow*answer,-.055*octoberBeat(seconds,4.0,6.6),
+                       octoberBeat(seconds,7.0,7.75),.0,cycle);
+        float count=clamp(2.0+(density-4.0)*(4.0/76.0),2.0,6.0);
+        for(int i=0;i<6;++i){
+            float index=float(i),presence=clamp(count-index,0.0,1.0);
+            if(presence<=0.0)continue; // Uniform setting/index skip only.
+            float travel=clamp((seconds-3.35-index*.12)/2.7,0.0,1.0);
+            float alive=smoothstep(.0,.16,travel)*(1.0-smoothstep(.65,1.0,travel));
+            float seed=fract(index*.618034+.21);
+            vec2 centre=little+vec2((seed-.5)*radius*.42+flow*.035*sin(travel*3.1415927+index),
+                                    radius*.19-travel*(.13+.11*flow));
+            float emberRadius=(.0023+.011*dotRadius)*(.76+.35*seed);
+            float distance=length(p-centre)-emberRadius;
+            float mask=shapeMask(distance)*alive*presence;
+            ink+=vec3(.72,.30,.055)*mask;
+        }
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
+    if(pattern==17){
+        float turn=fract(phase/12.0),seconds=turn*12.0,cycle=turn*6.2831853;
+        float shortAxis=min(1.0,1.0/surfaceAspect);
+        vec2 p=metric/shortAxis,extent=vec2(1.0,1.0/surfaceAspect)/shortAxis;
+        vec3 ink=vec3(.003,.007,.015);
+        float radius=.074+.19*dotRadius;
+        int count=int(clamp(2.0+floor(density/26.0),2.0,4.0));
+        for(int i=3;i>=0;--i){
+            if(i>=count)continue; // Same branch in every fragment.
+            float index=float(i);
+            float lag=index>=2.0?.060*flow*octoberBeat(seconds,3.0,7.9):0.0;
+            float tour=turn-index*.21-lag;
+            vec2 centre=octoberGhostRoute(tour,extent);
+            float size=radius*(i==0?1.0:i==1?.85:.91);
+            octoberGhost(ink,p,centre,size,index,seconds,cycle,i==0);
+        }
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
+    if(pattern==18){
+        float turn=fract(phase/12.0),seconds=turn*12.0,cycle=turn*6.2831853;
+        float shortAxis=min(1.0,1.0/surfaceAspect);
+        vec2 p=metric/shortAxis,extent=vec2(1.0,1.0/surfaceAspect)/shortAxis;
+        vec2 panel=p/extent;
+        float glass=.86+.07*sin(panel.x*29.0+panel.y*17.0)+.07*cos(panel.y*37.0-panel.x*13.0);
+        vec3 ink=vec3(.008,.016,.030)*glass;
+        float gust=flow*sin(cycle);
+        vec2 reflected=p-vec2(.19*extent.x+gust*.020*cos(panel.y*15.0+cycle),.16*extent.y);
+        vec2 reflection=reflected/vec2(.055+.20*dotRadius,.29*extent.y);
+        float amber=exp(-dot(reflection,reflection)*.70);
+        float ripples=.80+.12*flow*cos(panel.y*33.0+cycle*2.0)+.08*flow*cos(panel.y*51.0-cycle);
+        ink+=vec3(.19,.091,.026)*amber*ripples;
+        octoberRain(ink,p,turn,cycle,1.0);
+        octoberRain(ink,p,turn,cycle,0.0);
+        float frameWidth=.006+.012*dotRadius;
+        float frame=abs(boxDistance(p,extent*vec2(.455,.435)))-frameWidth;
+        float mullion=boxDistance(p-vec2(-.095*extent.x,0.0),vec2(frameWidth,.435*extent.y));
+        float sill=boxDistance(p-vec2(.0,.36*extent.y),vec2(.465*extent.x,.012+.024*dotRadius));
+        float bronze=shapeMask(min(min(frame,mullion),sill));
+        ink=mix(ink,vec3(.155,.082,.033)*(.82+.18*clamp(-panel.y+.50,0.0,1.0)),bronze);
+        float leafSize=.026+.09*dotRadius;
+        for(int i=0;i<2;++i){
+            float index=float(i);
+            vec2 centre=vec2((i==0?-.23:.27)*extent.x,.36*extent.y-leafSize*.40);
+            octoberWindowLeaf(ink,p,centre,leafSize,index,seconds,cycle);
+        }
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
     if(pattern==14){
         float cycle=phase*(6.2831853/12.0),ground=.32/surfaceAspect;
         float texture=.80+.12*sin(metric.x*43.0+sin(metric.y*17.0))+.08*cos(metric.x*19.0-metric.y*31.0);
