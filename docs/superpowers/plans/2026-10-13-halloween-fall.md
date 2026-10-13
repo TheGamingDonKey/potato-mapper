@@ -61,9 +61,9 @@
 
 **Interfaces:** `out/releases/PotatoMapper-0.8.8-windows-x64.zip`; fresh extraction under `out/halloween-check/final`; prior runtime fixture from `out/harvest-check/final/PotatoMapper-0.8.7-windows-x64`.
 
-- [ ] Package final Release binaries using `package.ps1` with cached Qt. Extract into a fresh directory; record exact ZIP size/SHA256.
-- [ ] With only Windows system directories on PATH, run extracted mapping/fall/FX/harvest/Dynamic FX/entrance checks, all four new examples, and an actual root-launcher child diagnostic. Check child completion, not just launcher exit.
-- [ ] Adapt the proven disposable update rehearsal to actual 0.8.7→0.8.8. Check managed mapping reopen, original project/media bytes, root launcher refresh, prior runtime and launcher backup. Run real ZIP/manifest, incomplete payload, interrupted download and cancelled restart checks.
+- [x] Package final Release binaries using `package.ps1` with cached Qt. Extract into a fresh directory; record exact ZIP size/SHA256.
+- [x] With only Windows system directories on PATH, run extracted mapping/fall/FX/harvest/Dynamic FX/entrance checks, all four new examples, and an actual root-launcher child diagnostic. Check child completion, not just launcher exit.
+- [x] Adapt the proven disposable update rehearsal to actual 0.8.7→0.8.8. Check managed mapping reopen, original project/media bytes, root launcher refresh, prior runtime and launcher backup. Run real ZIP/manifest, incomplete payload, interrupted download and cancelled restart checks.
 - [ ] Obtain a fresh read-only whole-diff review; fix demonstrated blockers and rerun affected gates. Push feature branch, create and attach PR, merge the reviewed SHA and publish only the checked ZIP and GIF.
 - [ ] Verify public latest stable v0.8.8, canonical HTTP-200 ZIP/GIF and newly downloaded app bytes matching local SHA256. Keep old releases available.
 - [ ] Return checkout to main, record PR/release/hash/evidence and remaining physical-projector check, push handoff and confirm clean status. Give Shane update/menu directions and preview/release links.
