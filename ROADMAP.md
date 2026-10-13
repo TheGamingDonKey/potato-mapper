@@ -4,6 +4,8 @@ A small, watermark-free projection mapper for home use with one projector. This 
 
 ## Where we left off
 
+- **Halloween/fall 0.8.8 — implemented, unreleased on `codex/halloween-fall`.** Three-agent design selected Pumpkin Mischief, Ghost Parade and Rainlit Window with four bundled examples. See the [design](docs/superpowers/specs/2026-10-13-halloween-fall-design.md) and [execution plan](docs/superpowers/plans/2026-10-13-halloween-fall.md). Native fall checks and full FX sweep pass. The 96-frame twelve-second capture and nine panel-shape captures were reviewed; default and maximum-density GPU measurements are below the earlier seasonal effects on this laptop. The numbered Release build, full native compatibility checks, 35 geometry and 32 storage assertions pass; independent review found no blockers. The final extracted runtime and all examples pass, as do actual root-launcher child completion and a real 0.8.7→0.8.8 install/reopen retaining synthetic project/media, previous runtime and launcher backup. Interruption/cancel/incomplete-payload checks pass. Publication is pending; physical projector appearance remains a user check.
+
 - **Thanksgiving 0.8.7 shipped**, merged in [PR #18](https://github.com/TheGamingDonKey/potato-mapper/pull/18) and published as [v0.8.7](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.7). Maple Supper and Harvest Lanterns extend the existing per-surface FX with native seasonal art and twelve-second loops. Ready-to-open examples are included. Native renderer, 35 geometry and 32 storage assertions, extracted mapping/harvest/FX/Dynamic FX/entrance checks and a real 0.8.6-to-0.8.7 launcher upgrade/reopen pass. Both packaged examples load. Interrupted download, cancelled restart and incomplete-payload checks preserve synthetic project/media and the prior runtime. The public latest release and canonical HTTP 200 app download match the tested ZIP: 27,110,980 bytes, SHA256 `7ef77d16f5104345faf8b09249b882ab7e25ae6e0cf3e1bff4d8ba5989c52935`. A shareable twelve-second native preview GIF is included in the release. Physical projector appearance remains a user check; Halloween is the next seasonal discussion.
 
 - **0.8.6 shipped**, merged in [PR #17](https://github.com/TheGamingDonKey/potato-mapper/pull/17) and published as [v0.8.6](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.6). Fluid Hot-Ass Potato travel, connected tapered ribbon, delayed reactive cells and output-pixel size controls. Duplicate saved IDs retain independent geometry. Release build, 35 geometry and 32 storage assertions pass; the final extracted mapping/Dynamic FX/entrance/FX checks and actual 0.8.5 launcher upgrade/reopen pass. Temporary/persistent Windows locks and long paths have focused storage coverage. Interrupted download, cancelled restart and incomplete payload checks retain synthetic saved work. Public latest metadata and canonical HTTP 200 download match the checked ZIP; physical projector appearance remains Shane's check. ZIP: 27092946 bytes, SHA256 `0bb0bd4843ab7bb7b68525126108e824d1d4141a2083b873b8504f712da34d04`.
@@ -29,6 +31,14 @@ A small, watermark-free projection mapper for home use with one projector. This 
 - Check an item only after its completion condition is met and relevant checks pass. Include a short evidence note and the implementation PR or commit.
 - If merged code is not in a downloadable app yet, label it **Implemented — unreleased**. Add the release link when it ships. Merging and publishing are separate steps.
 - Record unperformed checks honestly. A local output window is not evidence of a physical projector test.
+
+## Halloween and fall scenes
+
+- [x] **Native characters and weather — implemented, unreleased.** Three distinct scenes, stable IDs 16–18, preserved older FX and existing controls.
+- [x] **Examples and actual moving preview.** Individual mappings plus October Porch; twelve-second native capture and visual review.
+- [x] **Renderer, performance and packaged update checks.** Real controls/persistence, deformed mappings, extracted runtime and actual 0.8.7→0.8.8 launcher upgrade/reopen.
+- [ ] **Publish the checked 0.8.8 update.** Review, attach PR, merge and verify public app/GIF downloads.
+- [ ] **Physical projector acceptance.** Local renderer evidence is separate from projector appearance.
 
 ## Thanksgiving harvest scenes — shipped in 0.8.7
 

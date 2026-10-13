@@ -1,0 +1,207 @@
+{
+  "format": "PotatoMapper",
+  "version": 1,
+  "width": 1920,
+  "height": 1080,
+  "dynamic": {
+    "effect": 0,
+    "playing": true,
+    "members": []
+  },
+  "surfaces": [
+    {
+      "id": "pumpkin-mischief-1",
+      "name": "Pumpkin Mischief · Porch centre",
+      "media": "",
+      "pattern": 16,
+      "patternSpeed": 100,
+      "patternSize": 24,
+      "patternPlaying": true,
+      "fxDensity": 24,
+      "fxFlow": 60,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxEdge": 0,
+      "fxReverse": false,
+      "brightness": 100,
+      "opacity": 100,
+      "blend": 0,
+      "corners": [
+        [
+          0.045,
+          0.08
+        ],
+        [
+          0.605,
+          0.055
+        ],
+        [
+          0.59,
+          0.92
+        ],
+        [
+          0.06,
+          0.945
+        ]
+      ],
+      "cells": 2,
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          0.5,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          0.5
+        ],
+        [
+          0.51,
+          0.485
+        ],
+        [
+          1,
+          0.5
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0.5,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "visible": true,
+      "locked": false,
+      "fit": 0
+    },
+    {
+      "id": "pumpkin-mischief-2",
+      "name": "Pumpkin Mischief · Upper panel",
+      "media": "",
+      "pattern": 16,
+      "patternSpeed": 100,
+      "patternSize": 24,
+      "patternPlaying": true,
+      "fxDensity": 24,
+      "fxFlow": 60,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxEdge": 0,
+      "fxReverse": false,
+      "brightness": 100,
+      "opacity": 100,
+      "blend": 0,
+      "corners": [
+        [
+          0.66,
+          0.09
+        ],
+        [
+          0.95,
+          0.135
+        ],
+        [
+          0.94,
+          0.465
+        ],
+        [
+          0.645,
+          0.435
+        ]
+      ],
+      "cells": 1,
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "visible": true,
+      "locked": false,
+      "fit": 0
+    },
+    {
+      "id": "pumpkin-mischief-3",
+      "name": "Pumpkin Mischief · Lower panel",
+      "media": "",
+      "pattern": 16,
+      "patternSpeed": 100,
+      "patternSize": 24,
+      "patternPlaying": true,
+      "fxDensity": 24,
+      "fxFlow": 60,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxEdge": 0,
+      "fxReverse": false,
+      "brightness": 100,
+      "opacity": 100,
+      "blend": 0,
+      "corners": [
+        [
+          0.655,
+          0.565
+        ],
+        [
+          0.935,
+          0.545
+        ],
+        [
+          0.955,
+          0.92
+        ],
+        [
+          0.645,
+          0.95
+        ]
+      ],
+      "cells": 1,
+      "mesh": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "visible": true,
+      "locked": false,
+      "fit": 0
+    }
+  ]
+}

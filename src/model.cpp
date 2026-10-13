@@ -130,7 +130,7 @@ bool Surface::fromJson(const QJsonObject &j,const QString &base,Surface &s){
     s.cells=j["cells"].toInt(2);s.visible=j["visible"].toBool(true);s.locked=j["locked"].toBool();s.fit=std::clamp(j["fit"].toInt(),0,2);
     s.pattern=std::clamp(j["pattern"].toInt(),0,int(potatoPatterns().size())-1);s.patternSpeed=std::clamp(j["patternSpeed"].toInt(100),0,300);s.patternSize=std::clamp(j["patternSize"].toInt(18),5,45);s.patternPlaying=j["patternPlaying"].toBool(true);
     s.blend=std::clamp(j["blend"].toInt(),0,2);
-    s.fx.density=std::clamp(j["fxDensity"].toInt(potatoPatternDensity(s.pattern)),4,80);s.fx.flow=std::clamp(j["fxFlow"].toInt(70),0,100);s.fx.angle=std::clamp(j["fxAngle"].toInt(),-180,180);
+    s.fx.density=std::clamp(j["fxDensity"].toInt(potatoPatternDensity(s.pattern)),4,80);s.fx.flow=std::clamp(j["fxFlow"].toInt(potatoPatternDefaultFlow(s.pattern)),0,100);s.fx.angle=std::clamp(j["fxAngle"].toInt(),-180,180);
     s.fx.palette=std::clamp(j["fxPalette"].toInt(potatoPatternPalette(s.pattern)),0,5);s.fx.edge=std::clamp(j["fxEdge"].toInt(),0,25);s.fx.reverse=j["fxReverse"].toBool();
     s.brightness=std::clamp(j["brightness"].toInt(100),0,100);s.opacity=std::clamp(j["opacity"].toInt(100),0,100);
     auto readPoints=[](const QJsonArray &a,QPolygonF &pts){pts.clear();for(auto value:a){const auto p=value.toArray();if(p.size()!=2||!p[0].isDouble()||!p[1].isDouble())return false;pts.append({p[0].toDouble(),p[1].toDouble()});}return true;};
@@ -318,6 +318,7 @@ void Scene::setPattern(int i,int pattern){
     if(!pattern){clearMedia(i);return;}
     checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;
     s.fx.density=potatoPatternDensity(pattern);s.fx.palette=potatoPatternPalette(pattern);
+    if(pattern>=16&&pattern<=18)s.fx.flow=potatoPatternDefaultFlow(pattern);
     if(pattern>=5)s.patternSize=potatoPatternDefaultSize(pattern);
     touch(true);
 }

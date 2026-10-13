@@ -29,6 +29,15 @@ several surfaces with Hot-Ass Potato or Potato Focus. File > Examples opens
 ready-made three-surface demos. Choose participating surfaces in Dynamic FX;
 select Off to restore their original content. Replay intro restarts the snake.
 
+HALLOWEEN / FALL
+File > Examples > October Porch combines Pumpkin Mischief, Ghost Parade and
+Rainlit Window. Individual examples show glowing pumpkins, lantern-led ghosts
+and a quiet autumn window. These also appear in Potato FX > Animation.
+Start with Original colour, Speed 100% and Scene size 24%; the examples carry
+their own Density/Flow defaults. Pause and Reverse use twelve-second loops.
+The new Halloween/fall effects need 0.8.8 or later; older apps can replace them
+when saving a new mapping. No media download is needed.
+
 THANKSGIVING / AUTUMN
 File > Examples > Maple Supper opens warm maple leaves, pumpkins and a potato
 in an autumn scarf. Harvest Lanterns is a quieter candle-and-amber scene.
