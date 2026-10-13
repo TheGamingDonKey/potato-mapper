@@ -16,7 +16,7 @@ template<class Window> void profileFx(Window &window,QApplication &app,const QSt
     preview->profileRendering=true;
     preview->setWindowTitle("Potato FX performance check — editor");preview->resize(qRound(960/scale),qRound(540/scale));
     window.output->move(0,0);preview->move(12,12);preview->show();preview->raise();
-    struct State {int pattern=5,last=int(potatoPatterns().size())-1,layers=1,dynamic=0,cells=2,density=36;bool warp=false,entrance=false;};auto state=std::make_shared<State>();state->warp=args.contains("--profile-warp");state->entrance=args.contains("--profile-entrance");
+    struct State {int pattern=5,last=int(potatoPatterns().size())-1,layers=1,dynamic=0,cells=2,density=36;bool warp=false,entrance=false,densityOverride=false;};auto state=std::make_shared<State>();state->warp=args.contains("--profile-warp");state->entrance=args.contains("--profile-entrance");
     const int first=args.indexOf("--first-pattern"),last=args.indexOf("--last-pattern");
     if(first>=0&&first+1<args.size())state->pattern=args[first+1].toInt();
     if(last>=0&&last+1<args.size())state->last=args[last+1].toInt();
@@ -24,18 +24,22 @@ template<class Window> void profileFx(Window &window,QApplication &app,const QSt
     if(state->entrance)state->pattern=state->last=0;
     const int cells=args.indexOf("--profile-cells"),density=args.indexOf("--profile-density");
     if(cells>=0&&cells+1<args.size())state->cells=args[cells+1].toInt();
-    if(density>=0&&density+1<args.size())state->density=args[density+1].toInt();
+    if(density>=0&&density+1<args.size()){state->density=args[density+1].toInt();state->densityOverride=true;}
     if(state->pattern<0||state->last<state->pattern||state->last>=potatoPatterns().size()||state->dynamic<0||state->dynamic>2||state->cells<1||state->cells>16||state->density<8||state->density>80){
         QTimer::singleShot(0,&app,[&app]{qInfo()<<"FX PROFILE FAIL invalid pattern range";app.exit(2);});return;
     }
     auto step=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weak=step;
-    *step=[&window,&app,state,weak,preview]{
+    *step=[&window,&app,state,weak,preview,args]{
         auto keep=weak.lock();if(state->pattern>state->last){app.exit(0);return;}
         auto &scene=window.scene;scene.newProject();
         for(int i=0;i<state->layers;++i){if(i)scene.add();scene.setPattern(i,state->pattern);scene.surfaces[i].corners={QPointF(0,0),QPointF(1,0),QPointF(1,1),QPointF(0,1)};scene.surfaces[i].subdivide(state->cells);
             if(state->warp)for(auto &point:scene.surfaces[i].mesh)point.setY(point.y()+.015*std::sin(point.x()*3.141592653589793)*std::sin(point.y()*3.141592653589793));
             scene.setBlend(i,2);}
         if(state->dynamic){PotatoDynamic::Settings settings;settings.effect=state->dynamic;settings.density=state->density;for(const auto &s:scene.surfaces)settings.members<<s.id;scene.setDynamic(settings);scene.setDynamicTime(30);}
+        if(state->densityOverride&&!state->dynamic&&!state->entrance){for(int i=0;i<scene.surfaces.size();++i){auto look=scene.surfaces[i].fx;look.density=state->density;scene.setFxLook(i,look);}}
+        if(args.contains("--check-profile-density")&&state->densityOverride&&!state->dynamic&&!state->entrance){
+            for(const auto &s:scene.surfaces)if(s.fx.density!=state->density){qInfo()<<"FX PROFILE FAIL requested density"<<state->density<<"actual"<<s.fx.density;app.exit(2);return;}
+        }
         scene.select(0);scene.dirty=false;
         if(state->entrance){scene.playEntrance();scene.setEntranceTime(3);}
         auto *pulse=new QTimer(&window);if(state->pattern==0){QObject::connect(pulse,&QTimer::timeout,&window,[&window,preview]{window.output->update();preview->update();});pulse->start(16);}
@@ -61,7 +65,8 @@ template<class Window> void profileFx(Window &window,QApplication &app,const QSt
                     .arg(ms(a.gpuNs-outStats.gpuNs,a.gpuSamples-outStats.gpuSamples),0,'f',3).arg(ms(b.gpuNs-editorStats.gpuNs,b.gpuSamples-editorStats.gpuSamples),0,'f',3)
                     .arg(a.gpuSamples-outStats.gpuSamples).arg(b.gpuSamples-editorStats.gpuSamples);
                 std::sort(delays->begin(),delays->end());const auto p95=delays->isEmpty()?0:delays->at(qMin(delays->size()-1,delays->size()*95/100));
-                qInfo()<<"FX RESPONSIVENESS heartbeat-p95-late-ms"<<p95<<"max-late-ms"<<(delays->isEmpty()?0:delays->last())<<"cells"<<state->cells<<"density"<<state->density<<"warped"<<state->warp;
+                const int actualDensity=state->dynamic?window.scene.dynamic.density:window.scene.surfaces.first().fx.density;
+                qInfo()<<"FX RESPONSIVENESS heartbeat-p95-late-ms"<<p95<<"max-late-ms"<<(delays->isEmpty()?0:delays->last())<<"cells"<<state->cells<<"density"<<actualDensity<<"warped"<<state->warp;
                 if(window.output->paintedFrames==out||preview->paintedFrames==editor){qInfo()<<"FX PROFILE FAIL a renderer was not repainting";app.exit(2);return;}
                 if(state->layers==1)state->layers=4;else{state->layers=1;++state->pattern;}
                 (*keep)();

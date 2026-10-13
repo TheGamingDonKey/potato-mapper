@@ -48,12 +48,12 @@
 
 **Interfaces:** Existing `--profile-fx --first-pattern 16 --last-pattern 18 --profile-density 80 --profile-warp` must apply Density 80 to every ordinary FX surface and print actual density. Runtime/app/launcher all report 0.8.8.
 
-- [ ] Add an opt-in model assertion (`--check-profile-density`) to the existing native profile fixture; verify RED because ordinary FX currently ignores requested density.
-- [ ] Apply the fixture density with `Scene::setFxLook` and report/check actual values; verify GREEN. This fixes measurement, without changing ordinary app controls.
-- [ ] Measure defaults and maximum density for one/four overlapping layers at 1080p output plus preview. Compare costs with shipped seasonal scenes on the same hardware; retain measurements rather than promise a frame rate. If an optimization changes frames, investigate/revert it instead of accepting a subjective score.
-- [ ] Bump CMake/Windows resource metadata to 0.8.8 and write user instructions. Mark implemented work unreleased and actual remaining gates in ROADMAP/DEVELOPMENT.
-- [ ] Build Release and run full FX, fall, harvest, Dynamic FX, entrance and mapping checks, plus `PotatoDynamicChecks` and `PotatoProjectChecks`; read every result. Repeat only after changes or failures justify it.
-- [ ] Commit the checked candidate and documentation.
+- [x] Add an opt-in model assertion (`--check-profile-density`) to the existing native profile fixture; verify RED because ordinary FX currently ignores requested density.
+- [x] Apply the fixture density with `Scene::setFxLook` and report/check actual values; verify GREEN. This fixes measurement, without changing ordinary app controls.
+- [x] Measure defaults and maximum density for one/four overlapping layers at 1080p output plus preview. Compare costs with shipped seasonal scenes on the same hardware; retain measurements rather than promise a frame rate. If an optimization changes frames, investigate/revert it instead of accepting a subjective score.
+- [x] Bump CMake/Windows resource metadata to 0.8.8 and write user instructions. Mark implemented work unreleased and actual remaining gates in ROADMAP/DEVELOPMENT.
+- [x] Build Release and run full FX, fall, harvest, Dynamic FX, entrance and mapping checks, plus `PotatoDynamicChecks` and `PotatoProjectChecks`; read every result. Repeat only after changes or failures justify it.
+- [x] Commit the checked candidate and documentation.
 
 ### Task 3: Verified distribution, upgrade and public release
 
