@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1440" height="1500" viewBox="0 0 1440 1500" role="img" aria-labelledby="title desc">
+  <title id="title">The Hollow Wood — flat-value storyboard diagrams</title>
+  <desc id="desc">Five equal-size three-frame research strips showing a normal physical rule, a supernatural breach, and a proposed recovery. Editable vector blocking only; no motion or physical projection validated.</desc>
+  <defs>
+    <style>
+      .dark{fill:#182126}.mid{fill:#667779}.light{fill:#BEC9BF}.amber{fill:#D7A452}
+      .heading{font:600 30px 'Segoe UI',sans-serif;fill:#BEC9BF}
+      .sub{font:17px 'Segoe UI',sans-serif;fill:#BEC9BF}
+      .col{font:600 16px 'Segoe UI',sans-serif;letter-spacing:2px;fill:#BEC9BF}
+      .row{font:600 21px 'Segoe UI',sans-serif;fill:#BEC9BF}
+      .caption{font:16px 'Segoe UI',sans-serif;fill:#BEC9BF}
+      .wood{fill:none;stroke:#182126;stroke-width:17;stroke-linecap:square;stroke-linejoin:round}
+      .silk{fill:none;stroke:#667779;stroke-width:10;stroke-linecap:round}
+      .signal{fill:none;stroke:#D7A452;stroke-width:11;stroke-linecap:round}
+    </style>
+    <clipPath id="panel-clip"><rect width="430" height="190"/></clipPath>
+    <g id="field"><rect class="light" width="430" height="190"/></g>
+    <g id="ground"><path class="mid" d="M0 164 Q110 154 210 165 T430 162 V190 H0Z"/></g>
+    <g id="crown-root"><path class="dark" d="M164 184 L184 133 L186 96 L218 92 L231 137 L253 184 L224 172 L209 147 L196 172Z"/></g>
+    <g id="lantern"><path class="dark" d="M270 102 V91 Q280 80 290 91 V102 H297 V132 H263 V102Z"/><path class="amber" d="M270 107 H290 V126 H270Z"/></g>
+    <g id="passage"><use xlink:href="#field"/><path class="mid" d="M17 0 H51 L58 190 H5Z M395 0 H425 L430 190 H383Z"/><use xlink:href="#ground"/></g>
+    <g id="route-travelers"><path class="mid" d="M75 69 A10 10 0 1 1 95 69 L99 108 L111 139 L84 136 L72 110Z M132 84 A8 8 0 1 1 148 84 L153 116 L163 144 L140 142 L130 119Z"/><path fill="none" stroke="#182126" stroke-width="7" d="M86 134 L80 154 M98 134 L107 152 M143 141 L140 155 M155 140 L165 150"/></g>
+    <g id="oracle-routes"><path class="wood" d="M15 158 Q80 150 126 118 L190 111 M76 14 L118 58 L187 89 M420 47 L352 72 L274 111"/></g>
+    <g id="oracle-closed"><path class="dark" d="M145 69 L173 45 L260 47 L292 77 L283 107 L148 108Z M146 116 L279 114 L296 139 L264 170 L170 168 L140 145Z"/><path class="mid" d="M150 107 L282 105 L277 117 L149 118Z"/></g>
+    <g id="weaver-body"><ellipse class="dark" cx="218" cy="67" rx="73" ry="43"/><path class="dark" d="M151 68 L134 82 L148 99 L178 94 L188 75Z"/></g>
+    <g id="crow"><path class="dark" d="M205 47 Q231 40 251 57 L265 70 L284 73 L268 82 L259 96 Q244 115 217 112 L185 133 L181 116 L169 124 L173 101 Q168 74 190 59Z"/><path fill="none" stroke="#182126" stroke-width="7" stroke-linecap="square" d="M218 109 L215 139 L202 139 M238 111 L241 139 L254 139"/></g>
+    <g id="roost-branch"><path class="dark" d="M0 136 Q77 132 130 139 L300 139 Q359 132 430 136 V168 Q358 165 300 171 L130 171 Q70 163 0 168Z"/></g>
+  </defs>
+
+  <rect class="dark" width="1440" height="1500"/>
+  <text class="heading" x="40" y="48">THE HOLLOW WOOD / VALUE STORYBOARDS</text>
+  <text class="sub" x="40" y="78">Editable blocking diagrams; no motion/projection validated. Intended changes, not animation frames.</text>
+  <rect class="dark" x="1040" y="39" width="32" height="20" stroke="#BEC9BF"/>
+  <rect class="mid" x="1080" y="39" width="32" height="20"/>
+  <rect class="light" x="1120" y="39" width="32" height="20"/>
+  <rect class="amber" x="1160" y="39" width="32" height="20"/>
+  <text class="sub" x="1204" y="55">3 values + amber</text>
+  <text class="col" x="40" y="119">NORMAL RULE</text>
+  <text class="col" x="505" y="119">BREACH</text>
+  <text class="col" x="970" y="119">RECOVERY / CONCEALMENT</text>
+
+  <text class="row" x="40" y="157">01 / THE HOLLOW CROWN</text>
+  <g id="crown-normal" transform="translate(40 174)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#ground"/><use xlink:href="#crown-root"/>
+    <path class="dark" d="M185 128 L181 53 L195 12 L219 9 L230 55 L219 124Z"/>
+    <path class="wood" d="M198 72 L145 49 L130 16 M146 49 L111 47 M207 47 L251 29 L261 17 M249 29 L287 23 M214 75 L278 64 L310 39 M278 64 L315 77"/>
+    <path class="light" d="M199 111 L208 91 L217 116 L209 137Z"/>
+  </g>
+  <g id="crown-breach" transform="translate(505 174)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#ground"/><use xlink:href="#crown-root"/>
+    <path class="dark" d="M180 135 L164 105 L169 75 L206 69 L225 89 L247 62 L280 60 L309 79 L300 95 L270 94 L246 112 L226 131Z"/>
+    <path class="light" d="M193 110 L203 92 L217 112 L210 135Z M239 112 L264 98 L278 103 L249 127Z"/>
+    <path class="wood" d="M257 67 L240 40 L210 29 L202 17 M239 39 L246 20 M270 64 L278 34 L277 17 M279 34 L306 19 M284 68 L314 48 L345 45 M315 48 L329 23"/>
+  </g>
+  <g id="crown-recovery" transform="translate(970 174)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#ground"/><use xlink:href="#crown-root"/>
+    <path class="dark" d="M185 128 L181 53 L195 12 L219 9 L230 55 L219 124Z"/>
+    <path class="wood" d="M198 72 L145 49 L130 16 M146 49 L111 47 M207 47 L251 29 L261 17 M249 29 L287 23 M214 75 L278 64 L310 39 M278 64 L315 77"/>
+    <path class="mid" d="M86 -15 L151 -15 L325 202 L225 202Z"/>
+  </g>
+  <text class="caption" x="40" y="389">Trunk, roots and three main branch forks.</text>
+  <text class="caption" x="505" y="389">Shoulder, jaw gap and root-body resolve.</text>
+  <text class="caption" x="970" y="389">Broad bough covers the anatomy's return.</text>
+
+  <text class="row" x="40" y="426">02 / THE LANTERN PROCESSION</text>
+  <g id="procession-normal" transform="translate(40 443)" clip-path="url(#panel-clip)">
+    <use xlink:href="#passage"/><use xlink:href="#route-travelers"/>
+    <path class="dark" d="M213 45 A17 17 0 1 1 246 45 L247 76 L255 132 L230 141 L207 134 L203 85Z"/>
+    <path fill="none" stroke="#182126" stroke-width="12" stroke-linecap="round" d="M239 66 L258 80 L280 83 M219 134 L211 162 M241 136 L258 160"/>
+    <path fill="none" stroke="#182126" stroke-width="6" d="M280 82 V91"/><use xlink:href="#lantern"/>
+  </g>
+  <g id="procession-breach" transform="translate(505 443)" clip-path="url(#panel-clip)">
+    <use xlink:href="#passage"/>
+    <path class="mid" d="M0 84 L19 87 L23 119 L34 145 L7 142Z"/>
+    <path fill="none" stroke="#182126" stroke-width="7" d="M13 139 L8 158 M26 140 L37 155"/>
+    <use xlink:href="#lantern"/>
+  </g>
+  <g id="procession-recovery" transform="translate(970 443)" clip-path="url(#panel-clip)">
+    <use xlink:href="#passage"/>
+    <use xlink:href="#lantern" transform="translate(115)"/>
+    <path class="mid" d="M397 0 H430 V190 H393Z"/>
+    <path class="mid" d="M60 117 A7 7 0 1 1 74 117 L82 153 L57 153Z"/>
+  </g>
+  <text class="caption" x="40" y="658">Visible hand, hanging weight, planted feet.</text>
+  <text class="caption" x="505" y="658">Same lantern; carrier position is open air.</text>
+  <text class="caption" x="970" y="658">Lantern crosses into the far boundary cover.</text>
+
+  <text class="row" x="40" y="695">04 / THE MYCELIUM ORACLE</text>
+  <g id="oracle-normal" transform="translate(40 712)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#oracle-routes"/><use xlink:href="#oracle-closed"/>
+    <path class="signal" d="M39 155 L78 144 M85 24 L109 48 M397 56 L362 68"/>
+  </g>
+  <g id="oracle-breach" transform="translate(505 712)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#oracle-routes"/>
+    <path class="amber" d="M162 79 L267 79 L285 103 L270 135 L162 135 L147 106Z"/>
+    <path class="dark" d="M144 53 L172 26 L259 29 L294 58 L283 87 L249 78 L219 88 L180 78 L149 89Z M147 127 L183 139 L218 130 L254 141 L280 128 L298 154 L266 181 L170 178 L139 155Z"/>
+  </g>
+  <g id="oracle-recovery" transform="translate(970 712)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#oracle-routes"/><use xlink:href="#oracle-closed"/>
+    <path class="signal" d="M64 149 L98 135 M112 52 L140 66 M348 73 L318 85"/>
+  </g>
+  <text class="caption" x="40" y="927">Three routes approach one closed junction.</text>
+  <text class="caption" x="505" y="927">Heavy plates part; routes dim at arrival.</text>
+  <text class="caption" x="970" y="927">Wood closes; tension travels outward.</text>
+
+  <text class="row" x="40" y="964">17 / THE WEAVER ABOVE</text>
+  <g id="weaver-normal" transform="translate(40 981)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/>
+    <path class="mid" d="M29 0 H53 L57 190 H33Z M207 0 H226 L232 190 H207Z M378 0 H401 L398 190 H375Z"/>
+    <path class="silk" d="M42 28 Q105 135 216 28 Q300 137 389 28"/>
+    <use xlink:href="#weaver-body"/>
+    <path class="wood" d="M167 66 L112 105 L88 180 M185 89 L147 127 L141 185 M264 61 L323 103 L351 181 M255 92 L295 132 L300 186"/>
+    <path class="mid" d="M0 0 H430 V24 Q337 42 280 24 L149 24 Q70 46 0 26Z"/>
+  </g>
+  <g id="weaver-breach" transform="translate(505 981)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/>
+    <path class="mid" d="M29 0 H53 L57 190 H33Z M207 0 H226 L232 190 H207Z M378 0 H401 L374 111 L398 190 H375 L350 110Z"/>
+    <path class="silk" d="M42 28 Q105 135 216 28"/>
+    <path class="signal" d="M217 28 L358 111"/>
+    <use xlink:href="#weaver-body" transform="translate(0 8)"/>
+    <path class="wood" d="M167 74 L112 113 L88 180 M185 97 L147 135 L141 185 M264 69 L308 95 L357 111 M255 100 L300 145 L326 181"/>
+    <path class="dark" d="M346 102 H368 V120 H346Z"/>
+    <path class="mid" d="M0 0 H430 V24 Q337 42 280 24 L149 24 Q70 46 0 26Z"/>
+  </g>
+  <g id="weaver-recovery" transform="translate(970 981)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/>
+    <path class="mid" d="M29 0 H53 L57 190 H33Z M207 0 H226 L232 190 H207Z M378 0 H401 L398 190 H375Z"/>
+    <path class="silk" d="M42 28 Q105 135 216 28 Q300 137 389 28"/>
+    <use xlink:href="#weaver-body" transform="translate(0 -36)"/>
+    <path class="wood" d="M167 30 L112 69 L151 79 M185 53 L158 91 L193 90 M264 25 L322 62 L289 76 M255 56 L288 96 L255 93"/>
+    <path class="mid" d="M0 0 H430 V51 Q336 73 281 53 L150 53 Q70 77 0 51Z"/>
+  </g>
+  <text class="caption" x="40" y="1196">Large body, two leg pairs, three anchors.</text>
+  <text class="caption" x="505" y="1196">One planted pull tightens an arc and bends wood.</text>
+  <text class="caption" x="970" y="1196">Body folds under cover; support relaxes.</text>
+
+  <text class="row" x="40" y="1233">19 / THE RETURNING ROOST</text>
+  <g id="roost-normal" transform="translate(40 1250)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#roost-branch"/><use xlink:href="#crow"/>
+  </g>
+  <g id="roost-breach" transform="translate(505 1250)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/>
+    <path class="dark" d="M0 136 Q77 132 130 139 V171 Q70 163 0 168Z M300 139 Q359 132 430 136 V168 Q358 165 300 171Z"/>
+    <use xlink:href="#crow"/>
+  </g>
+  <g id="roost-recovery" transform="translate(970 1250)" clip-path="url(#panel-clip)">
+    <use xlink:href="#field"/><use xlink:href="#roost-branch"/><use xlink:href="#crow"/>
+  </g>
+  <text class="caption" x="40" y="1465">Crow's weight sits on one thick continuous bough.</text>
+  <text class="caption" x="505" y="1465">Large gap; two stubs; feet hold the same place.</text>
+  <text class="caption" x="970" y="1465">Support restored beneath the same held pose.</text>
+</svg>

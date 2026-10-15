@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 15 Halloween research
+
+Shane rejected the visual quality of the shipped 0.8.8 seasonal artwork. The [new research pack](docs/research/2026-10-15-hollow-wood/RESEARCH.md), on `codex/hollow-wood-research`, follows his selected dark enchanted forest / spectral creatures direction. Fifteen separately spawned specialist agents screened twenty current candidates and challenged source claims, art, choreography, projection and implementation routes. Provisional five: Hollow Crown, Lantern Procession, Mycelium Oracle, Weaver Above, Returning Roost. Final research grade is 8.3/10; the requested 9.5 is unmet. Generated art and editable static diagrams do not establish animation or projector quality.
+
+Source/app remains `C:\Users\mrbos\Downloads\Potato Mapper`; build/run instructions below are unchanged. No renderer, installed runtime, saved mapping or media was changed; no replacement animation or update was built/published. Next is an original low-detail Crown loop testing anatomy, weight/head continuity and repeated joins before detailed textures/fog. Existing media is a candidate route, not a completed integration: same-path surfaces share a player, separate files have no established common transport, audio starts muted but can be manually enabled. Physical projection remains separate. The pack records reviewer disagreement, partial source access, actual motion-reference limits, and the real task roster. No memory update or other-chat message was authorized or performed.
+
 Read [ROADMAP.md](ROADMAP.md) for current progress and proposed work. Keep its checklist and release status current as described in [AGENTS.md](AGENTS.md).
 
 ## Reliability lessons across projects

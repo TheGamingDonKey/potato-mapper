@@ -1,0 +1,38 @@
+{
+  "scope": "Static research artifacts and arithmetic only",
+  "candidate_count": 20,
+  "selected_ids": [
+    "01",
+    "02",
+    "04",
+    "17",
+    "19"
+  ],
+  "score_arithmetic": "exact",
+  "roster_task_identities": 15,
+  "specialist_reports": 15,
+  "svg_xml": "parsed",
+  "png_dimensions": {
+    "15-value-storyboards.png": [
+      2000,
+      2083
+    ],
+    "alternative-storyboards.png": [
+      1774,
+      887
+    ],
+    "hollow-wood-concept-v1.png": [
+      1536,
+      1024
+    ],
+    "hollow-wood-concept-v2.png": [
+      1536,
+      1024
+    ]
+  },
+  "broken_local_markdown_links": [],
+  "working_primary_alternate_in_manifest": true,
+  "animation_tested": false,
+  "mapper_new_media_tested": false,
+  "projector_tested": false
+}
