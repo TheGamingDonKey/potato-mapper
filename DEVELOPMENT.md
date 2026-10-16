@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 16 expanded Halloween Drop
+
+The [engineering design](docs/superpowers/specs/2026-10-16-halloween-drop-design.md) translates Shane's new request into event/theme preferences, stable content categories, saved surface topology, combined-contour walking, editable articulated actors and five atmospheric forest scenes. Build and publication after validation are authorized; the written architecture is pending review on `codex/halloween-drop-design`. Four specialists inspected actual code; no product implementation, package or release has been made for this expansion. Source/app remains in Downloads. Next: resolve design review, prepare/review the implementation plan, then build incremental runnable slices toward the complete drop.
+
+Key compatibility findings to carry forward: category filtering must use stable item data rather than combo indexes; bent edges require full boundary-mesh sampling; a glued boundary interval and an interior point navigation link have different topology; duplicate legacy surface IDs require separate unique route UIDs; new content/topology/actors need protected version2 project handling because old serializers clamp/drop unfamiliar data. The rolling `.bak` does not replace a permanent pre-conversion recovery copy. A local rig/runtime is needed for surface-reactive editability; complete-movie-only delivery does not fulfill it. Existing Dynamic FX and projector behavior remain baseline functionality.
+
 ## Current handoff — October 15 Halloween research
 
 Shane rejected the visual quality of the shipped 0.8.8 seasonal artwork. The [new research pack](docs/research/2026-10-15-hollow-wood/RESEARCH.md), on `codex/hollow-wood-research`, follows his selected dark enchanted forest / spectral creatures direction. Fifteen separately spawned specialist agents screened twenty current candidates and challenged source claims, art, choreography, projection and implementation routes. Provisional five: Hollow Crown, Lantern Procession, Mycelium Oracle, Weaver Above, Returning Roost. Final research grade is 8.3/10; the requested 9.5 is unmet. Generated art and editable static diagrams do not establish animation or projector quality.
