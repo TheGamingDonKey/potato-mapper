@@ -1,5 +1,7 @@
 # Potato Mapper roadmap
 
+- **October 29: 0.8.8 restored; replacement design awaits Shane's authorization.** The actual 0.9.0/0.9.1 interface was rejected despite earlier functional checks. The normal launcher opens stock 0.8.8; newer projects and a recovery save of open work remain intact, with 0.9.1 retained for them. See [visual style](docs/superpowers/specs/2026-10-29-windows11-visual-style.md), [app interactions](docs/superpowers/specs/2026-10-29-mapper-interaction.md) and the [restoration handoff](DEVELOPMENT.md). These are proposals, not implemented features or authorization to rebuild.
+
 - October29 local0.9.1: approved native Projection Studio layout, GPU thumbnail library/drag, independent inspector, actor controls and bounded geometry cache implemented and checked. Existing feature locations are documented in [feature access](docs/0.9.1-feature-access.md); [current handoff](docs/0.9.1-local-studio.md) records installation/update and recovery evidence. Public release, user visual acceptance, physical projection and Store certification remain distinct.
 
 A small, watermark-free projection mapper for home use with one projector. This checklist records what works, what we want next, and where development stopped. Priorities can change; proposed features are not release promises.

@@ -1,6 +1,16 @@
 # Development handoff
 
-## Current handoff — October29 Projection Studio0.9.1
+## Current handoff — October 29 restoration and design review
+
+Shane rejected the actual 0.9.0/0.9.1 UI and requested the 0.8.8 foundation, a full Windows 11 style specification and an app-specific interaction specification before authorizing another build. The [visual draft](docs/superpowers/specs/2026-10-29-windows11-visual-style.md) and [interaction draft](docs/superpowers/specs/2026-10-29-mapper-interaction.md) are ready for his review. Right-click Delete is a mandatory proposed access fix; neither old nor current source implements it. No redesign code, new executable, package or public release was created for these drafts.
+
+The normal desktop shortcut still targets `app/PotatoMapper.exe`. It now opens the verified stock `app/versions/0.8.8/PotatoMapperApp.exe`; `current.txt` is 0.8.8, `previous.txt` is 0.9.1. All 91 legacy manifest files matched their hashes, and the restored native window was inspected. The root launcher refreshed to its packaged 0.8.8 version normally. Newer source remains on `codex/seasonal-studio`; do not reset or discard that history merely to restore the old presentation.
+
+The open 0.9.1 session had unsaved work. Before closing it normally, Save as created `app/Projects/Recovered before restoring 0.8.8/Unsaved 0.9.1 work.pmap` (format 2, four surfaces), leaving the previous mapping intact. All four current Projects files were hashed before restoration and remained byte-identical after legacy startup. Existing version 2/3 projects must be reopened with the retained 0.9.1 runtime, not converted down or overwritten with 0.8.8. Old validators reject these versions. The restored launch supplied no project argument and opened a fresh scene. Proof: `out/verification/restored-088.json`. Total storage remains below the 1,500,000,000-byte cap.
+
+Next concrete step: Shane reviews both drafts and authorizes any implementation. A future milestone must preserve labelled 0.8.8 navigation, validate actual Windows material rendering in Qt/OpenGL, and obtain visual/workflow acceptance before replacing his working app. Document review and previous functional tests do not establish that acceptance.
+
+## Historical local build — October29 Projection Studio0.9.1, subsequently rejected
 
 Approved concept1 is implemented, packaged, tested and installed locally. Source and app remain in Downloads. See [current build, checks and limits](docs/0.9.1-local-studio.md) and [feature locations](docs/0.9.1-feature-access.md). Preserve saved projects/media and prior0.9.0 runtime. This supersedes the older design-only October entries below. Next: Shane's visual/physical projection review, then real Store identity/signing/WACK; local MSIX validation does not establish certification.
 

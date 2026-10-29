@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-Local development drop **0.9.1** implements the approved Projection Studio layout with a surface navigator, large mapping canvas, separate inspector and thumbnail library. Seasonal scenes, themes, media, connections, actors and Dynamic FX remain available. See [the current handoff](docs/0.9.1-local-studio.md), [feature locations](docs/0.9.1-feature-access.md) and [Store preparation](docs/store-preparation.md). The public download below is the earlier published release.
+**Current desktop runtime: 0.8.8, restored at Shane's request.** The 0.9.0/0.9.1 interface was rejected. Its source and newer-format projects remain preserved; 0.9.1 is retained for reopening those projects. The proposed replacement keeps the familiar 0.8.8 workflow and adds a Windows 11 material finish. Read the [visual style draft](docs/superpowers/specs/2026-10-29-windows11-visual-style.md) and [interaction draft](docs/superpowers/specs/2026-10-29-mapper-interaction.md). Another redesign requires Shane's explicit authorization. [Development handoff](DEVELOPMENT.md) records the restoration and recovery copy.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 
