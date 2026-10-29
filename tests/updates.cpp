@@ -15,6 +15,7 @@
 #include <QPushButton>
 #include <QPointer>
 #include <QLockFile>
+#include <QImage>
 #include <iostream>
 
 // Exercise the actual dialog with deterministic responses and the real ZIP
@@ -52,8 +53,8 @@ static bool until(const std::function<bool()> &ready,int timeout=20000){
 static QByteArray bytes(const QString &path){QFile f(path);if(!f.open(QIODevice::ReadOnly))return {};return f.readAll();}
 static void write(const QString &path,const QByteArray &data){QDir().mkpath(QFileInfo(path).absolutePath());QFile f(path);if(!f.open(QIODevice::WriteOnly)||f.write(data)!=data.size())throw std::runtime_error("Could not create fixture");}
 int main(int argc,char **argv){
-    QApplication app(argc,argv);app.setApplicationVersion("0.8.8");
-    const auto args=app.arguments();if(args.size()<3){std::cerr<<"Usage: PotatoUpdateChecks.exe <release.zip> <extracted-package> --install-root <disposable-root>\n";return 2;}
+    QApplication app(argc,argv);
+    const auto args=app.arguments();if(args.size()<3){std::cerr<<"Usage: PotatoUpdateChecks.exe <release.zip> <extracted-package> --install-root <disposable-root> --old-version <baseline-version>\n";return 2;}
     auto check=[](bool pass,const char *label){std::cout<<(pass?"PASS ":"FAIL ")<<label<<std::endl;if(!pass)throw std::runtime_error(label);};
     try{
         if(args.contains("--root-resolution-only")){
@@ -71,6 +72,9 @@ int main(int argc,char **argv){
             check(resolvePotatoInstallRoot(install.path(),{"PotatoMapper.exe"})==install.path(),"root and legacy flat launch remain unchanged");
             return 0;
         }
+        const int oldVersionArgument=args.indexOf("--old-version");
+        const auto oldVersion=oldVersionArgument>=0&&oldVersionArgument+1<args.size()?args[oldVersionArgument+1]:QString();
+        check(validPotatoVersion(oldVersion),"explicit valid baseline version supplied");app.setApplicationVersion(oldVersion);
         const auto zip=bytes(args[1]);check(!zip.isEmpty(),"read packaged ZIP");
         const auto package=QFileInfo(args[2]).absoluteFilePath();
         const auto version=QString::fromUtf8(bytes(QDir(package).filePath("current.txt"))).trimmed();
@@ -91,8 +95,14 @@ int main(int argc,char **argv){
         const bool handoff=args.contains("--handoff");
         if(handoff){const int launcher=args.indexOf("--launcher");const auto source=launcher>=0&&launcher+1<args.size()?args[launcher+1]:QDir(args[2]).filePath("PotatoMapper.exe");check(QFile::copy(source,QDir(root).filePath("PotatoMapper.exe")),"copy real launcher");}
         else write(QDir(root).filePath("PotatoMapper.exe"),"fixture launcher");
-        write(QDir(root).filePath("current.txt"),currentBytes);write(QDir(root).filePath("My mapping.pmap"),"{\"format\":\"PotatoMapper\",\"version\":1,\"width\":1280,\"height\":720,\"surfaces\":[]}");write(QDir(root).filePath("media/clip.mp4"),"personal media fixture");
-        const auto before=bytes(QDir(root).filePath("My mapping.pmap")),media=bytes(QDir(root).filePath("media/clip.mp4"));
+        write(QDir(root).filePath("current.txt"),currentBytes);
+        const auto imagePath=QDir(root).filePath("media/fixture.png");QDir().mkpath(QFileInfo(imagePath).absolutePath());
+        QImage fixture(64,64,QImage::Format_RGB32);
+        for(int y=0;y<64;++y)for(int x=0;x<64;++x)fixture.setPixel(x,y,qRgb(x*4,y*4,((x/8+y/8)%2)?220:35));
+        check(fixture.save(imagePath,"PNG")&&QImage(imagePath).convertToFormat(QImage::Format_RGB32)==fixture,"generate and decode real 64x64 PNG fixture");
+        write(QDir(root).filePath("My mapping.pmap"),R"JSON({"format":"PotatoMapper","version":1,"width":1280,"height":720,"surfaces":[{"id":"upgrade-fixture-surface","routeUid":"28fd588e-a165-4d11-bb0e-211b78f8da11","name":"Saved PNG fixture","media":"media/fixture.png","pattern":0,"patternSpeed":100,"patternSize":18,"patternPlaying":true,"brightness":100,"opacity":100,"blend":0,"corners":[[0.1,0.1],[0.9,0.1],[0.9,0.9],[0.1,0.9]],"cells":1,"mesh":[[0,0],[1,0],[0,1],[1,1]],"visible":true,"locked":false,"fit":1}]})JSON");
+        const auto before=bytes(QDir(root).filePath("My mapping.pmap")),media=bytes(imagePath);
+        write(QDir(root).filePath(".fixture-project.before"),before);write(QDir(root).filePath(".fixture-media.before"),media);
         if(handoff){
             QLockFile lock(QDir(root).filePath(".potato-runtime.lock"));check(lock.tryLock(),"editor process lock acquired");
             FixtureNetwork network;network.metadata=QJsonDocument(release).toJson();network.zip=zip;
@@ -101,17 +111,19 @@ int main(int argc,char **argv){
             QTimer::singleShot(30000,&app,[]{QCoreApplication::exit(2);});
             const int code=app.exec();if(dialog)delete dialog.data();std::cout<<"HANDOFF editor exits "<<code<<std::endl;return code;
         }
-        auto run=[&](bool interrupted){
+        auto run=[&](bool interrupted,bool tampered){
             FixtureNetwork network;network.metadata=QJsonDocument(release).toJson();network.zip=zip;network.interrupted=interrupted;bool prepared=false;
+            if(tampered)network.zip[network.zip.size()/2]=char(network.zip.at(network.zip.size()/2)^0x01);
             auto *dialog=new UpdateDialog(nullptr,[&]{prepared=true;return false;},[]{return QString();},&network);QPointer<UpdateDialog> safe=dialog;
             auto *download=dialog->findChild<QPushButton*>("downloadUpdateButton");auto *status=dialog->findChild<QLabel*>("updateStatus");
             check(until([&]{return download->isEnabled();}),"dialog offers download");download->click();
-            check(until([&]{return interrupted?status->text().contains("interrupted"):prepared;}),interrupted?"interrupted download leaves app running":"real extraction reaches restart confirmation");
-            if(!interrupted)check(status->text().contains("cancelled"),"cancelled restart leaves current project open");
+            check(until([&]{return interrupted||tampered?status->text().contains("failed verification"):prepared;}),tampered?"tampered ZIP rejected by digest":interrupted?"interrupted download leaves app running":"real extraction reaches restart confirmation");
+            if(interrupted||tampered)check(!prepared,"invalid download never requests restart");
+            else check(status->text().contains("cancelled"),"cancelled restart leaves current project open");
             dialog->reject();check(until([&]{return safe.isNull();}),"closing dialog cancels and releases staging");
-            check(bytes(QDir(root).filePath("current.txt"))==currentBytes&&bytes(QDir(root).filePath("My mapping.pmap"))==before&&bytes(QDir(root).filePath("media/clip.mp4"))==media,"selected version, project and media unchanged");
+            check(bytes(QDir(root).filePath("current.txt"))==currentBytes&&bytes(QDir(root).filePath("My mapping.pmap"))==before&&bytes(imagePath)==media,"selected version, project and referenced PNG unchanged");
             check(QDir(QDir(root).filePath(".updates")).entryList(QDir::Dirs|QDir::NoDotAndDotDot).isEmpty(),"temporary download folder removed");
         };
-        run(true);run(false);return 0;
+        run(true,false);run(false,true);run(false,false);return 0;
     }catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 2;}
 }

@@ -63,6 +63,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\START-HERE.txt') -Des
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\THIRD-PARTY.txt') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\THIRD-PARTY.txt') -Destination $runtime
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\licenses') -Destination $runtime -Recurse
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'assets\icons\LICENSE') -Destination (Join-Path $runtime 'licenses\Fluent-System-Icons-LICENSE.txt')
 foreach ($module in 'qtbase', 'qtmultimedia', 'qtsvg') {
     Copy-Item -LiteralPath (Join-Path $QtPath "sbom\$module-6.10.3.spdx.json") -Destination (Join-Path $runtime 'licenses')
 }

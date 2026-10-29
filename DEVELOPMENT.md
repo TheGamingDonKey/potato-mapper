@@ -1,5 +1,9 @@
 # Development handoff
 
+## Current handoff — October29 Projection Studio0.9.1
+
+Approved concept1 is implemented, packaged, tested and installed locally. Source and app remain in Downloads. See [current build, checks and limits](docs/0.9.1-local-studio.md) and [feature locations](docs/0.9.1-feature-access.md). Preserve saved projects/media and prior0.9.0 runtime. This supersedes the older design-only October entries below. Next: Shane's visual/physical projection review, then real Store identity/signing/WACK; local MSIX validation does not establish certification.
+
 ## Current handoff — October 16 expanded Halloween Drop
 
 The [engineering design](docs/superpowers/specs/2026-10-16-halloween-drop-design.md) translates Shane's new request into event/theme preferences, stable content categories, saved surface topology, combined-contour walking, editable articulated actors and five atmospheric forest scenes. Build and publication after validation are authorized; the written architecture is pending review on `codex/halloween-drop-design`. Four specialists inspected actual code; no product implementation, package or release has been made for this expansion. Source/app remains in Downloads. Next: resolve design review, prepare/review the implementation plan, then build incremental runnable slices toward the complete drop.

@@ -3,6 +3,7 @@
 #include "actors.h"
 #include "wizard-duel.h"
 #include <QPainter>
+#include <QOpenGLPaintDevice>
 #include <QFile>
 #include <QMimeData>
 #include <QMatrix3x3>
@@ -110,7 +111,8 @@ QRectF Canvas::canvasRect() const {
 }
 QPointF Canvas::normalized(const QPointF &p)const{auto r=canvasRect();return {(p.x()-r.x())/r.width(),(p.y()-r.y())/r.height()};}
 QPointF Canvas::screenPoint(const QPointF &p)const{auto r=canvasRect();return {r.x()+p.x()*r.width(),r.y()+p.y()*r.height()};}
-void Canvas::resetView(){zoom=1;pan={};update();}
+void Canvas::resetView(){zoom=1;pan={};update();emit viewChanged(zoom);}
+void Canvas::setViewZoom(double value){if(!std::isfinite(value))return;zoom=std::clamp(value,.25,8.0);update();emit viewChanged(zoom);}
 QVector<QPointF> Canvas::handles(const Surface &s)const{
     if(!meshMode)return s.corners;
     QVector<QPointF> result;const auto t=s.transform();for(auto p:s.mesh)result.append(t.map(p));return result;
@@ -136,7 +138,13 @@ void Canvas::paintGL(){
         scene->dynamicGeometry();
         if(profileRendering){renderStats.meshNs+=meshTimer.nsecsElapsed();renderStats.meshBuilds+=scene->dynamicGeometryBuilds-builds;}
     }
-    QPainter p(this);
+    // Always paint overlays into this GL framebuffer. QWidget::grab() redirects
+    // widget painters to its raster target, which otherwise loses these overlays
+    // when Qt subsequently composites the native GL texture over that target.
+    const double paintDpi=devicePixelRatioF();
+    QOpenGLPaintDevice paintDevice(QSize(qRound(width()*paintDpi),qRound(height()*paintDpi)));
+    paintDevice.setDevicePixelRatio(paintDpi);
+    QPainter p(&paintDevice);
     p.beginNativePainting();
     if(profileRendering){
         if(!profileQueries[0])glGenQueries(4,profileQueries);
@@ -147,7 +155,7 @@ void Canvas::paintGL(){
         for(int i=0;i<4;++i)if(!profilePending[i]){activeProfileQuery=i;glBeginQuery(GL_TIME_ELAPSED,profileQueries[i]);break;}
     }
     glDisable(GL_SCISSOR_TEST);glDisable(GL_DEPTH_TEST);glDisable(GL_CULL_FACE);
-    glClearColor(editor?.065f:0,editor?.078f:0,editor?.095f:0,1);glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(editor?.055f:0,editor?.055f:0,editor?.055f:0,1);glClear(GL_COLOR_BUFFER_BIT);
     const auto r=canvasRect();const double dpi=devicePixelRatioF();
     const int vx=qRound(r.x()*dpi),vy=qRound((height()-r.bottom())*dpi),vw=qRound(r.width()*dpi),vh=qRound(r.height()*dpi);
     glViewport(vx,vy,vw,vh);glEnable(GL_SCISSOR_TEST);glScissor(vx,vy,vw,vh);glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
@@ -248,6 +256,20 @@ void Canvas::paintGL(){
         QFont font("Segoe UI");font.setBold(true);font.setPixelSize(qMax(12,int(r.height()*.065)));font.setLetterSpacing(QFont::AbsoluteSpacing,r.height()*.004);p.setFont(font);p.setPen(QColor("#bcfaff"));p.drawText(r,Qt::AlignCenter,"POTATO MAPPER");p.restore();
     }
     if(!editor)return;
+    // Guides belong to the editor, never the projected image. Cache the empty
+    // stage mask across animation frames; mapped media remains untouched.
+    const auto &world=scene->worldGeometry();
+    if(gridRevision!=world.revision||gridViewRect!=r||gridOutputSize!=scene->outputSize){
+        QPainterPath stage;stage.addRect(r);QTransform transform;transform.translate(r.x(),r.y());transform.scale(r.width(),r.height());
+        gridEmptyClip=stage.subtracted(transform.map(world.normalizedClip));gridRevision=world.revision;gridViewRect=r;gridOutputSize=scene->outputSize;
+    }
+    p.save();p.setClipPath(gridEmptyClip);p.setPen(QPen(QColor("#242424"),1));
+    const int gridStep=100;for(int x=0;x<=scene->outputSize.width();x+=gridStep){const double sx=r.x()+r.width()*x/scene->outputSize.width();p.drawLine(QPointF(sx,r.top()),QPointF(sx,r.bottom()));}
+    for(int y=0;y<=scene->outputSize.height();y+=gridStep){const double sy=r.y()+r.height()*y/scene->outputSize.height();p.drawLine(QPointF(r.left(),sy),QPointF(r.right(),sy));}p.restore();
+    p.save();p.setClipRect(rect());QFont rulerFont=p.font();rulerFont.setPixelSize(10);p.setFont(rulerFont);p.setPen(QColor("#92928e"));
+    const int rulerStep=std::max(100,int(std::ceil(90.0*scene->outputSize.width()/std::max(1.0,r.width())/100))*100);
+    for(int x=0;x<=scene->outputSize.width();x+=rulerStep){double sx=r.x()+r.width()*x/scene->outputSize.width();if(sx>=0&&sx<width()-30)p.drawText(QPointF(sx+3,std::max(12.0,r.top()-7)),QString::number(x));}
+    for(int y=0;y<=scene->outputSize.height();y+=rulerStep){double sy=r.y()+r.height()*y/scene->outputSize.height();if(sy>14&&sy<height())p.drawText(QPointF(std::max(2.0,r.left()-29),sy-3),QString::number(y));}p.restore();
     if(property("connectionPreview").toBool()){
         const auto preview=scene->connectionPreviewGeometry(scene->selected);
         if(preview.size()==4){p.save();p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#ffcf73"),4));p.drawLine(screenPoint(preview[0]),screenPoint(preview[1]));p.setPen(QPen(QColor("#8aefdf"),4));p.drawLine(screenPoint(preview[2]),screenPoint(preview[3]));p.setPen(QPen(QColor("#e3eaff"),1,Qt::DashLine));p.drawLine(screenPoint(preview[0]),screenPoint(preview[2]));p.drawLine(screenPoint(preview[1]),screenPoint(preview[3]));p.restore();}
@@ -255,11 +277,11 @@ void Canvas::paintGL(){
     p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#566171"),1));p.drawRect(r);
     for(int i=0;i<scene->surfaces.size();i++){
         const auto &s=scene->surfaces[i];if(!s.visible)continue;const auto t=s.transform();bool selected=i==scene->selected;
-        p.setPen(QPen(selected?QColor("#78efce"):QColor("#718090"),selected?1.5:1));
+        p.setPen(QPen(selected?QColor("#e6ad57"):QColor("#718090"),selected?1.5:1));
         if(selected&&meshMode){for(int y=0;y<=s.cells;y++)for(int x=0;x<=s.cells;x++){int a=y*(s.cells+1)+x;if(x<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+1])));if(y<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+s.cells+1])));}}
         QPolygonF boundary;for(int side=0;side<4;++side)for(int k=0;k<s.cells;++k){double f=double(k)/s.cells;const QPointF uv=side==0?QPointF(f,0):side==1?QPointF(1,f):side==2?QPointF(1-f,1):QPointF(0,1-f);boundary<<screenPoint(t.map(s.sample(uv.x(),uv.y())));}p.setBrush(Qt::NoBrush);p.drawPolygon(boundary);
-        p.setPen(selected?QColor("#bbffeb"):QColor("#c1cad4"));p.drawText(screenPoint(s.corners[0])+QPointF(0,-12),s.name+(s.locked?"  [locked]":""));
-        if(selected&&!s.locked){auto points=handles(s);for(int j=0;j<points.size();j++){p.setPen(QPen(QColor("#11201d"),2));p.setBrush(j==activeHandle?QColor("#ffffff"):QColor("#78efce"));p.drawEllipse(screenPoint(points[j]),5.5,5.5);}}
+        p.setPen(selected?QColor("#f0ce91"):QColor("#c1cad4"));p.drawText(screenPoint(s.corners[0])+QPointF(0,-12),s.name+(s.locked?"  [locked]":""));
+        if(selected&&!s.locked&&!property("selectionOnly").toBool()){auto points=handles(s);for(int j=0;j<points.size();j++){p.setPen(QPen(QColor("#211a10"),2));p.setBrush(j==activeHandle?QColor("#ffffff"):QColor("#e6ad57"));p.drawEllipse(screenPoint(points[j]),5.5,5.5);}}
     }
     if(scene->blackout){p.setPen(QColor("#ffcc86"));p.drawText(12,21,"PROJECTOR BLACKOUT");}
 }
@@ -267,7 +289,7 @@ void Canvas::mousePressEvent(QMouseEvent *e){
     if(!editor)return;setFocus();lastMouse=e->position();
     if(e->button()==Qt::MiddleButton){panning=true;return;}if(e->button()!=Qt::LeftButton)return;
     activeHandle=-1;
-    if(auto *s=scene->current();s&&s->visible&&!s->locked){auto points=handles(*s);for(int i=0;i<points.size();i++)if(QLineF(screenPoint(points[i]),e->position()).length()<12){activeHandle=i;break;}}
+    if(auto *s=scene->current();s&&s->visible&&!s->locked&&!property("selectionOnly").toBool()){auto points=handles(*s);for(int i=0;i<points.size();i++)if(QLineF(screenPoint(points[i]),e->position()).length()<12){activeHandle=i;break;}}
     if(activeHandle<0)scene->select(hitSurface(e->position()));
     if(auto *s=scene->current();s&&!s->locked){scene->checkpoint();dragOriginal=*s;dragStart=normalized(e->position());dragging=true;}
     update();
@@ -288,7 +310,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *e){
 }
 void Canvas::mouseReleaseEvent(QMouseEvent *){dragging=false;panning=false;}
 void Canvas::wheelEvent(QWheelEvent *e){
-    if(!editor)return;auto anchor=normalized(e->position());zoom=std::clamp(zoom*std::pow(1.0015,e->angleDelta().y()),.25,8.0);pan+=e->position()-screenPoint(anchor);update();e->accept();
+    if(!editor)return;auto anchor=normalized(e->position());zoom=std::clamp(zoom*std::pow(1.0015,e->angleDelta().y()),.25,8.0);pan+=e->position()-screenPoint(anchor);update();emit viewChanged(zoom);e->accept();
 }
 void Canvas::keyPressEvent(QKeyEvent *e){
     if(!editor){if(e->key()==Qt::Key_Escape)hide();return;}
@@ -297,13 +319,19 @@ void Canvas::keyPressEvent(QKeyEvent *e){
     QPointF delta;double step=e->modifiers().testFlag(Qt::ShiftModifier)?10:1;
     switch(e->key()){case Qt::Key_Left:delta.setX(-step/scene->outputSize.width());break;case Qt::Key_Right:delta.setX(step/scene->outputSize.width());break;case Qt::Key_Up:delta.setY(-step/scene->outputSize.height());break;case Qt::Key_Down:delta.setY(step/scene->outputSize.height());break;default:QOpenGLWidget::keyPressEvent(e);return;}
     Surface candidate=*s;
-    if(activeHandle>=0&&activeHandle<handles(candidate).size()){
+    if(activeHandle>=0&&activeHandle<handles(candidate).size()&&!property("selectionOnly").toBool()){
         if(meshMode){auto t=candidate.transform();candidate.mesh[activeHandle]=t.inverted().map(t.map(candidate.mesh[activeHandle])+delta);}else candidate.corners[activeHandle]+=delta;
     }else {scene->checkpoint();scene->translateGroup(scene->selected,delta);e->accept();return;}
     if(candidate.valid()){scene->checkpoint();*s=candidate;scene->touch();}e->accept();
 }
-void Canvas::dragEnterEvent(QDragEnterEvent *e){if(editor&&e->mimeData()->hasUrls())e->acceptProposedAction();}
+void Canvas::dragEnterEvent(QDragEnterEvent *e){if(editor&&(e->mimeData()->hasUrls()||e->mimeData()->hasFormat("application/x-potato-pattern")))e->acceptProposedAction();}
 void Canvas::dropEvent(QDropEvent *e){
+    if(editor&&e->mimeData()->hasFormat("application/x-potato-pattern")){
+        bool valid=false;const int pattern=e->mimeData()->data("application/x-potato-pattern").toInt(&valid);
+        if(!valid||pattern<0||pattern>=potatoPatterns().size()){e->ignore();return;}
+        int target=hitSurface(e->position());if(target<0){scene->add();target=scene->selected;}
+        scene->select(target);scene->setPattern(target,pattern);e->acceptProposedAction();return;
+    }
     if(!editor||!e->mimeData()->hasUrls())return;int target=hitSurface(e->position());
     for(const auto &url:e->mimeData()->urls()){if(!url.isLocalFile())continue;if(target<0){scene->add();target=scene->selected;}scene->assignMedia(target,url.toLocalFile());scene->select(target);target=-1;}
     e->acceptProposedAction();

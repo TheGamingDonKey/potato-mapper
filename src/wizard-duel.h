@@ -15,28 +15,13 @@ inline void potatoDrawWizardDuel(QPainter &p,const Scene &scene,const QRectF &re
     const double tau=6.283185307179586;
     auto smooth=[](double a,double b,double x){double u=std::clamp((x-a)/(b-a),0.0,1.0);return u*u*(3-2*u);};
     auto beat=[&](double t,double a,double b,double c,double d){return smooth(a,b,t)*(1-smooth(c,d,t));};
-    auto pixel=[&](QPointF q){return QPointF(q.x()*scene.outputSize.width(),q.y()*scene.outputSize.height());};
-    auto mapped=[&](const Surface &s,double u,double v){return pixel(s.transform().map(s.sample(u,v)));};
-    QVector<const Surface*> panels;QVector<QPainterPath> clips;
-    for(const auto &s:scene.surfaces)if(s.visible&&s.opacity>0&&s.valid()){
-        QPolygonF outline;
-        for(int side=0;side<4;++side)for(int k=0;k<s.cells;++k){
-            const double f=double(k)/s.cells;const QPointF uv=side==0?QPointF(f,0):side==1?QPointF(1,f):side==2?QPointF(1-f,1):QPointF(0,1-f);
-            outline<<mapped(s,uv.x(),uv.y());
-        }
-        QPainterPath clip;clip.addPolygon(outline);clip.closeSubpath();panels<<&s;clips<<clip;
-    }
+    const auto &geometry=scene.worldGeometry();const auto &panels=geometry.panels;
     if(panels.isEmpty())return;
-    const Surface *owners[2]{panels[0],panels.size()>1?panels[1]:panels[0]};
-    QPointF base[2]{mapped(*owners[0],panels.size()>1?.5:.30,.56),mapped(*owners[1],panels.size()>1?.5:.70,.56)};
-    double radius[2];
-    for(int i=0;i<2;++i){
-        const double width=QLineF(mapped(*owners[i],.1,.5),mapped(*owners[i],.9,.5)).length();
-        const double height=QLineF(mapped(*owners[i],.5,.1),mapped(*owners[i],.5,.9)).length();
-        radius[i]=std::clamp(std::min(width,height)*.19,9.0,44.0);
-    }
+    const Scene::WorldGeometry::Panel *owners[2]{&panels[0],&panels[panels.size()>1?1:0]};
+    QPointF base[2]{panels.size()>1?owners[0]->wizardCentre:owners[0]->wizardLeft,panels.size()>1?owners[1]->wizardCentre:owners[1]->wizardRight};
+    const double radius[2]{owners[0]->wizardRadius*scene.actorSize/100.0,owners[1]->wizardRadius*scene.actorSize/100.0};
     if(QLineF(base[0],base[1]).length()<2.6*std::max(radius[0],radius[1])){
-        base[0]=mapped(*owners[0],.29,.56);base[1]=mapped(*owners[1],.71,.56);
+        base[0]=owners[0]->wizardFallbackLeft;base[1]=owners[1]->wizardFallbackRight;
     }
     const double phase=std::fmod(std::fmod(scene.actorElapsed,32.0)+32.0,32.0);
     const int caster=phase<16?0:1,target=1-caster;const double t=std::fmod(phase,16.0);
@@ -59,8 +44,9 @@ inline void potatoDrawWizardDuel(QPainter &p,const Scene &scene,const QRectF &re
     p.scale(rect.width()/scene.outputSize.width(),rect.height()/scene.outputSize.height());p.setRenderHint(QPainter::Antialiasing);
     const double reveal=scene.entranceActive?PotatoEntrance::reveal(scene.entranceElapsed):1.0;
     for(int panel=0;panel<panels.size();++panel){
-        p.save();p.setClipPath(clips[panel],Qt::IntersectClip);
-        p.setOpacity(reveal*panels[panel]->opacity/100.0*panels[panel]->brightness/100.0);
+        const auto &surface=scene.surfaces[panels[panel].surfaceIndex];
+        p.save();p.setClipPath(panels[panel].outputClip,Qt::IntersectClip);
+        p.setOpacity(reveal*surface.opacity/100.0*surface.brightness/100.0);
         for(int i=0;i<2;++i){
             const bool active=i==caster;const double r=radius[i],facing=base[1-i].x()<base[i].x()?-1.0:1.0;
             const double a=active?prepare:0,c=active?cast:0,d=active?0:dodge;

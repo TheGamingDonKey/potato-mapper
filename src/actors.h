@@ -9,15 +9,13 @@
 // One Scene clock drives both preview and output. Contour distances are output
 // pixels, so walking speed and body size do not change between differently sized panels.
 inline void potatoDrawBoundaryActors(QPainter &p,const Scene &scene,const QRectF &rect){
-    auto pixel=[&](QPointF q){return QPointF(q.x()*scene.outputSize.width(),q.y()*scene.outputSize.height());};
-    QPainterPath clip;
-    for(const auto &s:scene.surfaces)if(s.visible&&s.opacity>0){QPolygonF polygon;for(int side=0;side<4;++side)for(int k=0;k<s.cells;++k){double f=double(k)/s.cells;const QPointF uv=side==0?QPointF(f,0):side==1?QPointF(1,f):side==2?QPointF(1-f,1):QPointF(0,1-f);polygon<<pixel(s.transform().map(s.sample(uv.x(),uv.y())));}QPainterPath panel;panel.addPolygon(polygon);clip=clip.united(panel);}
-    p.save();p.setClipRect(rect);p.translate(rect.topLeft());p.scale(rect.width()/scene.outputSize.width(),rect.height()/scene.outputSize.height());p.setClipPath(clip,Qt::IntersectClip);p.setRenderHint(QPainter::Antialiasing);
-    const auto contours=scene.exposedContours();int ordinal=0;
-    for(const auto &contour:contours){QVector<double> lengths{0};double length=0;
-        for(int i=1;i<contour.size();++i){length+=QLineF(pixel(contour[i-1]),pixel(contour[i])).length();lengths<<length;}
+    if(scene.outputSize.isEmpty()||rect.isEmpty())return;
+    const auto &geometry=scene.worldGeometry();
+    p.save();p.setClipRect(rect);p.translate(rect.topLeft());p.scale(rect.width()/scene.outputSize.width(),rect.height()/scene.outputSize.height());p.setClipPath(geometry.outputClip,Qt::IntersectClip);p.setRenderHint(QPainter::Antialiasing);
+    int ordinal=0;
+    for(const auto &metric:geometry.contours){const auto &contour=metric.outputPoints;const auto &lengths=metric.lengths;const double length=metric.length;
         if(length<50)continue;
-        auto at=[&](double distance){distance=std::fmod(std::max(0.0,distance),length);for(int i=1;i<contour.size();++i)if(distance<=lengths[i]){double f=(distance-lengths[i-1])/std::max(1e-12,lengths[i]-lengths[i-1]);return pixel(contour[i-1])*(1-f)+pixel(contour[i])*f;}return pixel(contour.last());};
+        auto at=[&](double distance){distance=std::fmod(std::max(0.0,distance),length);for(int i=1;i<contour.size();++i)if(distance<=lengths[i]){double f=(distance-lengths[i-1])/std::max(1e-12,lengths[i]-lengths[i-1]);return contour[i-1]*(1-f)+contour[i]*f;}return contour.last();};
         const double time=scene.actorElapsed+ordinal++*1.37;
         // A four-second stride phrase has a short look/pause before continuing.
         const double phrase=std::fmod(time,4.0),travel=(std::floor(time/4)*3.6+std::min(phrase,3.6))*55;
@@ -26,8 +24,8 @@ inline void potatoDrawBoundaryActors(QPainter &p,const Scene &scene,const QRectF
         const double stride=phrase<3.6?std::sin(time*8):0;
         const auto inward=QPointF(-forward.y(),forward.x())/std::max(1e-9,std::hypot(forward.x(),forward.y()));
         double appearance=0;const auto sample=feet+inward*2;
-        for(const auto &s:scene.surfaces)if(s.visible&&s.opacity>0){QPolygonF polygon;for(int side=0;side<4;++side)for(int k=0;k<s.cells;++k){double f=double(k)/s.cells;const QPointF uv=side==0?QPointF(f,0):side==1?QPointF(1,f):side==2?QPointF(1-f,1):QPointF(0,1-f);polygon<<pixel(s.transform().map(s.sample(uv.x(),uv.y())));}if(polygon.containsPoint(sample,Qt::OddEvenFill)){appearance=s.opacity/100.0*s.brightness/100.0;break;}}
-        p.save();p.translate(feet);p.rotate(angle);p.setOpacity(appearance*(scene.entranceActive?PotatoEntrance::reveal(scene.entranceElapsed):1));
+        for(const auto &panel:geometry.panels)if(panel.outputOutline.containsPoint(sample,Qt::OddEvenFill)){const auto &s=scene.surfaces[panel.surfaceIndex];appearance=s.opacity/100.0*s.brightness/100.0;break;}
+        p.save();p.translate(feet);p.rotate(angle);p.scale(scene.actorSize/100.0,scene.actorSize/100.0);p.setOpacity(appearance*(scene.entranceActive?PotatoEntrance::reveal(scene.entranceElapsed):1));
         p.setPen(QPen(QColor("#d9f4df"),2.8,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));p.setBrush(QColor("#d9f4df"));
         // Local +Y points into a clockwise panel boundary; feet stay on the contour.
         const double bob=std::abs(stride)*1.2;p.drawLine(QPointF(0,12+bob),QPointF(0,30+bob));

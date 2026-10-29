@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-Local development drop **0.9.0** adds task tabs, themes, seasonal scenes, partial-edge connections and native actors. It is locally tested/packaged; the public download below is still 0.8.8. See [local drop and verification](docs/0.9.0-local-drop.md) and [Microsoft Store preparation](docs/store-preparation.md).
+Local development drop **0.9.1** implements the approved Projection Studio layout with a surface navigator, large mapping canvas, separate inspector and thumbnail library. Seasonal scenes, themes, media, connections, actors and Dynamic FX remain available. See [the current handoff](docs/0.9.1-local-studio.md), [feature locations](docs/0.9.1-feature-access.md) and [Store preparation](docs/store-preparation.md). The public download below is the earlier published release.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 

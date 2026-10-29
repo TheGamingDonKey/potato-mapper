@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <array>
 
 namespace {
 QPointF pixels(QPointF p,QSize size){return {p.x()*size.width(),p.y()*size.height()};}
@@ -85,30 +86,63 @@ void Scene::disconnectSurface(int i){if(!hasConnections(i))return;checkpoint();c
 void Scene::setConnectionsTied(int i,bool tied){if(!hasConnections(i))return;const auto uid=surfaces[i].routeUid;bool changed=false;for(const auto &c:connections)if((c.a==uid||c.b==uid)&&c.tied!=tied)changed=true;if(!changed)return;checkpoint();for(auto &c:connections)if(c.a==uid||c.b==uid)c.tied=tied;touch(true);}
 void Scene::setBoundaryActors(bool enabled){if(boundaryActors==enabled)return;checkpoint();boundaryActors=enabled;actorElapsed=0;touch(true);}
 void Scene::setWizardActors(bool enabled){if(wizardActors==enabled)return;checkpoint();wizardActors=enabled;actorElapsed=0;touch(true);}
+void Scene::setActorPlayback(bool playing){if(actorsPlaying==playing)return;checkpoint();actorsPlaying=playing;touch(true);}
+void Scene::setActorSpeed(int percent){percent=std::clamp(percent,10,300);if(actorSpeed==percent)return;checkpoint();actorSpeed=percent;touch(true);}
+void Scene::setActorSize(int percent){percent=std::clamp(percent,50,200);if(actorSize==percent)return;checkpoint();actorSize=percent;touch(true);}
 void Scene::translateGroup(int i,QPointF delta){
     if(i<0||i>=surfaces.size()||surfaces[i].locked)return;QSet<QString> group{surfaces[i].routeUid};bool more=true;
     while(more){more=false;for(const auto &c:connections)if(c.tied&&(group.contains(c.a)||group.contains(c.b))){if(!group.contains(c.a)){group.insert(c.a);more=true;}if(!group.contains(c.b)){group.insert(c.b);more=true;}}}
     QVector<Surface> proposed=surfaces;for(auto &s:proposed)if(group.contains(s.routeUid)){if(s.locked)return;for(auto &p:s.corners)p+=delta;if(!s.valid())return;}
     surfaces=proposed;touch();
 }
-QVector<QPolygonF> Scene::exposedContours() const {
-    struct Segment{QPointF a,b;QString owner;bool used=false;};QVector<Segment> segments;
-    for(const auto &s:surfaces)if(s.visible&&s.opacity>0)for(int side=0;side<4;++side){const auto e=edge(s,side,outputSize);QVector<QPair<double,double>> omitted;QVector<double> knots{0,1};
+const Scene::WorldGeometry &Scene::worldGeometry() const {
+    auto &cache=cachedWorldGeometry;
+    if(cache.revision==mappingRevision&&cache.outputSize==outputSize)return cache;
+    cache={};cache.revision=mappingRevision;cache.outputSize=outputSize;++worldGeometryBuilds;
+    if(outputSize.isEmpty())return cache;
+    QVector<std::array<Edge,4>> edges(surfaces.size());QVector<bool> active(surfaces.size(),false);
+    for(int i=0;i<surfaces.size();++i){const auto &s=surfaces[i];if(!s.visible||s.opacity<=0||!s.valid())continue;
+        WorldGeometry::Panel panel;panel.surfaceIndex=i;const auto transform=s.transform();bool finite=true;
+        for(int side=0;side<4;++side){auto &e=edges[i][side];e=edge(s,side,outputSize);
+            finite=finite&&std::isfinite(e.length);
+            for(int k=0;k<s.cells;++k){const auto point=e.points[k],output=pixels(point,outputSize);finite=finite&&std::isfinite(point.x())&&std::isfinite(point.y())&&std::isfinite(output.x())&&std::isfinite(output.y());panel.normalizedOutline<<point;panel.outputOutline<<output;}}
+        if(!finite)continue;active[i]=true;
+        QPainterPath normalized;normalized.addPolygon(panel.normalizedOutline);normalized.closeSubpath();
+        panel.outputClip.addPolygon(panel.outputOutline);panel.outputClip.closeSubpath();
+        cache.normalizedClip=cache.normalizedClip.united(normalized);cache.outputClip=cache.outputClip.united(panel.outputClip);
+        auto mapped=[&](double u,double v){return pixels(transform.map(s.sample(u,v)),outputSize);};
+        panel.wizardCentre=mapped(.5,.56);panel.wizardLeft=mapped(.30,.56);panel.wizardRight=mapped(.70,.56);
+        panel.wizardFallbackLeft=mapped(.29,.56);panel.wizardFallbackRight=mapped(.71,.56);
+        const double width=QLineF(mapped(.1,.5),mapped(.9,.5)).length(),height=QLineF(mapped(.5,.1),mapped(.5,.9)).length();
+        panel.wizardRadius=std::clamp(std::min(width,height)*.19,9.0,44.0);cache.panels<<panel;
+    }
+    // Resolve each seam once per edit, including visibility and opacity. A
+    // transparent neighbor must leave the other panel's entire boundary intact.
+    struct Seam {int a,b,edgeA,edgeB;double begin,end;QPointF start,finish;};QVector<Seam> seams;
+    for(const auto &c:connections){const int a=indexOf(*this,c.a),b=indexOf(*this,c.b);
+        if(a<0||b<0||!active[a]||!active[b]||c.edgeA<0||c.edgeA>3||c.edgeB<0||c.edgeB>3||!std::isfinite(c.beginB)||!std::isfinite(c.endB)||c.beginB<0||c.endB>1||c.beginB>=c.endB)continue;
+        const auto &ea=edges[a][c.edgeA],&eb=edges[b][c.edgeB];bool continuous=true;
+        for(int k=0;k<=16;++k){const double f=k/16.0;if(QLineF(pixels(ea.at(f),outputSize),pixels(eb.at(c.endB+(c.beginB-c.endB)*f),outputSize)).length()>2){continuous=false;break;}}
+        if(continuous)seams<<Seam{a,b,c.edgeA,c.edgeB,c.beginB,c.endB,ea.at(0),ea.at(1)};
+    }
+    struct Segment{QPointF a,b;int owner;bool used=false;};QVector<Segment> segments;
+    for(int i=0;i<surfaces.size();++i)if(active[i])for(int side=0;side<4;++side){const auto &e=edges[i][side];QVector<QPair<double,double>> omitted;QVector<double> knots{0,1};
         for(auto len:e.lengths)knots<<len/std::max(1e-12,e.length);
-        for(const auto &c:connections)if(sewn(*this,c)){if(c.a==s.routeUid&&c.edgeA==side)omitted<<qMakePair(0.0,1.0);if(c.b==s.routeUid&&c.edgeB==side){omitted<<qMakePair(c.beginB,c.endB);knots<<c.beginB<<c.endB;}}
-        std::sort(knots.begin(),knots.end());for(int k=1;k<knots.size();++k){const double a=knots[k-1],b=knots[k];if(b-a<1e-8)continue;bool skip=false;for(const auto &span:omitted)if((a+b)*.5>span.first-1e-9&&(a+b)*.5<span.second+1e-9)skip=true;if(!skip)segments<<Segment{e.at(a),e.at(b),s.routeUid,false};}}
-    QVector<QPolygonF> contours;
+        for(const auto &c:seams){if(c.a==i&&c.edgeA==side)omitted<<qMakePair(0.0,1.0);if(c.b==i&&c.edgeB==side){omitted<<qMakePair(c.begin,c.end);knots<<c.begin<<c.end;}}
+        std::sort(knots.begin(),knots.end());for(int k=1;k<knots.size();++k){const double a=knots[k-1],b=knots[k];if(b-a<1e-8)continue;bool skip=false;for(const auto &span:omitted)if((a+b)*.5>span.first-1e-9&&(a+b)*.5<span.second+1e-9)skip=true;if(!skip)segments<<Segment{e.at(a),e.at(b),i,false};}}
     for(int start=0;start<segments.size();++start)if(!segments[start].used){QPolygonF path;int current=start;
         for(int n=0;n<=segments.size();++n){auto &seg=segments[current];if(seg.used)break;seg.used=true;if(path.isEmpty())path<<seg.a;path<<seg.b;
             if(path.size()>2&&QLineF(pixels(path.first(),outputSize),pixels(path.last(),outputSize)).length()<.01)break;
             int next=-1;double best=2.01;for(int j=0;j<segments.size();++j)if(!segments[j].used){
                 bool allowed=seg.owner==segments[j].owner;
-                if(!allowed)for(const auto &c:connections)if(((c.a==seg.owner&&c.b==segments[j].owner)||(c.b==seg.owner&&c.a==segments[j].owner))&&sewn(*this,c)){
-                    const int a=indexOf(*this,c.a);const auto seam=edge(surfaces[a],c.edgeA,outputSize);
-                    if(QLineF(pixels(seg.b,outputSize),pixels(seam.at(0),outputSize)).length()<2.01||QLineF(pixels(seg.b,outputSize),pixels(seam.at(1),outputSize)).length()<2.01)allowed=true;}
+                if(!allowed)for(const auto &c:seams)if((c.a==seg.owner&&c.b==segments[j].owner)||(c.b==seg.owner&&c.a==segments[j].owner)){
+                    if(QLineF(pixels(seg.b,outputSize),pixels(c.start,outputSize)).length()<2.01||QLineF(pixels(seg.b,outputSize),pixels(c.finish,outputSize)).length()<2.01)allowed=true;}
                 if(!allowed)continue;const double d=QLineF(pixels(seg.b,outputSize),pixels(segments[j].a,outputSize)).length();if(d<best){best=d;next=j;}}
             if(next<0)break;current=next;}
-        if(path.size()>2)contours<<path;
+        if(path.size()>2){cache.normalizedContours<<path;WorldGeometry::Contour contour;contour.lengths<<0;
+            for(const auto &point:path){const auto p=pixels(point,outputSize);if(!contour.outputPoints.isEmpty()){contour.length+=QLineF(contour.outputPoints.last(),p).length();contour.lengths<<contour.length;}contour.outputPoints<<p;}
+            cache.contours<<contour;}
     }
-    return contours;
+    return cache;
 }
+QVector<QPolygonF> Scene::exposedContours() const {return worldGeometry().normalizedContours;}

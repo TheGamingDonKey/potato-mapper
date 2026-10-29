@@ -145,7 +145,7 @@ Scene::Scene(QObject *parent):QObject(parent){
     animationClock.start();auto *timer=new QTimer(this);timer->setTimerType(Qt::PreciseTimer);
     connect(timer,&QTimer::timeout,this,[this]{
         const double dt=std::min(animationClock.restart()/1000.0,.1);bool animated=false;
-        if((boundaryActors||wizardActors)&&!blackout){actorElapsed+=dt;animated=true;}
+        if((boundaryActors||wizardActors)&&actorsPlaying&&!blackout){actorElapsed+=dt*actorSpeed/100.0;animated=true;}
         if(entranceActive&&entrancePlaying&&!blackout){
             entranceElapsed=std::min(PotatoEntrance::duration,entranceElapsed+dt);
             if(entranceElapsed>=PotatoEntrance::duration)entranceActive=false;
@@ -286,7 +286,7 @@ void Scene::touch(bool structure){
 void Scene::newProject(){
     skipEntrance();
     for(auto *s:mediaSources)if(s->player)s->player->stop();
-    surfaces.clear();connections.clear();boundaryActors=false;wizardActors=false;actorElapsed=0;projectPath.clear();dynamic={};dynamicElapsed=0;selected=-1;add();history.clear();future.clear();dirty=false;emit structureChanged();
+    surfaces.clear();connections.clear();boundaryActors=false;wizardActors=false;actorsPlaying=true;actorSpeed=100;actorSize=100;actorElapsed=0;savedDigest.clear();projectPath.clear();dynamic={};dynamicElapsed=0;selected=-1;add();history.clear();future.clear();dirty=false;emit structureChanged();
 }
 void Scene::add(){
     checkpoint();Surface s;s.name="Surface "+QString::number(surfaces.size()+1);
@@ -341,14 +341,15 @@ void Scene::setFxLook(int i,FxLook look){
 QJsonObject Scene::json(const QString &base) const {
     QJsonArray items;for(const auto &s:surfaces)items.append(s.json(base));
     QJsonArray links;for(const auto &c:connections)links.append(QJsonObject{{"a",c.a},{"b",c.b},{"edgeA",c.edgeA},{"edgeB",c.edgeB},{"beginB",c.beginB},{"endB",c.endB},{"tied",c.tied}});
-    const bool modern=wizardActors||boundaryActors||!connections.isEmpty()||std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.pattern>=19;});
-    QJsonObject result{{"format","PotatoMapper"},{"version",modern?2:1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items},{"dynamic",dynamic.json()}};
-    if(modern){result["connections"]=links;result["boundaryActors"]=boundaryActors;result["wizardActors"]=wizardActors;}
+    const bool modern=!actorsPlaying||actorSpeed!=100||actorSize!=100||wizardActors||boundaryActors||!connections.isEmpty()||std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.pattern>=19;});
+    const bool actorControls=!actorsPlaying||actorSpeed!=100||actorSize!=100;
+    QJsonObject result{{"format","PotatoMapper"},{"version",actorControls?3:modern?2:1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items},{"dynamic",dynamic.json()}};
+    if(modern){result["connections"]=links;result["boundaryActors"]=boundaryActors;result["wizardActors"]=wizardActors;result["actorsPlaying"]=actorsPlaying;result["actorSpeed"]=actorSpeed;result["actorSize"]=actorSize;}
     return result;
 }
 bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool restartDynamic){
     if(!PotatoProjects::validateDocument(j,error))return false;
-    if((j["format"].toString()!="PotatoMapper"&&j["format"].toString()!="HomeMapper")||(j["version"].toInt()!=1&&j["version"].toInt()!=2)){error="This is not a supported Potato Mapper project.";return false;}
+    if((j["format"].toString()!="PotatoMapper"&&j["format"].toString()!="HomeMapper")||(j["version"].toInt()!=1&&j["version"].toInt()!=2&&j["version"].toInt()!=3)){error="This is not a supported Potato Mapper project.";return false;}
     QSize size(j["width"].toInt(),j["height"].toInt());
     if(size.width()<1||size.height()<1||size.width()>16384||size.height()>16384){error="Invalid output size.";return false;}
     QVector<Surface> restored;
@@ -356,7 +357,7 @@ bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool
     for(auto v:j["surfaces"].toArray()){Surface s;if(!Surface::fromJson(v.toObject(),base,s)){error=QString("Surface %1 (%2) has invalid corners or mesh points. The current project was kept.").arg(++surfaceIndex).arg(v.toObject()["name"].toString("unnamed"));return false;}restored.append(s);++surfaceIndex;}
     for(const auto &v:j["surfaces"].toArray()){const double id=v.toObject()["pattern"].toDouble();if(!std::isfinite(id)||id!=std::floor(id)||id<0||id>=potatoPatterns().size()){error="This project uses an unsupported animation ID. Current project kept.";return false;}}
     QSet<QString> routeIds;
-    for(auto &s:restored){if(s.routeUid.isEmpty()||routeIds.contains(s.routeUid)){if(j["version"].toInt()==2){error="Duplicate or empty surface route identity.";return false;}s.routeUid=QUuid::createUuid().toString(QUuid::WithoutBraces);}routeIds.insert(s.routeUid);}
+    for(auto &s:restored){if(s.routeUid.isEmpty()||routeIds.contains(s.routeUid)){if(j["version"].toInt()>=2){error="Duplicate or empty surface route identity.";return false;}s.routeUid=QUuid::createUuid().toString(QUuid::WithoutBraces);}routeIds.insert(s.routeUid);}
     QVector<Connection> restoredConnections;
     if(j.contains("connections")&&!j["connections"].isArray()){error="Invalid connections.";return false;}
     for(const auto &value:j["connections"].toArray()){
@@ -369,7 +370,7 @@ bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool
         for(const auto &other:restoredConnections)if(overlap(c,other)){error="Overlapping connections.";return false;}
         restoredConnections<<c;
     }
-    surfaces=restored;connections=restoredConnections;boundaryActors=j["boundaryActors"].toBool();wizardActors=j["wizardActors"].toBool();actorElapsed=0;outputSize=size;selected=surfaces.isEmpty()?-1:0;
+    surfaces=restored;connections=restoredConnections;boundaryActors=j["boundaryActors"].toBool();wizardActors=j["wizardActors"].toBool();actorsPlaying=j["actorsPlaying"].toBool(true);actorSpeed=std::clamp(j["actorSpeed"].toInt(100),10,300);actorSize=std::clamp(j["actorSize"].toInt(100),50,200);actorElapsed=0;outputSize=size;selected=surfaces.isEmpty()?-1:0;
     const auto restoredDynamic=PotatoDynamic::Settings::fromJson(j["dynamic"].toObject());
     if(restartDynamic||restoredDynamic.effect!=dynamic.effect||restoredDynamic.members!=dynamic.members)dynamicElapsed=0;
     dynamic=restoredDynamic;rebuildDynamic();
@@ -384,13 +385,14 @@ bool Scene::save(const QString &path,QString &error){
     if(!savedDigest.isEmpty()&&QFileInfo(path).absoluteFilePath()==QFileInfo(projectPath).absoluteFilePath()){
         QFile current(path);if(!current.open(QIODevice::ReadOnly)||QCryptographicHash::hash(current.readAll(),QCryptographicHash::Sha256)!=savedDigest){error="This mapping changed on disk in another app, or was moved. Your open work is intact. Use Save as to keep a separate copy, then reopen the other version.";return false;}
     }
-    if(json()["version"].toInt()==2&&QFileInfo::exists(path)){
+    if(json()["version"].toInt()>=2&&QFileInfo::exists(path)){
         QFile old(path);if(!old.open(QIODevice::ReadOnly)){error=old.errorString();return false;}
         const auto oldBytes=old.readAll();old.close();
-        if(QJsonDocument::fromJson(oldBytes).object()["version"].toInt()==1){
-            QString recovery=path+".v1-recovery.pmap";
+        const int oldVersion=QJsonDocument::fromJson(oldBytes).object()["version"].toInt();
+        if(oldVersion>=1&&oldVersion<json()["version"].toInt()){
+            QString recovery=path+QString(".v%1-recovery.pmap").arg(oldVersion);
             auto matches=[&](const QString &p){QFile f(p);return f.open(QIODevice::ReadOnly)&&f.readAll()==oldBytes;};
-            if(QFileInfo::exists(recovery)&&!matches(recovery))recovery=path+".v1-"+QString::fromLatin1(QCryptographicHash::hash(oldBytes,QCryptographicHash::Sha256).toHex())+".pmap";
+            if(QFileInfo::exists(recovery)&&!matches(recovery))recovery=path+QString(".v%1-").arg(oldVersion)+QString::fromLatin1(QCryptographicHash::hash(oldBytes,QCryptographicHash::Sha256).toHex())+".pmap";
             if(QFileInfo::exists(recovery)){if(!matches(recovery)){error="Recovery path collision. Original project kept.";return false;}}
             else {QSaveFile backup(recovery);if(!backup.open(QIODevice::WriteOnly)||backup.write(oldBytes)!=oldBytes.size()||!backup.commit()){error="Cannot retain permanent pre-conversion recovery copy. Original unchanged.";return false;}}
         }

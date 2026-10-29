@@ -61,7 +61,7 @@ To exercise MakeAppx before public Store identity is supplied, use an explicitly
 
 ```powershell
 .\packaging\store\New-StorePackage.ps1 `
-    -RuntimeDirectory '.\out\releases\PotatoMapper-0.9.0-windows-x64\versions\0.9.0' `
+    -RuntimeDirectory '.\out\releases\PotatoMapper-0.9.1-windows-x64\versions\0.9.1' `
     -PackageName 'PotatoMapper.LocalValidation' `
     -Publisher 'CN=PotatoMapperLocalValidation' `
     -PublisherDisplayName 'Local packaging validation only' `
@@ -94,6 +94,8 @@ Static imports and MakeAppx validation do not prove dynamic plugin loading or in
 ## Evidence on this host
 
 On October 29, 2026, Windows SDK `10.0.26100.0` x64 MakeAppx and Windows App Certification Kit `appcert.exe` were found. The PowerShell scripts parsed successfully. Asset conversion produced validated PNGs at 50x50, 44x44 and 150x150 (43,313 bytes total). A read-only preflight of the existing `app/versions/0.3.0` deployment validated 37 x64 binaries totaling 58,008,248 bytes; this validates the tool against an old deployment, not a current Store candidate. The source/profile requires integration checks against the current build. No real Store identity was supplied. Integration subsequently produced an unsigned local-validation MSIX from the 0.9.0 deployed runtime using SDK MakeAppx with schema validation, 37 x64 binaries, known repository examples and .pmap/.hmap associations. The synthetic QA identity is explicitly marked not a Store candidate. No package was signed, installed, WACK-tested, submitted or published. See out/store-validation/store-package-report.json and the 0.9.0 local-drop handoff.
+
+Later on October 29, the same script completed MakeAppx packaging and semantic validation against the extracted **0.9.1** runtime. The fresh `out/store-validation-091/store-package-report.json` records 37 x64 binaries, 95 mapped files and an unsigned 26,884,443-byte `PotatoMapper-1.0.0.0-x64.msix` with SHA-256 `f0ea732f0559afcc02c09f88861aaf9556f31e474bfe8eb727c31e05375f0094`. Identity remains synthetic (`PotatoMapper.LocalValidation`, `CN=PotatoMapperLocalValidation`), with display names explicitly marked QA/not Store. The separate combined-storage preflight included external concept previews and reserved 60,000,000 bytes before packaging. This proves local unsigned package creation only: real Partner Center identity verification, signing, installed operation/update testing, WACK, submission and Store acceptance remain unperformed.
 
 ## Microsoft references
 

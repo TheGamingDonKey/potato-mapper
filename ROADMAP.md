@@ -1,5 +1,7 @@
 # Potato Mapper roadmap
 
+- October29 local0.9.1: approved native Projection Studio layout, GPU thumbnail library/drag, independent inspector, actor controls and bounded geometry cache implemented and checked. Existing feature locations are documented in [feature access](docs/0.9.1-feature-access.md); [current handoff](docs/0.9.1-local-studio.md) records installation/update and recovery evidence. Public release, user visual acceptance, physical projection and Store certification remain distinct.
+
 A small, watermark-free projection mapper for home use with one projector. This checklist records what works, what we want next, and where development stopped. Priorities can change; proposed features are not release promises.
 
 ## Where we left off

@@ -1,0 +1,29 @@
+Microsoft Fluent UI System Icons
+Source: https://github.com/microsoft/fluentui-system-icons
+20px Regular SVG icons. Original path geometry retained; fill recolored #DDE0E2 for dark editor chrome.
+License: MIT; see LICENSE.
+
+open = Folder Open
+save = Save
+undo = Arrow Undo
+redo = Arrow Redo
+add = Add
+select = Cursor
+corners = Crop (corner-edit tool)
+mesh = Grid
+connect = Link
+eye = Eye
+lock = Lock Closed
+play = Play
+pause = Pause
+stop = Stop
+settings = Settings
+search = Search
+fit = Full Screen Maximize
+library = Library
+chevron = Chevron Right
+trash = Delete
+duplicate = Copy
+check = Checkmark (dark fill on amber checkbox)
+unlock = Lock Open
+eye-off = Eye Off

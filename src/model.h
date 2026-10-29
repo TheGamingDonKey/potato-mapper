@@ -11,6 +11,7 @@
 #include <QHash>
 #include <QUuid>
 #include <QElapsedTimer>
+#include <QPainterPath>
 #include "patterns.h"
 #include "dynamic.h"
 
@@ -82,6 +83,8 @@ public:
     QVector<Connection> connections;
     bool boundaryActors=false;
     bool wizardActors=false;
+    bool actorsPlaying=true;
+    int actorSpeed=100,actorSize=100;
     double actorElapsed=0;
     QString connectionDescription(int index) const;
     QString connectionPreview(int index) const;
@@ -95,8 +98,36 @@ public:
     bool boundaryActorsEnabled() const { return boundaryActors; }
     void setWizardActors(bool enabled);
     bool wizardActorsEnabled() const { return wizardActors; }
+    void setActorPlayback(bool playing);
+    void setActorSpeed(int percent);
+    void setActorSize(int percent);
     void translateGroup(int index,QPointF delta);
     QVector<QPolygonF> exposedContours() const;
+    // One bounded mesh-derived cache serves preview/output. Animation clocks do
+    // not change this revision; edits must call touch()/rebuildDynamic().
+    struct WorldGeometry {
+        struct Panel {
+            int surfaceIndex=-1;
+            QPolygonF normalizedOutline,outputOutline;
+            QPainterPath outputClip;
+            QPointF wizardCentre,wizardLeft,wizardRight,wizardFallbackLeft,wizardFallbackRight;
+            double wizardRadius=9;
+        };
+        struct Contour {
+            QPolygonF outputPoints;
+            QVector<double> lengths;
+            double length=0;
+        };
+        QVector<Panel> panels;
+        QVector<QPolygonF> normalizedContours;
+        QVector<Contour> contours;
+        QPainterPath normalizedClip,outputClip;
+        QSize outputSize;
+        quint64 revision=0;
+    };
+    const WorldGeometry &worldGeometry() const;
+    quint64 geometryRevision() const { return mappingRevision; }
+    mutable quint64 worldGeometryBuilds=0;
     PotatoDynamic::Settings dynamic;
     PotatoDynamic::Frame dynamicFrame;
     double dynamicElapsed = 0;
@@ -145,6 +176,7 @@ private:
     QVector<QJsonObject> history, future;
     DynamicGeometry cachedDynamicGeometry;
     DynamicGeometry cachedEntranceGeometry;
+    mutable WorldGeometry cachedWorldGeometry;
     quint64 mappingRevision=1;
     quint64 dynamicRevision=1;
     void updateDynamicFrame();

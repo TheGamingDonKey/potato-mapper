@@ -178,7 +178,7 @@ QString directory(const QString &installRoot) { const auto store=PotatoDistribut
 bool validateDocument(const QJsonObject &project, QString &error) {
     error.clear();
     const QString format = project["format"].toString();
-    if ((format != "PotatoMapper" && format != "HomeMapper") || (project["version"].toDouble() != 1 && project["version"].toDouble() != 2)
+    if ((format != "PotatoMapper" && format != "HomeMapper") || (project["version"].toDouble() != 1 && project["version"].toDouble() != 2 && project["version"].toDouble() != 3)
         || !project["surfaces"].isArray()) {
         error = "Unsupported project format, version or surfaces."; return false;
     }
