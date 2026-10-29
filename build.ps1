@@ -5,6 +5,7 @@ param(
     [string]$AppDirectory
 )
 $ErrorActionPreference = 'Stop'
+& (Join-Path $PSScriptRoot 'packaging\Check-Storage.ps1') -ReserveBytes 150000000
 if (-not $QtPath) { $QtPath = $env:QTDIR }
 if (-not $QtPath) { $QtPath = Join-Path $env:USERPROFILE '.cache\home-mapper-qt\6.10.3\msvc2022_64' }
 if (-not (Test-Path -LiteralPath (Join-Path $QtPath 'lib\cmake\Qt6\Qt6Config.cmake'))) {

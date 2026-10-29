@@ -1,5 +1,6 @@
 #include "projects.h"
 #include "projects-publish.h"
+#include "distribution.h"
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDebug>
@@ -172,12 +173,12 @@ bool lockIndex(QLockFile &lock, const QString &projects, QString &error) {
 }
 
 namespace PotatoProjects {
-QString directory(const QString &installRoot) { return QDir(absolute(installRoot)).filePath("Projects"); }
+QString directory(const QString &installRoot) { const auto store=PotatoDistribution::projectLibraryRoot();return store.isEmpty()?QDir(absolute(installRoot)).filePath("Projects"):store; }
 
 bool validateDocument(const QJsonObject &project, QString &error) {
     error.clear();
     const QString format = project["format"].toString();
-    if ((format != "PotatoMapper" && format != "HomeMapper") || project["version"].toDouble() != 1
+    if ((format != "PotatoMapper" && format != "HomeMapper") || (project["version"].toDouble() != 1 && project["version"].toDouble() != 2)
         || !project["surfaces"].isArray()) {
         error = "Unsupported project format, version or surfaces."; return false;
     }

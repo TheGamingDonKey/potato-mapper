@@ -1,5 +1,7 @@
 #include "canvas.h"
 #include "entrance.h"
+#include "actors.h"
+#include "wizard-duel.h"
 #include <QPainter>
 #include <QFile>
 #include <QMimeData>
@@ -33,8 +35,10 @@ void Canvas::initializeGL(){
 layout(location=0) in vec2 position;
 layout(location=1) in vec2 texturePosition;
 uniform mat3 mapping;
+uniform mat3 surfaceMapping;
 out vec2 uv;
-void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2.0*p.y,0.0,p.z);uv=texturePosition;}
+noperspective out vec2 mappedOutputUv;
+void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2.0*p.y,0.0,p.z);uv=texturePosition;vec3 world=surfaceMapping*vec3(position,1.0);mappedOutputUv=world.xy/world.z;}
 )GLSL";
     QFile shaderFile(":/assets/patterns.frag");
     if(!shaderFile.open(QIODevice::ReadOnly)){graphicsError="The built-in pattern shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
@@ -204,6 +208,11 @@ void Canvas::paintGL(){
         m(0,0)=float(t.m11());m(0,1)=float(t.m21());m(0,2)=float(t.m31());
         m(1,0)=float(t.m12());m(1,1)=float(t.m22());m(1,2)=float(t.m32());
         m(2,0)=float(t.m13());m(2,1)=float(t.m23());m(2,2)=float(t.m33());program.setUniformValue("mapping",m);
+        const auto surfaceTransform=s.transform();QMatrix3x3 world;
+        world(0,0)=float(surfaceTransform.m11());world(0,1)=float(surfaceTransform.m21());world(0,2)=float(surfaceTransform.m31());
+        world(1,0)=float(surfaceTransform.m12());world(1,1)=float(surfaceTransform.m22());world(1,2)=float(surfaceTransform.m32());
+        world(2,0)=float(surfaceTransform.m13());world(2,1)=float(surfaceTransform.m23());world(2,2)=float(surfaceTransform.m33());
+        program.setUniformValue("surfaceMapping",world);program.setUniformValue("outputAspect",float(scene->outputSize.width())/scene->outputSize.height());
         QVector2D uvScale(1,1),uvOffset(0,0);
         const double phasePeriod=potatoPatternPeriod(s.pattern);
         program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,phasePeriod)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
@@ -232,17 +241,23 @@ void Canvas::paintGL(){
     glViewport(0,0,qRound(width()*dpi),qRound(height()*dpi));
     if(activeProfileQuery>=0){glEndQuery(GL_TIME_ELAPSED);profilePending[activeProfileQuery]=true;activeProfileQuery=-1;}
     p.endNativePainting();
+    if((editor||!scene->blackout)&&showContent&&scene->boundaryActors)potatoDrawBoundaryActors(p,*scene,r);
+    if((editor||!scene->blackout)&&showContent&&scene->wizardActors)potatoDrawWizardDuel(p,*scene,r);
     if((editor||!scene->blackout)&&scene->dynamicFrame.titleOpacity>0&&showContent){
         p.save();p.setClipRect(r);p.setRenderHint(QPainter::Antialiasing);p.setOpacity(scene->dynamicFrame.titleOpacity*(scene->entranceActive?PotatoEntrance::reveal(scene->entranceElapsed):1.0));
         QFont font("Segoe UI");font.setBold(true);font.setPixelSize(qMax(12,int(r.height()*.065)));font.setLetterSpacing(QFont::AbsoluteSpacing,r.height()*.004);p.setFont(font);p.setPen(QColor("#bcfaff"));p.drawText(r,Qt::AlignCenter,"POTATO MAPPER");p.restore();
     }
     if(!editor)return;
+    if(property("connectionPreview").toBool()){
+        const auto preview=scene->connectionPreviewGeometry(scene->selected);
+        if(preview.size()==4){p.save();p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#ffcf73"),4));p.drawLine(screenPoint(preview[0]),screenPoint(preview[1]));p.setPen(QPen(QColor("#8aefdf"),4));p.drawLine(screenPoint(preview[2]),screenPoint(preview[3]));p.setPen(QPen(QColor("#e3eaff"),1,Qt::DashLine));p.drawLine(screenPoint(preview[0]),screenPoint(preview[2]));p.drawLine(screenPoint(preview[1]),screenPoint(preview[3]));p.restore();}
+    }
     p.setRenderHint(QPainter::Antialiasing);p.setPen(QPen(QColor("#566171"),1));p.drawRect(r);
     for(int i=0;i<scene->surfaces.size();i++){
         const auto &s=scene->surfaces[i];if(!s.visible)continue;const auto t=s.transform();bool selected=i==scene->selected;
         p.setPen(QPen(selected?QColor("#78efce"):QColor("#718090"),selected?1.5:1));
         if(selected&&meshMode){for(int y=0;y<=s.cells;y++)for(int x=0;x<=s.cells;x++){int a=y*(s.cells+1)+x;if(x<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+1])));if(y<s.cells)p.drawLine(screenPoint(t.map(s.mesh[a])),screenPoint(t.map(s.mesh[a+s.cells+1])));}}
-        QPolygonF boundary;for(auto c:s.corners)boundary<<screenPoint(c);p.setBrush(Qt::NoBrush);p.drawPolygon(boundary);
+        QPolygonF boundary;for(int side=0;side<4;++side)for(int k=0;k<s.cells;++k){double f=double(k)/s.cells;const QPointF uv=side==0?QPointF(f,0):side==1?QPointF(1,f):side==2?QPointF(1-f,1):QPointF(0,1-f);boundary<<screenPoint(t.map(s.sample(uv.x(),uv.y())));}p.setBrush(Qt::NoBrush);p.drawPolygon(boundary);
         p.setPen(selected?QColor("#bbffeb"):QColor("#c1cad4"));p.drawText(screenPoint(s.corners[0])+QPointF(0,-12),s.name+(s.locked?"  [locked]":""));
         if(selected&&!s.locked){auto points=handles(s);for(int j=0;j<points.size();j++){p.setPen(QPen(QColor("#11201d"),2));p.setBrush(j==activeHandle?QColor("#ffffff"):QColor("#78efce"));p.drawEllipse(screenPoint(points[j]),5.5,5.5);}}
     }
@@ -268,7 +283,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *e){
     if(!dragging)return;auto *s=scene->current();if(!s)return;
     Surface candidate=dragOriginal;auto pos=normalized(e->position());
     if(activeHandle>=0){if(meshMode)candidate.mesh[activeHandle]=candidate.transform().inverted().map(pos);else candidate.corners[activeHandle]=pos;}
-    else for(auto &point:candidate.corners)point+=pos-dragStart;
+    else {const auto desired=dragOriginal.corners[0]+pos-dragStart;scene->translateGroup(scene->selected,desired-s->corners[0]);return;}
     if(candidate.valid()){*s=candidate;scene->touch();}
 }
 void Canvas::mouseReleaseEvent(QMouseEvent *){dragging=false;panning=false;}
@@ -284,7 +299,7 @@ void Canvas::keyPressEvent(QKeyEvent *e){
     Surface candidate=*s;
     if(activeHandle>=0&&activeHandle<handles(candidate).size()){
         if(meshMode){auto t=candidate.transform();candidate.mesh[activeHandle]=t.inverted().map(t.map(candidate.mesh[activeHandle])+delta);}else candidate.corners[activeHandle]+=delta;
-    }else for(auto &p:candidate.corners)p+=delta;
+    }else {scene->checkpoint();scene->translateGroup(scene->selected,delta);e->accept();return;}
     if(candidate.valid()){scene->checkpoint();*s=candidate;scene->touch();}e->accept();
 }
 void Canvas::dragEnterEvent(QDragEnterEvent *e){if(editor&&e->mimeData()->hasUrls())e->acceptProposedAction();}

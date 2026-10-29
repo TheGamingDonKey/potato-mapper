@@ -33,6 +33,7 @@ signals:
 };
 
 struct Surface {
+    QString routeUid = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString name;
     QString media;
@@ -77,6 +78,25 @@ public:
     void setEntranceTime(double seconds);
     bool dirty = false;
     QString projectPath;
+    struct Connection { QString a,b; int edgeA=0,edgeB=0; double beginB=0,endB=1; bool tied=false; };
+    QVector<Connection> connections;
+    bool boundaryActors=false;
+    bool wizardActors=false;
+    double actorElapsed=0;
+    QString connectionDescription(int index) const;
+    QString connectionPreview(int index) const;
+    QPolygonF connectionPreviewGeometry(int index) const;
+    bool connectNearest(int index,bool fit,QString &error);
+    void disconnectSurface(int index);
+    void setConnectionsTied(int index,bool tied);
+    bool connectionsTied(int index) const;
+    bool hasConnections(int index) const;
+    void setBoundaryActors(bool enabled);
+    bool boundaryActorsEnabled() const { return boundaryActors; }
+    void setWizardActors(bool enabled);
+    bool wizardActorsEnabled() const { return wizardActors; }
+    void translateGroup(int index,QPointF delta);
+    QVector<QPolygonF> exposedContours() const;
     PotatoDynamic::Settings dynamic;
     PotatoDynamic::Frame dynamicFrame;
     double dynamicElapsed = 0;
@@ -119,6 +139,7 @@ signals:
     void structureChanged();
     void message(const QString &text);
 private:
+    QByteArray savedDigest;
     QElapsedTimer animationClock;
     QHash<QString, MediaSource*> mediaSources;
     QVector<QJsonObject> history, future;

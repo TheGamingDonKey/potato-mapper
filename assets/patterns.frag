@@ -1,5 +1,6 @@
 #version 330 core
 in vec2 uv;
+noperspective in vec2 mappedOutputUv;
 uniform sampler2D picture;
 uniform sampler2D chromaPicture;
 uniform bool yuvVideo;
@@ -12,6 +13,7 @@ uniform int blendMode;
 uniform float phase;
 uniform float dotRadius;
 uniform float surfaceAspect;
+uniform float outputAspect;
 uniform float brightness;
 uniform float opacity;
 uniform float density;
@@ -51,7 +53,7 @@ void finishColor(){
     if(pattern>0){
         // Seasonal illustrations keep their shadows, ribs and facial detail
         // when a colour preset is selected. Older effects retain their tint.
-        if((pattern==14||pattern==15||pattern==16||pattern==17||pattern==18)&&palette!=0)
+        if(pattern>=14&&pattern<=22&&palette!=0)
             color.rgb=selectedTint(vec3(1.0))*dot(color.rgb,vec3(.25,.60,.15));
         else color.rgb=selectedTint(color.rgb);
         if(edgeFade>0.0){float edge=min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y));color.a*=smoothstep(0.0,edgeFade,edge);}
@@ -315,9 +317,343 @@ void octoberWindowLeaf(inout vec3 ink,vec2 p,vec2 centre,float radius,float inde
     leaf=mix(leaf,vec3(.25,.080,.025),shapeMask((veins-.024)*radius)*.75);
     ink=mix(ink,leaf,mask);
 }
+// The new collection uses one 24 s clock. Choreography envelopes return to
+// zero before the seam; the old October cast above keeps its own 12 s clock.
+float seasonBeat(float seconds,float first,float rise,float fall,float last){
+    return smoothstep(first,rise,seconds)*(1.0-smoothstep(fall,last,seconds));
+}
+float seasonStroke(vec2 p,vec2 a,vec2 b,float width){
+    return shapeMask(harvestSegment(p,a,b)-width);
+}
+void seasonEyes(inout vec3 ink,vec2 q,float radius,float blink,float gaze,float mood){
+    float eyeY=.078*mix(1.0,.12,blink);
+    float eyes=min(harvestEllipse(q-vec2(-.19+gaze,-.12),vec2(.061,eyeY)),
+                   harvestEllipse(q-vec2(.19+gaze,-.12),vec2(.061,eyeY)));
+    ink=mix(ink,vec3(.025,.022,.033),shapeMask(eyes*radius));
+    float shine=min(length(q-vec2(-.206+gaze,-.142)),length(q-vec2(.174+gaze,-.142)))-.014;
+    ink=mix(ink,vec3(1.0,.94,.77),shapeMask(shine*radius)*(1.0-blink));
+    float smile=max(abs(harvestEllipse(q-vec2(0.0,.035),vec2(.115,.085)))-.014,.055-q.y);
+    float o=abs(harvestEllipse(q-vec2(.012,.087),vec2(.036,.047)))-.014;
+    ink=mix(ink,vec3(.11,.04,.032),shapeMask(mix(smile,o,mood)*radius));
+}
+// Two depth layers share positions, wind and time in normalized OUTPUT space.
+// The finite lattice repeats after exactly 13/17 vertical cells; jitter is
+// spatially seeded. Snow cannot respawn halfway across a mapped boundary.
+void seasonSnow(inout vec3 ink,inout float coverage,vec2 world,float turn,float cycle){
+    float pixel=max(length(fwidth(world)),.0007);
+    for(int layer=0;layer<2;++layer){
+        float depth=float(layer),grid=(4.0+density*.13)*(1.0+depth*.55);
+        float period=layer==0?13.0:17.0;
+        vec2 field=world*grid;
+        field.x-=flow*.42*sin(cycle)+flow*.10*sin(cycle*2.0+world.y*2.0);
+        field.y-=turn*period;
+        vec2 base=floor(field);
+        for(int i=0;i<9;++i){
+            vec2 cell=base+vec2(float(i%3-1),float(i/3-1));
+            vec2 id=mod(cell,vec2(29.0,period));
+            float seed=cellSeed(id+depth*17.0),other=cellSeed(id.yx+vec2(8.3,2.4));
+            vec2 centre=cell+.5+vec2(seed-.5,other-.5)*.64;
+            vec2 q=(field-centre)/grid;
+            float radius=(.0016+.012*dotRadius)*(.65+.65*seed)*(1.0-depth*.38);
+            float distance=length(q)-radius;
+            float flake=(1.0-smoothstep(-pixel,pixel,distance))*(.67-depth*.25);
+            // A pale blue body with a smaller white core reads as snow, while
+            // nearby flakes remain broader/brighter than the distant layer.
+            vec3 snow=mix(vec3(.51,.69,.84),vec3(.93,.98,1.0),1.0-depth*.5);
+            ink=mix(ink,snow,flake);coverage+=flake*(1.0-coverage);
+        }
+    }
+}
+void seasonForest(inout vec3 ink,vec2 p,vec2 extent,float cycle){
+    vec2 panel=p/extent;
+    float pool=exp(-dot((panel-vec2(.03,-.13))/vec2(.33,.38),
+                       (panel-vec2(.03,-.13))/vec2(.33,.38)));
+    ink=vec3(.003,.009,.013)+vec3(.032,.065,.078)*pool;
+    // Broad fog bands separate the protagonist from the receding trunks.
+    float fog=exp(-pow((panel.y-.17-.014*sin(panel.x*9.0+cycle))/.13,2.0));
+    ink+=vec3(.015,.032,.036)*fog;
+    for(int i=0;i<7;++i){
+        float n=float(i),seed=cellSeed(vec2(n,4.0));
+        float x=(n/6.0-.5)*extent.x*.98;
+        vec2 a=vec2(x,.43*extent.y),b=vec2(x+(seed-.5)*.12,-.53*extent.y);
+        float trunk=seasonStroke(p,a,b,.010+.013*seed);
+        float fork=seasonStroke(p,mix(a,b,.62),b+vec2((seed-.5)*.22,.15*extent.y),.009);
+        ink=mix(ink,vec3(.008,.022,.028),max(trunk,fork));
+    }
+}
+void seasonCrown(inout vec3 ink,vec2 p,vec2 extent,float seconds,float cycle){
+    float wake=seasonBeat(seconds,3.0,9.0,19.0,23.0);
+    float attend=seasonBeat(seconds,11.0,15.0,18.5,21.5);
+    float weight=seasonBeat(seconds,3.0,5.8,7.5,10.5);
+    float energy=.42+.58*flow;
+    float radius=.20+.39*dotRadius;
+    vec2 root=vec2(-.018,.37*extent.y);
+    vec2 hip=vec2(.025+energy*.025*weight,.14*extent.y);
+    vec2 chest=vec2(-.012+energy*.013*wake,-.015*extent.y);
+    vec2 head=chest+vec2(energy*.025*attend,-radius*.66);
+    // Root, body and crown use the same landmarks in every pose. There is
+    // no separate deer sprite or opacity crossfade to hide a disconnected rig.
+    float body=seasonStroke(p,root,hip,radius*.19);
+    body=max(body,seasonStroke(p,hip,chest,radius*(.19+.07*wake)));
+    for(int i=0;i<3;++i){
+        float n=float(i),x=n-1.0;
+        vec2 foot=root+vec2(x*radius*.92,.045*extent.y-abs(x)*.012);
+        vec2 knee=mix(hip,foot,.64)+vec2(x*radius*(.10+.16*wake),-.01);
+        body=max(body,seasonStroke(p,hip,knee,radius*.105));
+        body=max(body,seasonStroke(p,knee,foot,radius*.065));
+    }
+    vec3 bark=vec3(.11,.18,.18)*(.68+.22*sin(p.x*73.0+p.y*7.0)+.10*cos(p.x*127.0-p.y*11.0));
+    bark+=vec3(.018,.049,.055)*wake;
+    ink=mix(ink,bark,body);
+    // Unequal antlers stay attached to their two head roots. Their opening
+    // is slow, large and legible; the right crown settles after the left.
+    for(int side=0;side<2;++side){
+        float s=side==0?-1.0:1.0;
+        float open=wake*(side==0?1.0:.87)+.10*attend;
+        vec2 a=head+vec2(s*radius*.20,-radius*.12);
+        vec2 b=head+vec2(s*radius*(.62+.18*open),-radius*(.64+.06*open));
+        vec2 c=head+vec2(s*radius*(.77+.26*open),-radius*(1.15-(side==0?.0:.13)));
+        float antler=max(seasonStroke(p,a,b,radius*.078),seasonStroke(p,b,c,radius*.049));
+        vec2 fork=mix(a,b,.65);
+        antler=max(antler,seasonStroke(p,fork,fork+vec2(-s*radius*.08,-radius*.43),radius*.035));
+        fork=mix(b,c,.48);
+        antler=max(antler,seasonStroke(p,fork,fork+vec2(s*radius*.34,-radius*.19),radius*.031));
+        ink=mix(ink,bark*1.10+vec3(.025,.035,.034),antler);
+    }
+    vec2 q=rotatePoint((p-head)/radius,energy*(-.10*wake+.075*attend));
+    q.x/=1.0+.30*attend;
+    float skull=harvestEllipse(q-vec2(0.0,.01),vec2(.23+.13*wake,.37));
+    float muzzle=harvestEllipse(q-vec2(.025*attend,.28),vec2(.135+.035*attend,.23));
+    float face=shapeMask(min(skull,muzzle)*radius);
+    float ridge=.76+.24*cos(q.x*15.0+q.y*2.0);
+    vec3 bone=mix(bark,vec3(.34,.43,.40)*ridge,wake*.86);
+    ink=mix(ink,bone,face);
+    float brow=min(harvestSegment(q,vec2(-.30,-.06),vec2(-.075,-.015)),
+                   harvestSegment(q,vec2(.075,-.025),vec2(.30,-.11)))-.035;
+    ink=mix(ink,vec3(.026,.044,.048),shapeMask(brow*radius)*wake);
+    float blink=seasonBeat(seconds,16.70,16.79,16.88,17.03);
+    vec2 eyeSize=vec2(.048,.027*mix(1.0,.08,blink));
+    float eyes=min(harvestEllipse(q-vec2(-.16+.018*attend,-.015),eyeSize),
+                   harvestEllipse(q-vec2(.17+.018*attend,-.045),eyeSize));
+    ink=mix(ink,vec3(.57,.86,.69),shapeMask(eyes*radius)*wake);
+    float nose=harvestEllipse(q-vec2(.026,.37),vec2(.080,.042));
+    ink=mix(ink,vec3(.024,.043,.044),shapeMask(nose*radius)*wake);
+    // A quiet chest cavity provides a broad recognition landmark.
+    float voidMask=shapeMask(harvestEllipse((p-chest)/radius-vec2(0.0,.22),vec2(.095,.19))*radius);
+    ink=mix(ink,vec3(.008,.020,.024),voidMask*wake);
+    // A foreground bough covers head then shoulders during recovery rather
+    // than relying on a tiny blink, fog flash or whole-screen fade.
+    float cover=seasonBeat(seconds,19.0,20.7,22.8,23.9);
+    vec2 boughA=vec2(-extent.x*.64,-extent.y*.29);
+    vec2 boughB=vec2(extent.x*(.14+.48*cover),extent.y*(-.55+.43*cover));
+    float bough=seasonStroke(p,boughA,boughB,.029+.034*cover);
+    ink=mix(ink,vec3(.006,.014,.017),bough);
+}
+void seasonKeeper(inout vec3 ink,vec2 p,vec2 extent,float radius,float index,float turn,float cycle){
+    float t=fract(turn-index*.245+.12),seconds=t*24.0;
+    float walkA=smoothstep(.02,.36,t),walkB=smoothstep(.55,.98,t);
+    // Followers queue behind unequal holding marks instead of converging
+    // on the leader's exact stop and drawing their faces through one another.
+    float stop=-.055-index*.11;
+    float x=mix(-.70,stop,walkA)+(.70-stop)*walkB;
+    float gait=t*6.2831853*8.0+index*.9;
+    float moving=1.0-seasonBeat(seconds,7.5,8.6,13.2,14.1);
+    float inspect=seasonBeat(seconds,8.0,9.5,11.8,13.2);
+    float lean=flow*.07*inspect*(index<.5?-1.0:1.0);
+    vec2 centre=vec2(x*extent.x,.23*extent.y-abs(sin(gait))*.032*radius*moving);
+    vec2 q=rotatePoint((p-centre)/radius,lean);
+    // Feet plant alternately; the swing foot follows a low arc. The body
+    // rises twice per stride and settles while the lantern keeps moving.
+    for(int foot=0;foot<2;++foot){
+        float f=float(foot),step=gait+f*3.1415927;
+        vec2 ankle=vec2((f-.5)*.24+.13*cos(step)*moving,.83-.10*max(sin(step),0.0)*moving);
+        float leg=seasonStroke(q,vec2((f-.5)*.22,.58),ankle,.061);
+        float shoe=shapeMask(harvestEllipse(q-ankle-vec2(.055,.015),vec2(.13,.07)));
+        ink=mix(ink,vec3(.20,.12,.066),max(leg,shoe));
+    }
+    float cloak=harvestEllipse(q-vec2(0.0,.25),vec2(.43,.55));
+    cloak=max(cloak,-.18-q.y);
+    float hem=.72+.025*sin(q.x*21.0+cycle+index);
+    cloak=max(cloak,q.y-hem);
+    vec3 coat=index<.5?vec3(.41,.15,.065):index<1.5?vec3(.20,.29,.21):vec3(.37,.20,.27);
+    float folds=.70+.20*cos(q.x*10.0)+.10*clamp(-q.y,0.0,1.0);
+    ink=mix(ink,coat*folds,shapeMask(cloak*radius));
+    // An asymmetric hood and broad pale face keep expressions readable.
+    float hood=harvestEllipse(q-vec2(-.025,-.19),vec2(.44,.42));
+    ink=mix(ink,coat*.69,shapeMask(hood*radius));
+    float face=shapeMask(harvestEllipse(q-vec2(.035,-.15),vec2(.30,.26))*radius);
+    ink=mix(ink,vec3(.76,.65,.46)*(.88+.12*cos(q.x*4.0)),face);
+    vec2 faceQ=q-vec2(.035,-.15);
+    float blink=seasonBeat(seconds,4.0+index*.5,4.10+index*.5,4.18+index*.5,4.35+index*.5);
+    float gaze=.02+.026*inspect;
+    seasonEyes(ink,faceQ,radius,blink,gaze,index>1.5?inspect*.8:0.0);
+    // The arm's held lantern anticipates upward, then recovers more slowly.
+    vec2 hand=vec2(.56,.22-.28*inspect*(.45+.55*flow));
+    float arm=seasonStroke(q,vec2(.26,.08),hand,.067);
+    ink=mix(ink,coat*.80,arm);
+    ink=mix(ink,vec3(.72,.58,.38),shapeMask((length(q-hand)-.075)*radius));
+    float lag=(.025+.08*flow)*sin(gait-.8)*(moving*.8+.2);
+    vec2 lamp=centre+rotatePoint((hand+vec2(lag,.39))*radius,-lean);
+    harvestLantern(ink,p,lamp,radius*.22,.94+.045*sin(cycle*3.0+index));
+    float scarf=boxDistance(rotatePoint(q-vec2(-.13,.16),flow*.08*sin(gait-.6)),vec2(.30,.061));
+    ink=mix(ink,index<.5?vec3(.64,.37,.073):vec3(.63,.18,.075),shapeMask(scarf*radius));
+}
+void seasonWorkshop(inout vec3 ink,vec2 p,vec2 extent,float seconds,float cycle){
+    float r=.17+.28*dotRadius;
+    // The composition is a small open-front workshop, with the action lit
+    // from behind and snow kept in the exterior plane.
+    float amber=exp(-dot(p/vec2(r*2.8,r*2.0),p/vec2(r*2.8,r*2.0)));
+    ink+=vec3(.10,.055,.020)*amber;
+    float cabin=shapeMask(boxDistance(p-vec2(0.0,.015),vec2(r*1.65,r*1.15)));
+    ink=mix(ink,vec3(.14,.076,.041),cabin);
+    float interior=shapeMask(boxDistance(p-vec2(0.0,.015),vec2(r*1.47,r*.99)));
+    vec3 room=vec3(.18,.10,.047)+vec3(.11,.066,.020)*amber;
+    ink=mix(ink,room,interior);
+    float roof=max(abs(p.x)-r*1.89,abs(p.y+r*1.11-abs(p.x)*.16)-r*.12);
+    ink=mix(ink,vec3(.70,.82,.84),shapeMask(roof));
+    float sill=boxDistance(p-vec2(0.0,r*1.17),vec2(r*1.78,r*.11));
+    ink=mix(ink,vec3(.47,.27,.11),shapeMask(sill));
+    // Ceiling decorations live behind the cast. Drawing them last sliced
+    // the maker's tall cap into disconnected red patches in actual output.
+    for(int i=0;i<5;++i){
+        float n=float(i),x=(n-2.0)*r*.52;
+        float evergreen=shapeMask(harvestEllipse(p-vec2(x,-r*.83+.025*cos(n)),vec2(r*.37,r*.11)));
+        ink=mix(ink,vec3(.075,.22,.14),evergreen);
+        float berry=shapeMask((length(p-vec2(x,-r*.81))-r*.035));
+        ink=mix(ink,vec3(.65,.10,.075),berry);
+    }
+    float anticipate=seasonBeat(seconds,3.5,5.8,6.15,6.6);
+    float tap=seasonBeat(seconds,6.25,6.50,6.58,6.95);
+    float surprise=seasonBeat(seconds,6.55,6.85,7.30,8.6);
+    float settle=seasonBeat(seconds,7.4,8.7,10.0,11.8);
+    float activity=.45+.55*flow;
+    vec2 maker=vec2(-r*.48,r*.02);
+    vec2 q=(p-maker)/r;
+    float torso=harvestEllipse(q-vec2(0.0,.35),vec2(.43,.51));
+    ink=mix(ink,vec3(.23,.35,.28)*(.83+.17*cos(q.x*8.0)),shapeMask(torso*r));
+    vec2 head=vec2(.005,-.24-.035*activity*anticipate+.03*tap);
+    float beard=harvestEllipse(q-head-vec2(0.0,.22),vec2(.32,.33));
+    ink=mix(ink,vec3(.73,.79,.73),shapeMask(beard*r));
+    float face=harvestEllipse(q-head,vec2(.29,.255));
+    ink=mix(ink,vec3(.91,.65,.42),shapeMask(face*r));
+    float blink=seasonBeat(seconds,1.60,1.70,1.78,1.94)+seasonBeat(seconds,12.1,12.2,12.3,12.45);
+    seasonEyes(ink,q-head,r,blink,.026*settle,0.0);
+    vec2 hat=q-head-vec2(-.055,-.39);
+    float cone=max(abs(hat.x+.16*hat.y)-(.32+.40*hat.y),max(-.43-hat.y,hat.y-.08));
+    ink=mix(ink,vec3(.57,.075,.073)*(.86+.14*cos(hat.x*6.0)),shapeMask(cone*r));
+    float brim=boxDistance(q-head-vec2(0.0,-.22),vec2(.33,.055));
+    ink=mix(ink,vec3(.86,.86,.71),shapeMask(brim*r));
+    // A shoulder/elbow/hand chain lifts the mallet before the quick contact.
+    vec2 shoulder=vec2(.28,.14),elbow=vec2(.47,.32-.20*anticipate);
+    vec2 hand=vec2(.70,.43-.54*anticipate+.16*tap);
+    float arm=max(seasonStroke(q,shoulder,elbow,.080),seasonStroke(q,elbow,hand,.065));
+    ink=mix(ink,vec3(.30,.45,.33),arm);
+    ink=mix(ink,vec3(.89,.64,.39),shapeMask((length(q-hand)-.085)*r));
+    float handle=seasonStroke(q,hand,hand+vec2(.06,-.29),.022);
+    ink=mix(ink,vec3(.52,.27,.10),handle);
+    vec2 mallet=rotatePoint(q-hand-vec2(.06,-.29),-.13*anticipate);
+    ink=mix(ink,vec3(.72,.45,.18),shapeMask(boxDistance(mallet,vec2(.14,.075))*r));
+    // The toy rotates an exact three turns and comes to rest in its starting
+    // orientation. Its wobble starts AFTER the contact and decays in place.
+    float spin=smoothstep(6.55,11.9,seconds)*18.8495559;
+    vec2 toyCentre=vec2(r*.55,r*.48);
+    vec2 toy=rotatePoint((p-toyCentre)/(r*.25),spin);
+    float toyAngle=atan(toy.y,toy.x),starRadius=.60+.24*cos(toyAngle*5.0);
+    float star=length(toy)-starRadius;
+    ink=mix(ink,vec3(.96,.66,.14),shapeMask(star*r*.25));
+    float spindle=seasonStroke(p,toyCentre+vec2(0.0,-r*.28),toyCentre+vec2(0.0,r*.20),r*.019);
+    ink=mix(ink,vec3(.87,.59,.24),spindle);
+    // A robin visitor watches, startles once, then leans in curiously.
+    vec2 birdCentre=vec2(r*1.12,r*(.50-.13*surprise));
+    vec2 bird=rotatePoint((p-birdCentre)/(r*.27),activity*(.12*surprise-.10*settle));
+    float tail=seasonStroke(bird,vec2(.35,.33),vec2(.89,.02),.17);
+    ink=mix(ink,vec3(.20,.22,.19),tail);
+    float birdBody=shapeMask(harvestEllipse(bird,vec2(.65,.75))*r*.27);
+    ink=mix(ink,vec3(.34,.33,.25),birdBody);
+    float bib=shapeMask(harvestEllipse(bird-vec2(-.18,.17),vec2(.42,.42))*r*.27)*birdBody;
+    ink=mix(ink,vec3(.69,.20,.075),bib);
+    float birdEye=harvestEllipse(bird-vec2(-.26,-.27),vec2(.071,.078*(1.0-.88*seasonBeat(seconds,10.1,10.2,10.3,10.45))));
+    ink=mix(ink,vec3(.016,.024,.027),shapeMask(birdEye*r*.27));
+    float beak=max(abs(bird.y+.03)-.12,max(-.89-bird.x,bird.x+.53));
+    ink=mix(ink,vec3(.84,.55,.19),shapeMask(beak*r*.27));
+    // Table crosses in front of the cast and toy base: no floating contact.
+    float table=boxDistance(p-vec2(0.0,r*.74),vec2(r*1.44,r*.07));
+    ink=mix(ink,vec3(.48,.29,.13),shapeMask(table));
+    float leg=min(boxDistance(p-vec2(-r*1.16,r*.96),vec2(r*.06,r*.20)),
+                  boxDistance(p-vec2(r*1.16,r*.96),vec2(r*.06,r*.20)));
+    ink=mix(ink,vec3(.31,.18,.075),shapeMask(leg));
+}
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern>=19&&pattern<=22){
+        float turn=fract(phase/24.0),seconds=turn*24.0,cycle=turn*6.2831853;
+        float shortAxis=min(1.0,1.0/surfaceAspect);
+        vec2 p=metric/shortAxis,extent=vec2(1.0,1.0/surfaceAspect)/shortAxis;
+        vec2 world=rotatePoint(mappedOutputUv*vec2(max(outputAspect,.1),1.0),angle);
+        vec3 ink=vec3(0.0);float coverage=0.0;
+        if(pattern==22){
+            seasonSnow(ink,coverage,world,turn,cycle);
+            // Return straight alpha: normal/screen/add all retain the dark
+            // transparent sky between flakes rather than filling the panel.
+            color=vec4(ink/max(coverage,.00001),coverage);finishColor();return;
+        }
+        if(pattern==19){
+            seasonForest(ink,p,extent,cycle);
+            seasonCrown(ink,p,extent,seconds,cycle);
+            // Sparse forest lights breathe in fixed groves, never randomize.
+            int count=int(clamp(2.0+floor(density*.065),2.0,7.0));
+            for(int i=0;i<7;++i){
+                if(i>=count)continue;
+                float n=float(i),seed=cellSeed(vec2(n,8.0));
+                vec2 centre=vec2((seed-.5)*extent.x*.83,(.10+seed*.23)*extent.y);
+                centre+=vec2(.018*sin(cycle+n),.012*cos(cycle+n*1.3))*(.35+.65*flow);
+                float r=.011+.026*dotRadius;
+                vec2 grove=(p-centre)/r;
+                float pulse=.76+.24*sin(cycle+n*1.4);
+                // Broad reflected light makes additional groves readable at
+                // mapped-panel scale; the actual source remains restrained.
+                ink+=vec3(.016,.080,.052)*exp(-dot(grove/2.6,grove/2.6))*pulse;
+                float stalk=seasonStroke(p,centre+vec2(0.0,r*.05),centre+vec2(0.0,r*.85),r*.095);
+                ink=mix(ink,vec3(.11,.24,.18)*pulse,stalk);
+                float cap=max(harvestEllipse(grove,vec2(.73,.43)),grove.y-.06);
+                ink=mix(ink,vec3(.25,.53,.35)*pulse,shapeMask(cap*r));
+            }
+        }else if(pattern==20){
+            seasonForest(ink,p,extent,cycle);
+            ink+=vec3(.030,.013,.004)*exp(-pow((p.y/extent.y-.28)/.12,2.0));
+            int count=int(clamp(2.0+floor(density/32.0),2.0,4.0));
+            for(int i=3;i>=0;--i){
+                if(i>=count)continue;
+                float n=float(i),radius=(.115+.24*dotRadius)*(i==0?1.0:i==1?.86:.76);
+                seasonKeeper(ink,p,extent,radius,n,turn,cycle);
+            }
+            // Leaves pass through the foreground on a periodic vertical
+            // path; wrapping is outside the panel plus their full outline.
+            for(int i=0;i<5;++i){
+                float n=float(i),seed=cellSeed(vec2(n,2.0));
+                float presence=clamp((density-4.0)/15.0-n,0.0,1.0);
+                float fall=fract(turn+n*.197),r=.018+.035*dotRadius;
+                vec2 centre=vec2((seed-.5)*extent.x*.83+flow*.04*sin(cycle+n),
+                                 mix(-extent.y*.60-r,extent.y*.60+r,fall));
+                vec2 q=rotatePoint((p-centre)/r,n+(.3+.6*flow)*sin(cycle+n));
+                ink=mix(ink,vec3(.44,.18,.035),shapeMask(harvestMaple(q)*r)*presence*.83);
+            }
+            // Broad trunks conceal the travelers' offscreen reset. They do
+            // not fill the central action or turn the cast into a tiny border.
+            for(int side=0;side<2;++side){
+                float s=side==0?-1.0:1.0;
+                vec2 a=vec2(s*extent.x*.485,extent.y*.54),b=vec2(s*extent.x*.46,-extent.y*.54);
+                ink=mix(ink,vec3(.006,.013,.016),seasonStroke(p,a,b,.042));
+            }
+        }else{
+            vec2 panel=p/extent;
+            ink=vec3(.006,.017,.030)+vec3(.019,.032,.043)*exp(-pow((panel.y-.31)/.18,2.0));
+            seasonSnow(ink,coverage,world,turn,cycle);
+            seasonWorkshop(ink,p,extent,seconds,cycle);
+        }
+        color=vec4(clamp(ink,0.0,1.0),1.0);finishColor();return;
+    }
     if(pattern==16){
         float turn=fract(phase/12.0),seconds=turn*12.0,cycle=turn*6.2831853;
         float shortAxis=min(1.0,1.0/surfaceAspect);

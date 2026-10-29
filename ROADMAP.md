@@ -230,3 +230,17 @@ Merged in [PR #14](https://github.com/TheGamingDonKey/potato-mapper/pull/14) and
 - [x] Real renderer/state regression and visual stage inspection; existing mapping, blending and Dynamic FX checks pass. Performance sampled with visible 1080p output/preview and deformed one/four-layer stress scenes.
 - [x] Final extracted portable entrance/FX checks and actual 0.8.3 launcher update to 0.8.4, managed project reopen, retained prior launcher/runtime and unchanged original project/media. Interrupted download, cancelled restart and incomplete payload checks passed.
 - [x] Publish and verify [0.8.4](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.8.4). Public latest metadata and canonical HTTP 200 download match the 27,070,173-byte final ZIP and SHA256 `6e9ed67bf42522e6a9378554d7203c392c1853365f3599d240efec45db36f915`. Physical projector appearance remains a user check; camera recognition and richer coordinated choreography are deferred.
+
+## 0.9.0 Seasonal Studio — implemented and locally packaged, not publicly released
+
+- [x] Task-oriented Qt UI, compact output controls, four appearance themes and searchable seasonal catalogue with stable IDs.
+- [x] Native Hollow Crown, Lantern Keepers, Midnight Workshop and coherent Shared Snowfall; original ghost helpers retained.
+- [x] Previewed partial-edge connections, opt-in fit, disconnect, translation ties, explicit contour walking and original wizard reactions.
+- [x] Protected v2 format, permanent exact v1 recovery, incompatible rollback handling and external-save conflict detection.
+- [x] Direct launcher package, extracted-runtime regressions and real 0.8.8→0.9.0 upgrade/reopen/rollback checks.
+- [x] Store profile and MakeAppx/schema-validated unsigned local QA package with synthetic identity; user projects excluded.
+- [ ] Real Store publisher identity, signing, installed-package tests, WACK and Partner Center acceptance.
+- [ ] Physical projector and clean-machine acceptance.
+- [ ] Further woodland scenes, more actor editing controls and interior route links.
+
+Evidence and boundaries: [local drop handoff](docs/0.9.0-local-drop.md). Existing public release remains 0.8.8.
