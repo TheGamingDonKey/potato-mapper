@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 31 single-component material proof
+
+Shane authorized one working visual piece, not the full redesign. Branch `codex/surface-material-proof` adds an isolated [surface-menu proof](proofs/surface-material/README.md). It generates the 0.8.8 shell from Git, preserves its arrangement and reuses the existing C++/Qt/OpenGL source without core edits. The menu uses app-rendered sampled frost; it is not verified Windows DWM Acrylic. No additional dependencies were installed. The normal launcher still selects 0.8.8, and personal projects/media are outside the proof session.
+
+Build/run and scoped check instructions are in the proof README. The actual popup was inspected, including its surface-name header, keyboard highlight and Escape dismissal. Focused checks cover pointer-target Delete/Undo/Redo, original temporary media bytes, clean cancellation and unchanged fixed output pixels. This is not a complete keyboard/accessibility or full-UI migration test. No package or public release was made. Next: Shane reviews the visible component and decides whether to authorize extending the material treatment while retaining familiar feature locations.
+
 ## Current handoff — October 29 restoration and design review
 
 Shane rejected the actual 0.9.0/0.9.1 UI and requested the 0.8.8 foundation, a full Windows 11 style specification and an app-specific interaction specification before authorizing another build. The [visual draft](docs/superpowers/specs/2026-10-29-windows11-visual-style.md) and [interaction draft](docs/superpowers/specs/2026-10-29-mapper-interaction.md) are ready for his review. Right-click Delete is a mandatory proposed access fix; neither old nor current source implements it. No redesign code, new executable, package or public release was created for these drafts.
