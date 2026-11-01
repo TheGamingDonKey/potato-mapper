@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 31 complete interface themes installed as 0.9.3
+
+Shane clarified that themes are complete interface designs. Settings → Appearance → Interface theme now offers Classic 1 (tagged 0.8.8 QSS, Material paint/capture bypassed) and refined Material, with old colour choices correctly separated as Material accents. Both retain the current software and familiar layout. [Local handoff, preservation and checks](docs/0.9.3-interface-themes.md). Source branch: `codex/interface-themes`; current 0.9.3, previous 0.9.2, original 0.8.8 retained. No public release/Store certification.
+
+Seven fresh deployed native checks and source/visual review passed; nested live-menu switches and actual restart persistence were inspected. A queued restoration resize regression was corrected without weakening its test. Unsaved actual work was saved separately under `app/Projects/Recovered before interface themes/Unsaved 0.9.2 work.pmap` and reopened after update. Five protected hashes, 96 installed and 96 retained payload hashes passed. Storage about 1.46 GB: reuse the existing build tree and inventory bounded generated cleanup before another full package. Next: Shane's feedback on the full styles; retain current controls and locations.
+
 ## Current handoff — October 31 whole-app material finish installed locally
 
 Shane approved the visible component and explicitly authorized the wider implementation. Version 0.9.2 now applies shared painter material across the native app while restoring the 0.8.8 two-toolbar/left-sidebar/right-canvas layout. Later animations, themes, connections, actors and version 2/3 projects remain supported. See [changes, feature locations, evidence and limits](docs/0.9.2-material-finish.md). Source is on `codex/material-finish`; normal launcher selects 0.9.2, previous selects 0.8.8. No public release or new Store certification is claimed.

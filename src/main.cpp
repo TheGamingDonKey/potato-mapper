@@ -3,6 +3,7 @@
 #include "branding.h"
 #include "updates.h"
 #include "ui.h"
+#include "appearance.h"
 #include "style.h"
 #include "material.h"
 #include "material-menu.h"
@@ -280,13 +281,21 @@ public:
         for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
         fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *settingsMenu=menuBar()->addMenu("Settings");
-        auto *appearanceMenu=settingsMenu->addMenu("Appearance");auto *themeGroup=new QActionGroup(this);themeGroup->setExclusive(true);
-        const auto selectedTheme=PotatoAppearance::themeId(QSettings().value("ui/theme","classic1").toString());
-        for(const auto &entry:QList<QPair<QString,QString>>{{"Classic 1","classic1"},{"Halloween","halloween"},{"Autumn","autumn"},{"Christmas","christmas"}}){
-            auto *themeAction=appearanceMenu->addAction(entry.first);themeAction->setObjectName("theme_"+entry.second);themeAction->setData(entry.second);themeAction->setCheckable(true);themeAction->setChecked(entry.second==selectedTheme);themeGroup->addAction(themeAction);
-            connect(themeAction,&QAction::triggered,this,[this,id=entry.second]{qApp->setStyleSheet(potatoStyle(id));qApp->setProperty("potatoTheme",id);if(!smoke)QSettings().setValue("ui/theme",id);});
+        auto *appearanceMenu=settingsMenu->addMenu("Appearance");
+        auto *interfaceMenu=appearanceMenu->addMenu("Interface theme");interfaceMenu->setObjectName("interfaceThemeMenu");
+        auto *interfaceGroup=new QActionGroup(this);interfaceGroup->setExclusive(true);
+        for(const auto &entry:QList<QPair<QString,QString>>{{"Classic 1 — 0.8.8","classic1"},{"Material — Windows 11","material"}}){
+            auto *interfaceAction=interfaceMenu->addAction(entry.first);interfaceAction->setObjectName("interfaceTheme_"+entry.second);interfaceAction->setData(entry.second);interfaceAction->setCheckable(true);interfaceAction->setChecked(entry.second==qApp->property("potatoInterfaceTheme").toString());interfaceGroup->addAction(interfaceAction);
+            connect(interfaceAction,&QAction::triggered,this,[this,id=entry.second]{applyAppearance({id,qApp->property("potatoTheme").toString()});});
         }
-        appearanceMenu->addSeparator();auto *reduceMotion=appearanceMenu->addAction("Reduce interface motion");reduceMotion->setObjectName("reduceInterfaceMotion");reduceMotion->setCheckable(true);reduceMotion->setChecked(QSettings().value("ui/reducedMotion",false).toBool());reduceMotion->setToolTip("Editor chrome only. These themes are static; scene animations retain their own playback controls.");
+        auto *accentMenu=appearanceMenu->addMenu("Material accent");accentMenu->setObjectName("materialAccentMenu");accentMenu->setToolTipsVisible(true);
+        accentMenu->menuAction()->setToolTip("Colour adjustments for Material. Classic 1 keeps its original 0.8.8 colours and remembers this choice for Material.");
+        auto *accentGroup=new QActionGroup(this);accentGroup->setExclusive(true);
+        for(const auto &entry:QList<QPair<QString,QString>>{{"Original gold","classic1"},{"Halloween","halloween"},{"Autumn","autumn"},{"Christmas","christmas"}}){
+            auto *accentAction=accentMenu->addAction(entry.first);accentAction->setObjectName("theme_"+entry.second);accentAction->setData(entry.second);accentAction->setCheckable(true);accentAction->setChecked(entry.second==qApp->property("potatoTheme").toString());accentAction->setToolTip("Adjusts Material colours. Classic 1 retains the original 0.8.8 style.");accentGroup->addAction(accentAction);
+            connect(accentAction,&QAction::triggered,this,[this,id=entry.second]{applyAppearance({qApp->property("potatoInterfaceTheme").toString(),id});});
+        }
+        appearanceMenu->addSeparator();auto *reduceMotion=appearanceMenu->addAction("Reduce interface motion");reduceMotion->setObjectName("reduceInterfaceMotion");reduceMotion->setCheckable(true);reduceMotion->setChecked(QSettings().value("ui/reducedMotion",false).toBool());reduceMotion->setToolTip("Editor chrome only. These interface styles are static; scene animations retain their own playback controls.");
         qApp->setProperty("potatoReducedMotion",reduceMotion->isChecked());connect(reduceMotion,&QAction::toggled,this,[this](bool reduced){qApp->setProperty("potatoReducedMotion",reduced);if(!smoke)QSettings().setValue("ui/reducedMotion",reduced);});
         auto *specialEvents=settingsMenu->addAction("Special events…",this,[this]{showAnimationBrowser(true);});specialEvents->setObjectName("specialEvents");
         auto *helpMenu=menuBar()->addMenu("Help");
@@ -349,6 +358,48 @@ protected:
     }
     void closeEvent(QCloseEvent *e)override{if(smoke||property("potatoUpdateExit").toBool()||canDiscard()){output->close();e->accept();}else e->ignore();}
 private:
+    quint64 appearanceRevision=0;
+    void applyAppearance(const PotatoAppearance::Preferences &requested){
+        const PotatoAppearance::Preferences preferences{PotatoAppearance::interfaceThemeId(requested.interfaceTheme),PotatoAppearance::accentId(requested.accent)};
+        if(qApp->property("potatoInterfaceTheme").toString()==preferences.interfaceTheme&&qApp->property("potatoTheme").toString()==preferences.accent){
+            if(!smoke){QSettings settings;PotatoAppearance::writePreferences(settings,preferences);}
+            return;
+        }
+        QList<QPair<QPointer<QWidget>,QRect>> windows{{QPointer<QWidget>(this),geometry()}};
+        for(auto *dialog:findChildren<QDialog*>())if(dialog->isVisible())windows.append({QPointer<QWidget>(dialog),dialog->geometry()});
+        QList<QPair<QPointer<QSplitter>,QList<int>>> splitters;
+        for(auto *splitter:findChildren<QSplitter*>())splitters.append({QPointer<QSplitter>(splitter),splitter->sizes()});
+        QList<QPair<QPointer<QScrollBar>,int>> scrolls;
+        for(auto *scroll:findChildren<QScrollBar*>())scrolls.append({QPointer<QScrollBar>(scroll),scroll->value()});
+        const auto revision=++appearanceRevision;
+        auto restoreContext=[this,revision,windows,splitters,scrolls]{
+            if(revision!=appearanceRevision)return;
+            for(const auto &entry:windows)if(entry.first&&!entry.first->isMaximized()&&!entry.first->isFullScreen())entry.first->setGeometry(entry.second);
+            if(layout())layout()->activate();
+            for(const auto &entry:splitters)if(entry.first)entry.first->setSizes(entry.second);
+            for(const auto &entry:scrolls)if(entry.first)entry.first->setValue(entry.second);
+        };
+        // Keep the same widgets and scene; only their editor presentation changes.
+        setUpdatesEnabled(false);
+        qApp->setProperty("potatoInterfaceTheme",preferences.interfaceTheme);
+        qApp->setProperty("potatoTheme",preferences.accent);
+        qApp->setStyleSheet(potatoStyle(preferences.accent,preferences.interfaceTheme));
+        for(auto *action:findChildren<QAction*>()){
+            if(action->objectName().startsWith("interfaceTheme_"))action->setChecked(action->data().toString()==preferences.interfaceTheme);
+            else if(action->objectName().startsWith("theme_"))action->setChecked(action->data().toString()==preferences.accent);
+        }
+        restoreContext();setUpdatesEnabled(true);update();
+        QList<QPair<QPointer<QWidget>,QRect>> settledWindows;
+        for(const auto &entry:windows)if(entry.first)settledWindows.append({entry.first,entry.first->geometry()});
+        // Styles can post layout requests. Preserve scroll after those settle,
+        // while allowing a subsequent resize or move to take precedence.
+        QTimer::singleShot(0,this,[this,revision,settledWindows,restoreContext]{
+            if(revision!=appearanceRevision)return;
+            for(const auto &entry:settledWindows)if(entry.first&&entry.first->geometry()!=entry.second)return;
+            restoreContext();
+        });
+        if(!smoke){QSettings settings;PotatoAppearance::writePreferences(settings,preferences);}
+    }
     enum class EditingTool {Select,Corners,Mesh};
     void setEditingTool(EditingTool tool){
         const QSignalBlocker modeBlock(mode);
@@ -420,7 +471,7 @@ private:
         }
         if(!animationList->currentItem()&&animationList->count())animationList->setCurrentRow(0);
         browserStatus->setText(animationList->count()?QString("%1 installed").arg(animationList->count()):QString("No results"));
-        browserStatus->setToolTip(animationList->count()?QString("%1 installed animations match this search. Select one, then Apply to surface.").arg(animationList->count()):category=="christmas"?QString("No matching Christmas scenes. Try another search. The Christmas editor theme is available in Settings → Appearance."):QString("No matching animations. Try another search or category."));
+        browserStatus->setToolTip(animationList->count()?QString("%1 installed animations match this search. Select one, then Apply to surface.").arg(animationList->count()):category=="christmas"?QString("No matching Christmas scenes. Try another search. A Christmas Material accent is available in Settings → Appearance."):QString("No matching animations. Try another search or category."));
         syncLibrarySelection();applyAnimation->setEnabled(scene.current()&&animationList->currentItem());
     }
     void showAnimationBrowser(bool seasonal=false){
@@ -557,7 +608,8 @@ int main(int argc,char **argv){
     QSurfaceFormat format;format.setVersion(3,3);format.setProfile(QSurfaceFormat::CoreProfile);format.setSwapInterval(1);format.setDepthBufferSize(0);format.setStencilBufferSize(8);QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc,argv);app.setApplicationName("Potato Mapper");app.setOrganizationName("PotatoMapper");app.setApplicationVersion(POTATO_VERSION);app.setWindowIcon(QIcon(":/assets/potato-mapper.png"));
     qInstallMessageHandler(logMessage);app.setStyle("Fusion");
-    const auto theme=PotatoAppearance::themeId(QSettings().value("ui/theme","classic1").toString());app.setStyleSheet(potatoStyle(theme));app.setProperty("potatoTheme",theme);
+    QSettings appearanceSettings;const auto appearance=PotatoAppearance::readPreferences(appearanceSettings);
+    app.setProperty("potatoInterfaceTheme",appearance.interfaceTheme);app.setProperty("potatoTheme",appearance.accent);app.setStyleSheet(potatoStyle(appearance.accent,appearance.interfaceTheme));
     auto args=app.arguments();const bool diagnostic=std::any_of(args.begin(),args.end(),[](const QString &a){return a.startsWith("--smoke")||a.startsWith("--test-")||a=="--profile-media"||a=="--profile-fx"||a=="--check-project"||a=="--seasonal-check";});
     if(args.contains("--check-project")){const int i=args.indexOf("--check-project");Scene scene;QString error;const bool ok=i+1<args.size()&&scene.load(args[i+1],error);qInfo()<<"PROJECT LOAD"<<ok<<"surfaces"<<scene.surfaces.size()<<error;return ok?0:2;}
     QString maintenanceNotice;

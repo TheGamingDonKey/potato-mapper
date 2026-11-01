@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**Current desktop runtime: 0.8.8, restored at Shane's request.** The 0.9.0/0.9.1 interface was rejected. Its source and newer-format projects remain preserved; 0.9.1 is retained for reopening those projects. The proposed replacement keeps the familiar 0.8.8 workflow and adds a Windows 11 material finish. Read the [visual style draft](docs/superpowers/specs/2026-10-29-windows11-visual-style.md) and [interaction draft](docs/superpowers/specs/2026-10-29-mapper-interaction.md). Another redesign requires Shane's explicit authorization. [Development handoff](DEVELOPMENT.md) records the restoration and recovery copy.
+**Local desktop runtime: 0.9.3.** The familiar 0.8.8 layout now supports two complete interface styles: Classic 1 (original 0.8.8 styling) and Material (the approved Windows-inspired finish). Choose **Settings → Appearance → Interface theme**; both retain current mapping, animation, connection and project features. See the [local changes and verification](docs/0.9.3-interface-themes.md). The public download linked below is v0.8.8; this local update has not been publicly released. [Development handoff](DEVELOPMENT.md) records installation and saved-work recovery.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 
