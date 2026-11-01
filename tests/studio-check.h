@@ -1,4 +1,5 @@
 #pragma once
+#include "material-ui-check.h"
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
@@ -12,11 +13,14 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMimeData>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QScreen>
 #include <QSpinBox>
-#include <QTabWidget>
+#include <QDialog>
+#include <QScrollArea>
+#include <QToolButton>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QWheelEvent>
@@ -24,6 +28,8 @@
 // Real native-widget integration check. Only an in-memory scene and disposable
 // files are changed. Keep the existing seasonal/output pixel checks separate:
 // these assertions establish layout and wiring, not artistic acceptance.
+// The historical --smoke-studio flag retains the newer-feature regression
+// coverage while following the restored sidebar and temporary chooser.
 template<class Window> void runStudioChecks(Window &window,QApplication &app,QStringList args){
     QTimer::singleShot(650,&window,[&window,&app,args]{
         window.smoke=true;
@@ -35,8 +41,9 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
             app.processEvents();
         };
         auto bounds=[&](QWidget *widget){return QRect(widget->mapTo(&window,QPoint()),widget->size());};
-        auto visible=[&](QWidget *widget){return widget&&widget->isVisible()&&!widget->visibleRegion().isEmpty()&&window.rect().contains(bounds(widget));};
+        auto visible=[&](QWidget *widget){return widget&&PotatoMaterialUiCheck::visible(widget,widget->window());};
         auto click=[&](QWidget *widget,const QString &label){
+            PotatoMaterialUiCheck::reveal(widget,app);
             require(visible(widget)&&widget->isEnabled(),label+" visible and enabled");
             if(!widget||!widget->isVisible()||!widget->isEnabled())return;
             const QPointF local(widget->rect().center()),global(widget->mapToGlobal(local.toPoint()));
@@ -45,27 +52,28 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
             QApplication::sendEvent(widget,&down);QApplication::sendEvent(widget,&up);app.processEvents();
         };
         auto *sidebar=window.template findChild<QWidget*>("surfaceSidebar");
-        auto *inspector=window.template findChild<QWidget*>("inspectorPanel");
+        auto *inspector=window.template findChild<QScrollArea*>("surfaceInspector");
         auto *browser=window.template findChild<QWidget*>("animationBrowser");
-        auto *stage=window.template findChild<QWidget*>("canvasPanel");
-        auto *tabs=window.template findChild<QTabWidget*>("taskTabs");
+        auto *browserDialog=window.template findChild<QDialog*>("animationBrowserDialog");
+        auto *browse=window.template findChild<QPushButton*>("browseAnimations");
+        auto *openPotatoFx=window.template findChild<QAction*>("openPotatoFx");
+        auto *fxSection=window.template findChild<QWidget*>("fxSection");
+        auto *fxHeading=fxSection?fxSection->template findChild<QToolButton*>("sectionHeading"):nullptr;
+        auto *stage=window.canvas;
         auto *list=window.template findChild<QListWidget*>("surfaceList");
         auto *library=window.template findChild<QListWidget*>("animationLibrary");
         auto *category=window.template findChild<QComboBox*>("animationCategory");
         auto *search=window.template findChild<QLineEdit*>("animationSearch");
         auto *apply=window.template findChild<QPushButton*>("applyAnimation");
-        auto *sceneControls=window.template findChild<QPushButton*>("sceneControls");
         auto *actorPause=window.template findChild<QPushButton*>("actorPause");
         auto *actorSpeed=window.template findChild<QSpinBox*>("actorSpeed");
         auto *actorSize=window.template findChild<QSpinBox*>("actorSize");
         auto *zoom=window.template findChild<QSpinBox*>("canvasZoom");
         auto *fit=window.template findChild<QPushButton*>("fitView");
         auto *editMode=window.template findChild<QComboBox*>("mapEditMode");
-        auto *selectTool=window.template findChild<QPushButton*>("selectTool");
-        auto *cornersTool=window.template findChild<QPushButton*>("cornersTool");
-        auto *meshTool=window.template findChild<QPushButton*>("meshTool");
-        auto *connectTool=window.template findChild<QPushButton*>("canvasConnect");
-        require(sidebar&&inspector&&browser&&stage&&tabs&&list&&library&&category&&search&&apply&&sceneControls&&actorPause&&actorSpeed&&actorSize&&zoom&&fit&&editMode&&selectTool&&cornersTool&&meshTool&&connectTool,"native Studio controls exist");
+        auto *connectTool=window.template findChild<QPushButton*>("connectSurface");
+        auto *actorsSection=window.template findChild<QWidget*>("actorsSection");
+        require(sidebar&&inspector&&browser&&browserDialog&&browse&&openPotatoFx&&fxHeading&&stage&&list&&library&&category&&search&&apply&&actorPause&&actorSpeed&&actorSize&&zoom&&fit&&editMode&&connectTool&&actorsSection,"retained native feature controls exist");
         if(!failures.isEmpty()){finish();return;}
         auto *theme=window.template findChild<QAction*>("theme_classic1");require(theme,"Classic 1 theme action exists");if(theme)theme->trigger();
         auto &scene=window.scene;scene.newProject();scene.setPattern(0,17);scene.dirty=false;
@@ -78,16 +86,17 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
             const bool heightFits=!screen.isValid()||size.height()<=screen.height();
             const bool supportedHeight=heightFits?window.height()==size.height():window.height()>=640&&window.height()<=size.height();
             require(window.width()==size.width()&&supportedHeight,dimensions+(heightFits?" exact fitting size is supported":" oversized height may be constrained by Windows"));
-            require(visible(sidebar)&&visible(stage)&&visible(browser)&&visible(list)&&visible(library),label+" navigation, stage and library visible");
+            require(visible(sidebar)&&visible(stage)&&visible(list)&&visible(inspector),label+" left navigation, inspector and canvas visible");
             require(bounds(sidebar).right()<bounds(stage).left(),label+" navigator sits left of stage");
-            require(bounds(browser).top()>bounds(stage).bottom(),label+" library sits below stage");
-            if(inspector->isVisible())require(visible(inspector)&&bounds(inspector).left()>bounds(stage).right(),label+" inspector sits separately to the right");
-            else require(size.width()<1280,label+" inspector is available at regular sizes");
+            require(sidebar->isAncestorOf(inspector)&&!browserDialog->isVisible(),label+" inspector stays left and library is temporary");
             require(window.canvas->width()>=240&&window.canvas->height()>=170,label+" usable canvas area");
             for(const auto &name:QStringList{"outputDisplays","outputStart","outputStop","blackoutButton"})
                 require(visible(window.template findChild<QWidget*>(name)),label+" visible output control "+name);
-            require(visible(sceneControls)&&visible(actorPause),label+" visible whole-scene transport");
         }
+        fxHeading->setChecked(false);openPotatoFx->trigger();settle(35);
+        require(fxHeading->isChecked()&&visible(fxHeading)&&!browserDialog->isVisible(),"Potato FX toolbar action reveals sidebar FX without opening browser");
+        require(scene.json()==unchanged&&!scene.dirty,"Potato FX sidebar navigation preserves clean mapping");
+        click(browse,"Browse animations");settle(35);require(browserDialog->isVisible()&&visible(library),"Browse opens reachable native library");
         category->setCurrentIndex(category->findData("christmas"));search->setText("no-such-studio-animation-92473");settle(35);
         require(library->count()==0,"impossible search produces an empty library");
         require(window.width()==960,"empty Christmas library does not expand compact window");
@@ -109,6 +118,7 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
         scene.setPattern(0,1);if(library->count())library->setCurrentRow(0);click(apply,"Apply to surface");
         require(scene.current()&&scene.current()->pattern==17,"Apply uses stable ID rather than filtered row");
         scene.undo();require(scene.current()&&scene.current()->pattern==1,"Apply supports Undo");
+        browserDialog->close();settle(35);
 
         // A real drop event must hit the existing mapped surface and preserve
         // its geometry. No synthetic media paths or user's files are involved.
@@ -124,13 +134,44 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
         QDropEvent invalidDrop(centre,Qt::CopyAction,&invalid,Qt::LeftButton,Qt::NoModifier);QApplication::sendEvent(window.canvas,&invalidDrop);
         require(!invalidDrop.isAccepted()&&scene.json()==beforeInvalid,"invalid content drop leaves mapping unchanged");
 
-        editMode->setCurrentIndex(1);require(window.canvas->meshMode&&meshTool->isChecked()&&!selectTool->isChecked(),"Map Edit Mesh synchronizes canvas and toolbar");
-        click(cornersTool,"Corners tool");require(editMode->currentIndex()==0&&!window.canvas->meshMode&&!window.canvas->property("selectionOnly").toBool(),"Corners toolbar synchronizes Map Edit and corner mode");
-        click(selectTool,"Select tool");require(selectTool->isChecked()&&!window.canvas->meshMode&&window.canvas->property("selectionOnly").toBool(),"Select toolbar activates selection-only mode");
-        editMode->setCurrentIndex(1);require(meshTool->isChecked()&&!selectTool->isChecked()&&window.canvas->meshMode&&!window.canvas->property("selectionOnly").toBool(),"Map Edit clears stale Select mode");
+        PotatoMaterialUiCheck::reveal(editMode,app);
+        editMode->setCurrentIndex(1);require(window.canvas->meshMode&&!window.canvas->property("selectionOnly").toBool(),"Map Edit Mesh activates canvas mesh handles");
+        editMode->setCurrentIndex(0);require(!window.canvas->meshMode&&!window.canvas->property("selectionOnly").toBool(),"Corners activates corner editing");
+        editMode->setCurrentIndex(2);require(!window.canvas->meshMode&&window.canvas->property("selectionOnly").toBool(),"Select activates selection-only mode");
+        editMode->setCurrentIndex(1);require(window.canvas->meshMode&&!window.canvas->property("selectionOnly").toBool(),"Map Edit clears stale Select mode");
         require(!connectTool->isCheckable(),"Connect is a command rather than an editing mode");
-        scene.add();click(connectTool,"Connect command");require(tabs->currentIndex()==2&&meshTool->isChecked()&&window.canvas->meshMode,"Connect opens inspector without changing active Mesh tool");scene.undo();
-        require(scene.surfaces.size()==surfaceCount,"temporary connection test surface removed by Undo");click(cornersTool,"Restore Corners tool");
+        scene.add();
+        scene.surfaces[0].corners={{.1,.3},{.3,.3},{.3,.5},{.1,.5}};
+        scene.surfaces[1].corners={{.32,.1},{.62,.1},{.62,.7},{.32,.7}};
+        scene.select(0);scene.touch(true);scene.dirty=false;
+        PotatoMaterialUiCheck::reveal(connectTool,app);require(visible(connectTool)&&connectTool->isEnabled()&&editMode->currentIndex()==1&&window.canvas->meshMode,"opening Connections preserves active Mesh tool");
+        if(auto *fitConnection=window.template findChild<QCheckBox*>("fitConnection"))fitConnection->setChecked(false);
+        const auto beforeConnection=scene.json();
+        const auto leftGeometry=scene.surfaces[0].corners,rightGeometry=scene.surfaces[1].corners;
+        auto answerConnection=[&](QMessageBox::StandardButton answer){
+            bool sawPreview=false,answered=false;QTimer inspect,watchdog;inspect.setSingleShot(true);watchdog.setSingleShot(true);
+            QObject::connect(&inspect,&QTimer::timeout,&window,[&]{
+                auto *dialog=qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+                require(dialog&&dialog->windowTitle()=="Preview connection","Connect button opens real Preview connection confirmation");
+                if(!dialog)return;
+                if(dialog->windowTitle()!="Preview connection"){dialog->reject();return;}
+                sawPreview=true;require(window.canvas->property("connectionPreview").toBool(),"connection geometry preview active during confirmation");
+                auto *button=dialog->button(answer);require(button,"requested confirmation button exists");
+                if(button){answered=true;button->click();}else dialog->reject();
+            });
+            QObject::connect(&watchdog,&QTimer::timeout,&window,[&]{if(auto *dialog=qobject_cast<QMessageBox*>(QApplication::activeModalWidget()))dialog->reject();});
+            inspect.start(120);watchdog.start(1800);click(connectTool,"Connect confirmation command");inspect.stop();watchdog.stop();
+            require(sawPreview&&answered,"native connection confirmation answered");
+            require(!window.canvas->property("connectionPreview").toBool()&&editMode->currentIndex()==1&&window.canvas->meshMode,"confirmation closes preview and preserves active Mesh mode");
+        };
+        answerConnection(QMessageBox::Cancel);
+        require(scene.json()==beforeConnection&&!scene.dirty&&scene.connections.isEmpty(),"Cancel preserves exact clean mapping without creating a link");
+        answerConnection(QMessageBox::Yes);
+        require(scene.connections.size()==1&&scene.hasConnections(0)&&scene.hasConnections(1),"Yes from actual Connect button creates one panel link");
+        require(scene.surfaces[0].corners==leftGeometry&&scene.surfaces[1].corners==rightGeometry,"logical Connect keeps both panel geometries");
+        scene.undo();require(scene.json()==beforeConnection&&scene.connections.isEmpty(),"one Undo restores exact pre-Connect mapping");
+        scene.undo();
+        require(scene.surfaces.size()==surfaceCount,"temporary connection test surface removed by Undo");editMode->setCurrentIndex(0);
 
         window.canvas->setViewZoom(1.75);require(zoom->value()==175,"canvas change synchronizes zoom display");
         zoom->setValue(125);require(qAbs(window.canvas->viewZoom()-1.25)<.001,"zoom control changes canvas");
@@ -139,7 +180,7 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
         QApplication::sendEvent(window.canvas,&wheel);
         require(zoom->value()==qRound(window.canvas->viewZoom()*100),"wheel zoom synchronizes display");
         click(fit,"Fit view");require(zoom->value()==100&&qAbs(window.canvas->viewZoom()-1)<.001,"Fit view resets canvas and zoom display");
-        click(sceneControls,"Scene controls");require(tabs->currentIndex()==3&&tabs->tabText(3)=="Scene","visible Scene controls opens Scene inspector");
+        PotatoMaterialUiCheck::reveal(actorPause,app);require(visible(actorPause)&&sidebar->isAncestorOf(actorsSection),"whole-scene actor controls reachable in sidebar");
         const int originalSpeed=scene.actorSpeed,originalSize=scene.actorSize;
         actorSpeed->setValue(140);require(scene.actorSpeed==140,"whole-scene speed control edits model");
         scene.undo();require(scene.actorSpeed==originalSpeed&&actorSpeed->value()==originalSpeed,"whole-scene speed Undo refreshes control");actorSpeed->setValue(140);
@@ -150,7 +191,7 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
         click(actorPause,"Pause whole-scene actors");const double paused=scene.actorElapsed;const auto pausedDocument=scene.json();scene.dirty=false;settle(100);
         require(!scene.actorsPlaying&&scene.actorElapsed==paused,"Pause freezes actual actor clock");
         require(scene.json()==pausedDocument&&!scene.dirty,"paused timer does not dirty project or settings");
-        QTemporaryDir temp;require(temp.isValid(),"disposable Studio project folder");QString error;
+        QTemporaryDir temp(QDir(potatoInstallRoot()).filePath("studio-check-XXXXXX"));require(temp.isValid(),"disposable feature-check project folder");QString error;
         if(temp.isValid()){
             const auto document=scene.json();const auto path=temp.filePath("studio.pmap");
             require(scene.save(path,error),"save Studio controls: "+error);scene.newProject();
@@ -168,9 +209,9 @@ template<class Window> void runStudioChecks(Window &window,QApplication &app,QSt
             if(snapshot+1<args.size()){
                 const int fixture=args.indexOf("--studio-scene");const auto example=fixture>=0&&fixture+1<args.size()?args[fixture+1]:QDir(QCoreApplication::applicationDirPath()).filePath("examples/Seasonal Studio.pmap");
                 require(scene.load(example,error),"load Studio snapshot example: "+error);
-                scene.select(0);tabs->setCurrentIndex(1);category->setCurrentIndex(category->findData("halloween"));search->clear();
+                scene.select(0);category->setCurrentIndex(category->findData("halloween"));search->clear();
                 if(scene.current())for(int row=0;row<library->count();++row)if(library->item(row)->data(Qt::UserRole).toInt()==scene.current()->pattern){library->setCurrentRow(row);library->scrollToItem(library->item(row),QAbstractItemView::PositionAtCenter);break;}
-                window.resize(1440,1024);settle(150);
+                browserDialog->close();window.resize(1440,1024);PotatoMaterialUiCheck::reveal(window.template findChild<QWidget*>("animationPicker"),app);settle(150);
                 require(QDir().mkpath(QFileInfo(args[snapshot+1]).absolutePath()),"create Studio snapshot folder");
                 const auto canvasFrame=window.canvas->grabFramebuffer();require(canvasFrame.save(args[snapshot+1]+".canvas.png"),"save actual editor framebuffer companion");
                 const auto windowFrame=window.grab().toImage();require(windowFrame.save(args[snapshot+1]),"save actual native Studio snapshot");

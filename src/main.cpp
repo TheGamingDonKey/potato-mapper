@@ -4,12 +4,15 @@
 #include "updates.h"
 #include "ui.h"
 #include "style.h"
+#include "material.h"
+#include "material-menu.h"
 #include "studio-widgets.h"
 #include "distribution.h"
 #include "../tests/appearance-theme-check.h"
 #include "../tests/seasonal-check.h"
 #include "../tests/connections-check.h"
 #include "../tests/studio-check.h"
+#include "../tests/material-ui-check.h"
 #include "dynamic-ui.h"
 #include "projects.h"
 #include "launcher-refresh.h"
@@ -23,6 +26,8 @@
 #include "../tests/entrance-check.h"
 #include <QMenuBar>
 #include <QMenu>
+#include <QDialog>
+#include <QWidgetAction>
 #include <QInputDialog>
 #include <QProgressBar>
 #include <QProcess>
@@ -65,10 +70,7 @@
 #include <QSettings>
 #include <QIcon>
 #include <QActionGroup>
-#include <QTabWidget>
-#include <QTabBar>
 #include <QLineEdit>
-#include <QButtonGroup>
 #include <functional>
 #include <memory>
 
@@ -79,41 +81,43 @@ public:
     Canvas *canvas,*output;
     bool smoke=false;
     explicit MainWindow(){
-        setWindowTitle("Potato Mapper");setMinimumSize(960,640);
+        setWindowTitle("Potato Mapper");setMinimumSize(760,540);
         const auto desktop=screen()->availableGeometry().size();resize(qMin(1280,desktop.width()-48),qMin(800,desktop.height()-48));
-        canvas=new Canvas(&scene,true);output=new Canvas(&scene,false);
+        canvas=new Canvas(&scene,true);canvas->setObjectName("editorCanvas");output=new Canvas(&scene,false);
         output->setWindowTitle("Potato Mapper — Projector");output->setWindowFlag(Qt::FramelessWindowHint);
         output->installEventFilter(this);
-        auto *bar=addToolBar("Project");bar->setObjectName("projectToolbar");bar->setMovable(false);bar->setFloatable(false);bar->setFixedHeight(56);bar->setIconSize({18,18});bar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);bar->setStyleSheet("QToolBar{padding:4px 6px;spacing:4px;} QToolButton{padding:5px 6px;}");bar->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-        auto *brandIcon=new QLabel;brandIcon->setPixmap(QPixmap(":/assets/potato-mapper.png").scaled(28,28,Qt::KeepAspectRatio,Qt::SmoothTransformation));brandIcon->setContentsMargins(8,0,5,0);bar->addWidget(brandIcon);
-        projectTitle=new ElidedLabel;projectTitle->setObjectName("projectTitle");projectTitle->setMinimumWidth(90);projectTitle->setMaximumWidth(300);projectTitle->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Preferred);bar->addWidget(projectTitle);
+        auto *bar=addToolBar("Project");bar->setObjectName("projectToolbar");bar->setMovable(false);bar->setFloatable(false);
+        auto *brandIcon=new QLabel;brandIcon->setPixmap(QPixmap(":/assets/potato-mapper.png").scaled(42,42,Qt::KeepAspectRatio,Qt::SmoothTransformation));bar->addWidget(brandIcon);
+        auto *brandName=new QLabel("Potato Mapper");brandName->setObjectName("brandName");brandName->setStyleSheet("font-size:16px;font-weight:700;color:#f6d396;padding-right:12px;");bar->addWidget(brandName);
         auto action=[this,bar](const QString &name,const QKeySequence &key,std::function<void()> fn){auto *a=bar->addAction(name);if(!key.isEmpty())a->setShortcut(key);connect(a,&QAction::triggered,this,fn);return a;};
         action("New",QKeySequence::New,[this]{if(!canDiscard())return;scene.newProject();refresh();});
-        action("Open",QKeySequence::Open,[this]{open();})->setIcon(studioIcon("open"));action("Save",QKeySequence::Save,[this]{save(false);})->setIcon(studioIcon("save"));
-        action("Save as",QKeySequence("Ctrl+Shift+S"),[this]{save(true);});
-        auto *undoAction=action("Undo",QKeySequence::Undo,[this]{scene.undo();});undoAction->setIcon(studioIcon("undo"));
-        auto *redoAction=action("Redo",QKeySequence::Redo,[this]{scene.redo();});redoAction->setIcon(studioIcon("redo"));
+        action("Open",QKeySequence::Open,[this]{open();});action("Save",QKeySequence::Save,[this]{save(false);});
+        action("Save as",QKeySequence("Ctrl+Shift+S"),[this]{save(true);});bar->addSeparator();
+        action("Undo",QKeySequence::Undo,[this]{scene.undo();});action("Redo",QKeySequence::Redo,[this]{scene.redo();});bar->addSeparator();
         action("+ Surface",QKeySequence("Ctrl+N, S"),[this]{scene.add();});action("Load media",QKeySequence("Ctrl+I"),[this]{loadMedia();});
-        action("Potato FX",{},[this]{showAnimationBrowser();});action("Dynamic FX",{},[this]{showDynamicControls();});bar->addSeparator();
-        auto *outputPanel=new QWidget;outputPanel->setObjectName("outputToolbar");auto *outputRow=new QHBoxLayout(outputPanel);outputRow->setContentsMargins(2,0,5,0);outputRow->setSpacing(5);
-        displays=new QComboBox;displays->setObjectName("outputDisplays");displays->setMinimumWidth(130);displays->setMaximumWidth(180);displays->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);displays->setMinimumContentsLength(13);displays->setToolTip("Projection destination");outputRow->addWidget(displays);
-        startOutputButton=new QPushButton("Start output");startOutputButton->setIcon(studioIcon("play"));startOutputButton->setObjectName("outputStart");startOutputButton->setStyleSheet("padding:7px 10px;");outputRow->addWidget(startOutputButton);
-        stopOutputButton=new QPushButton;stopOutputButton->setIcon(studioIcon("stop"));stopOutputButton->setToolTip("Stop projector output (Esc)");stopOutputButton->setAccessibleName("Stop output");stopOutputButton->setObjectName("outputStop");stopOutputButton->setFixedWidth(34);outputRow->addWidget(stopOutputButton);
-        blackoutButton=new QPushButton("Blackout");blackoutButton->setToolTip("Blackout projector output [B]");blackoutButton->setObjectName("blackoutButton");blackoutButton->setStyleSheet("padding:7px 8px;");blackoutButton->setCheckable(true);outputRow->addWidget(blackoutButton);
-        auto *outputDetailsToggle=new QToolButton;outputDetailsToggle->setIcon(studioIcon("settings"));outputDetailsToggle->setToolTip("Output details and Potato Scan");outputDetailsToggle->setAccessibleName("Output details");outputDetailsToggle->setObjectName("outputDetailsToggle");outputDetailsToggle->setFixedSize(32,34);outputDetailsToggle->setIconSize({20,20});outputDetailsToggle->setStyleSheet("padding:4px;");outputRow->addWidget(outputDetailsToggle);outputPanel->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Fixed);
-        auto *outputDetails=new QWidget(this,Qt::Popup);outputDetails->setObjectName("outputDetails");outputDetails->setMinimumWidth(440);auto *detailsLayout=new QVBoxLayout(outputDetails);detailsLayout->setContentsMargins(14,14,14,14);detailsLayout->setSpacing(12);
-        auto *outputHeading=new QLabel("PROJECTOR OUTPUT");outputHeading->setObjectName("surfaceHeading");detailsLayout->addWidget(outputHeading);
-        outputInfo=new QLabel;outputInfo->setObjectName("outputStatus");outputInfo->setWordWrap(true);detailsLayout->addWidget(outputInfo);
-        auto *displayActions=new QHBoxLayout;auto *refreshButton=new QPushButton("Refresh displays");displayActions->addWidget(refreshButton);
-        auto *settingsButton=new QPushButton("Display settings");displayActions->addWidget(settingsButton);detailsLayout->addLayout(displayActions);
-        auto *displayHelp=new QLabel("Use Windows + P → Extend. Choose the projector in the header. Output on the editor display opens fullscreen; Esc returns to the editor.");displayHelp->setWordWrap(true);detailsLayout->addWidget(displayHelp);
-        connect(outputDetailsToggle,&QToolButton::clicked,this,[outputDetails,outputDetailsToggle]{outputDetails->adjustSize();outputDetails->move(outputDetailsToggle->mapToGlobal(QPoint(outputDetailsToggle->width()-outputDetails->width(),outputDetailsToggle->height()+4)));outputDetails->show();});
-        auto *entranceControls=new QVBoxLayout;entranceControls->setSpacing(8);
+        action("Potato FX",{},[this]{showSidebarSection(fxSection);})->setObjectName("openPotatoFx");
+        action("Dynamic FX",{},[this]{showDynamicControls();});
+        addToolBarBreak();
+        auto *outputBar=addToolBar("Projector output");outputBar->setObjectName("outputToolbar");outputBar->setMovable(false);outputBar->setFloatable(false);
+        auto *outputPanel=new QWidget;outputPanel->setObjectName("outputPanel");auto *outputLayout=new QVBoxLayout(outputPanel);outputLayout->setContentsMargins(4,2,4,2);outputLayout->setSpacing(5);
+        auto *outputRow=new QHBoxLayout;outputRow->setSpacing(8);
+        outputRow->addWidget(new QLabel("PROJECTOR OUTPUT"));
+        displays=new QComboBox;displays->setObjectName("outputDisplays");displays->setMinimumWidth(160);displays->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);outputRow->addWidget(displays,1);
+        auto *refreshButton=new QPushButton("Refresh");refreshButton->setObjectName("outputRefresh");outputRow->addWidget(refreshButton);
+        auto *settingsButton=new QPushButton("Display settings");settingsButton->setObjectName("outputSettings");outputRow->addWidget(settingsButton);
+        outputLayout->addLayout(outputRow);
+        auto *outputControls=new QHBoxLayout;outputControls->setSpacing(8);
+        startOutputButton=new QPushButton("Start output");startOutputButton->setObjectName("outputStart");outputControls->addWidget(startOutputButton);
+        stopOutputButton=new QPushButton("Stop");stopOutputButton->setObjectName("outputStop");outputControls->addWidget(stopOutputButton);
+        blackoutButton=new QPushButton("Blackout  [B]");blackoutButton->setObjectName("blackoutButton");blackoutButton->setCheckable(true);outputControls->addWidget(blackoutButton);
+        outputInfo=new QLabel;outputInfo->setObjectName("outputStatus");outputInfo->setMinimumWidth(0);outputInfo->setWordWrap(true);outputInfo->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);outputControls->addWidget(outputInfo,1);
+        outputLayout->addLayout(outputControls);outputBar->addWidget(outputPanel);outputPanel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Preferred);
+        auto *entranceControls=new QHBoxLayout;entranceControls->setSpacing(8);
         auto *scanLabel=new QLabel("POTATO SCAN");scanLabel->setStyleSheet("color:#91d6d8;font-size:11px;font-weight:600;");entranceControls->addWidget(scanLabel);
         entrancePlay=new QPushButton("Play entrance");entrancePlay->setObjectName("entrancePlay");entrancePlay->setToolTip("Turn off blackout and trace your mapped surfaces, build a scan grid, then reveal their content.");entranceControls->addWidget(entrancePlay);
         entranceSkip=new QPushButton("Skip");entranceSkip->setObjectName("entranceSkip");entranceControls->addWidget(entranceSkip);
         entranceAutomatic=new QCheckBox("On output start");entranceAutomatic->setObjectName("entranceAutomatic");entranceAutomatic->setChecked(QSettings().value("output/entrance",true).toBool());entranceControls->addWidget(entranceAutomatic);
-        entranceInfo=new QLabel("8-second mapping reveal");entranceInfo->setObjectName("entranceInfo");entranceInfo->setStyleSheet("color:#9caab6;font-size:11px;");entranceControls->addWidget(entranceInfo);detailsLayout->addLayout(entranceControls);
+        entranceInfo=new QLabel("8-second mapping reveal");entranceInfo->setObjectName("entranceInfo");entranceInfo->setStyleSheet("color:#9caab6;font-size:11px;");entranceControls->addWidget(entranceInfo,1);outputLayout->addLayout(entranceControls);
         connect(entrancePlay,&QPushButton::clicked,this,[this]{scene.playEntrance();updateOutputStatus();});
         connect(entranceSkip,&QPushButton::clicked,this,[this]{scene.skipEntrance();});
         connect(entranceAutomatic,&QCheckBox::toggled,this,[this](bool enabled){if(!smoke)QSettings().setValue("output/entrance",enabled);});
@@ -127,15 +131,12 @@ public:
         auto *blackShortcut=new QShortcut(QKeySequence("B"),this);connect(blackShortcut,&QShortcut::activated,blackoutButton,&QPushButton::click);
         auto *outBlack=new QShortcut(QKeySequence("B"),output);connect(outBlack,&QShortcut::activated,blackoutButton,&QPushButton::click);
         selectedDisplay=QSettings().value("output/display").toString();
-        auto *split=new QSplitter;split->setObjectName("editorSplitter");split->setHandleWidth(6);split->setChildrenCollapsible(false);
-        auto *editorRoot=new QWidget;auto *editorLayout=new QVBoxLayout(editorRoot);editorLayout->setContentsMargins(0,0,0,0);editorLayout->setSpacing(0);
-        auto *header=new QWidget;header->setObjectName("projectHeader");header->setFixedHeight(56);auto *headerLayout=new QHBoxLayout(header);headerLayout->setContentsMargins(0,0,5,0);headerLayout->setSpacing(3);removeToolBar(bar);headerLayout->addWidget(bar,1);bar->show();headerLayout->addWidget(outputPanel);editorLayout->addWidget(header);editorLayout->addWidget(split,1);setCentralWidget(editorRoot);
-        auto *panel=new QWidget;panel->setObjectName("surfaceSidebar");panel->setMinimumWidth(180);panel->setMaximumWidth(420);
-        auto *layout=new QVBoxLayout(panel);layout->setContentsMargins(5,8,5,8);layout->setSpacing(6);
-        auto *surfaceHeadingRow=new QHBoxLayout;auto *surfaceHeading=new QLabel("SURFACES");surfaceHeading->setObjectName("surfaceHeading");surfaceHeadingRow->addWidget(surfaceHeading,1);
-        auto *addSurface=new QPushButton("Surface");addSurface->setObjectName("addSurface");addSurface->setIcon(studioIcon("add"));connect(addSurface,&QPushButton::clicked,this,[this]{scene.add();});surfaceHeadingRow->addWidget(addSurface);layout->addLayout(surfaceHeadingRow);
+        auto *split=new QSplitter;split->setObjectName("editorSplitter");split->setHandleWidth(6);split->setChildrenCollapsible(false);setCentralWidget(split);
+        auto *panel=new QWidget;panel->setObjectName("surfaceSidebar");panel->setMinimumWidth(260);panel->setMaximumWidth(600);
+        auto *layout=new QVBoxLayout(panel);layout->setContentsMargins(12,12,8,12);layout->setSpacing(8);
+        auto *surfaceHeading=new QLabel("SURFACES");surfaceHeading->setObjectName("surfaceHeading");surfaceHeading->setStyleSheet("font-weight:600;color:#90a8b5;");layout->addWidget(surfaceHeading);
         list=new QListWidget;list->setObjectName("surfaceList");list->setContextMenuPolicy(Qt::CustomContextMenu);list->setToolTip("Right-click a surface for media actions. Double-click to rename.");
-        list->setTextElideMode(Qt::ElideMiddle);list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);list->setMinimumHeight(100);list->setSpacing(0);list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);list->setItemDelegate(new StudioSurfaceDelegate(list));list->viewport()->installEventFilter(this);layout->addWidget(list,1);
+        list->setTextElideMode(Qt::ElideMiddle);list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);list->setMinimumHeight(100);list->setMaximumHeight(190);layout->addWidget(list,1);
         connect(list,&QListWidget::currentRowChanged,this,[this](int row){scene.select(row);});
         connect(list,&QListWidget::customContextMenuRequested,this,[this](const QPoint &pos){const auto *item=list->itemAt(pos);if(item)surfaceMenu(list->row(item),list->viewport()->mapToGlobal(pos));});
         connect(list,&QListWidget::itemDoubleClicked,this,[this]{renameSelected();});
@@ -143,23 +144,17 @@ public:
         auto *surfaceButtons=new QHBoxLayout;
         auto button=[this](const QString &text,std::function<void()> fn){auto *b=new QPushButton(text);connect(b,&QPushButton::clicked,this,fn);return b;};
         surfaceButtons->addWidget(button("Duplicate",[this]{if(auto *s=scene.current()){scene.checkpoint();Surface copy=*s;copy.id=QUuid::createUuid().toString(QUuid::WithoutBraces);copy.name+=" copy";for(auto &p:copy.corners)p+=QPointF(.025,.025);scene.surfaces.append(copy);scene.selected=int(scene.surfaces.size())-1;scene.touch(true);}}));
-        surfaceButtons->addWidget(button("Delete",[this]{if(scene.current()){scene.checkpoint();scene.surfaces.removeAt(scene.selected);scene.selected=std::min(scene.selected,int(scene.surfaces.size())-1);scene.touch(true);}}));
+        surfaceButtons->addWidget(button("Delete",[this]{deleteSelectedSurface();}));
         auto *orderButtons=surfaceButtons;
         orderButtons->addWidget(button("Back",[this]{int i=scene.selected;if(i>0){scene.checkpoint();scene.surfaces.swapItemsAt(i,i-1);scene.selected--;scene.touch(true);}}));
         orderButtons->addWidget(button("Forward",[this]{int i=scene.selected;if(i>=0&&i+1<scene.surfaces.size()){scene.checkpoint();scene.surfaces.swapItemsAt(i,i+1);scene.selected++;scene.touch(true);}}));
-        const QStringList surfaceIcons{"duplicate","trash","undo","redo"};
-        for(int i=0;i<surfaceButtons->count();++i){auto *b=qobject_cast<QPushButton*>(surfaceButtons->itemAt(i)->widget());b->setProperty("compactSurface",true);b->setToolTip(b->text());b->setAccessibleName(b->text());b->setIcon(studioIcon(surfaceIcons.at(i)));b->setText({});b->setFixedWidth(35);}layout->addLayout(surfaceButtons);
-        visible=new QCheckBox("Visible");locked=new QCheckBox("Lock position");auto *flags=new QHBoxLayout;flags->addWidget(visible);flags->addWidget(locked);
+        const QStringList surfaceButtonNames{"duplicateSurfaceButton","deleteSurfaceButton","layerBackButton","layerForwardButton"};
+        for(int i=0;i<surfaceButtons->count();++i){auto *b=surfaceButtons->itemAt(i)->widget();b->setProperty("compactSurface",true);b->setObjectName(surfaceButtonNames.at(i));}layout->addLayout(surfaceButtons);
+        visible=new QCheckBox("Visible");visible->setObjectName("surfaceVisible");locked=new QCheckBox("Lock position");locked->setObjectName("surfaceLocked");auto *flags=new QHBoxLayout;flags->addWidget(visible);flags->addWidget(locked);layout->addLayout(flags);
         connect(visible,&QCheckBox::toggled,this,[this](bool v){if(auto *s=scene.current()){scene.checkpoint();s->visible=v;scene.touch(true);}});
         connect(locked,&QCheckBox::toggled,this,[this](bool v){if(auto *s=scene.current()){scene.checkpoint();s->locked=v;scene.touch(true);}});
-        auto *inspectorPanel=new QWidget;inspectorPanel->setObjectName("inspectorPanel");inspectorPanel->setMinimumWidth(250);inspectorPanel->setMaximumWidth(420);auto *inspectorLayout=new QVBoxLayout(inspectorPanel);inspectorLayout->setContentsMargins(10,10,10,8);inspectorLayout->setSpacing(10);
-        auto *inspectorHeading=new QLabel("INSPECTOR");inspectorHeading->setObjectName("surfaceHeading");inspectorLayout->addWidget(inspectorHeading);
-        taskSurface=new ElidedLabel;taskSurface->setObjectName("taskSurface");inspectorLayout->addWidget(taskSurface);
-        contentPreview=new QLabel;contentPreview->setObjectName("contentPreview");contentPreview->setAlignment(Qt::AlignCenter);contentPreview->setFixedHeight(116);contentPreview->setMinimumWidth(0);contentPreview->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);inspectorLayout->addWidget(contentPreview);
-        contentTitle=new ElidedLabel;contentTitle->setObjectName("contentTitle");inspectorLayout->addWidget(contentTitle);
-        tasks=new QTabWidget;tasks->setObjectName("taskTabs");tasks->tabBar()->setStyleSheet("QTabBar::tab{padding:9px 5px;min-width:0px;}");inspectorLayout->addWidget(tasks,1);
-        auto *details=new QWidget;auto *detailLayout=new QVBoxLayout(details);detailLayout->setContentsMargins(0,0,6,0);detailLayout->setSpacing(10);
-        mediaSection=new InspectorSection("Media");detailLayout->addWidget(mediaSection);auto *mediaLayout=mediaSection->content;
+        auto *details=new QWidget;details->setObjectName("sidebarDetails");auto *detailLayout=new QVBoxLayout(details);detailLayout->setContentsMargins(0,0,6,0);detailLayout->setSpacing(10);
+        mediaSection=new InspectorSection("Media");mediaSection->setObjectName("mediaSection");detailLayout->addWidget(mediaSection);auto *mediaLayout=mediaSection->content;
         mediaLabel=new ElidedLabel;mediaLabel->setStyleSheet("color:#b9c5cd;");mediaLayout->addWidget(mediaLabel);
         auto *mediaActions=new QHBoxLayout;
         mediaActions->addWidget(button("Load media…",[this]{loadMedia();}));
@@ -172,7 +167,7 @@ public:
         connect(seek,&QSlider::sliderReleased,this,[this]{if(auto *m=selectedMedia();m&&m->player)m->player->setPosition(m->player->duration()*seek->value()/1000);});
         mute=new QCheckBox("Mute audio");mute->setChecked(true);videoLayout->addWidget(mute);
         connect(mute,&QCheckBox::toggled,this,[this](bool v){if(auto *m=selectedMedia();m&&m->audio)m->audio->setMuted(v);});
-        auto *appearance=new InspectorSection("Surface appearance");appearance->heading->setChecked(false);detailLayout->addWidget(appearance);
+        auto *appearance=new InspectorSection("Appearance");appearance->setObjectName("appearanceSection");detailLayout->addWidget(appearance);
         auto appearanceControl=[this,appearance](const QString &name,QSlider *&slider,QLabel *&value){
             auto *row=new QHBoxLayout;auto *label=new QLabel(name);label->setMinimumWidth(64);row->addWidget(label);
             slider=new QSlider(Qt::Horizontal);slider->setMinimumWidth(60);slider->setObjectName(name.toLower()+"Slider");slider->setRange(0,100);slider->setValue(100);slider->setAccessibleName(name);row->addWidget(slider,1);
@@ -190,100 +185,82 @@ public:
         blendPicker->setToolTip("Normal covers lower layers. Screen and Add keep black transparent over other surfaces; Add can reach white more quickly.");
         connect(blendPicker,&QComboBox::currentIndexChanged,this,[this](int index){scene.setBlend(scene.selected,index);});
         resetAppearance=button("Reset appearance",[this]{scene.resetAppearance(scene.selected);});resetAppearance->setObjectName("resetAppearanceButton");appearance->content->addWidget(resetAppearance);
-        fxSection=new InspectorSection("Potato FX");detailLayout->addWidget(fxSection);
-        auto *scope=new QLabel("This surface · media or built-in animation");scope->setObjectName("scopeLabel");scope->setWordWrap(true);fxSection->content->addWidget(scope);
-        auto *fxForm=new QFormLayout;patternPicker=new QComboBox;patternPicker->setObjectName("animationPicker");for(int id=0;id<potatoPatterns().size();++id)patternPicker->addItem(potatoPatterns().at(id),id);patternPicker->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);patternPicker->setMinimumContentsLength(8);fxForm->addRow("Animation",patternPicker);fxSection->content->addLayout(fxForm);
+        fxSection=new InspectorSection("Potato FX");fxSection->setObjectName("fxSection");fxSection->heading->setChecked(false);detailLayout->addWidget(fxSection);
+        auto *fxForm=new QFormLayout;patternPicker=new QComboBox;patternPicker->setObjectName("animationPicker");for(int id=0;id<potatoPatterns().size();++id)patternPicker->addItem(potatoPatterns().at(id),id);patternPicker->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);patternPicker->setMinimumContentsLength(12);fxForm->addRow("Animation",patternPicker);fxSection->content->addLayout(fxForm);
         connect(patternPicker,&QComboBox::currentIndexChanged,this,[this](int index){if(index>=0)scene.setPattern(scene.selected,patternPicker->itemData(index).toInt());});
         auto *browseButton=button("Browse animations…",[this]{showAnimationBrowser();});browseButton->setObjectName("browseAnimations");fxSection->content->addWidget(browseButton);
-        browserSection=new InspectorSection("Library");browserSection->setObjectName("animationBrowser");browserSection->heading->hide();browserSection->setMinimumHeight(176);
-        auto *libraryBar=new QHBoxLayout;auto *libraryHeading=new QLabel("LIBRARY");libraryHeading->setObjectName("surfaceHeading");libraryBar->addWidget(libraryHeading);
-        animationSearch=new QLineEdit;animationSearch->setObjectName("animationSearch");animationSearch->setPlaceholderText("Search content…");animationSearch->setClearButtonEnabled(true);animationSearch->setAccessibleName("Search animations");animationSearch->setMaximumWidth(280);libraryBar->addWidget(animationSearch,1);
-        animationCategory=new QComboBox;animationCategory->setObjectName("animationCategory");animationCategory->setAccessibleName("Animation category");
-        for(const auto &entry:QList<QPair<QString,QString>>{{"All","all"},{"Patterns","patterns"},{"Autumn","autumn"},{"Halloween","halloween"},{"Christmas","christmas"}})animationCategory->addItem(entry.first,entry.second);libraryBar->addWidget(animationCategory);
-        browserStatus=new QLabel;browserStatus->setObjectName("browserStatus");browserStatus->setMinimumWidth(0);browserStatus->setMaximumWidth(120);browserStatus->setMaximumHeight(34);browserStatus->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);libraryBar->addWidget(browserStatus,1);
-        applyAnimation=button("Apply to surface",[this]{if(auto *item=animationList->currentItem())scene.setPattern(scene.selected,item->data(Qt::UserRole).toInt());});applyAnimation->setObjectName("applyAnimation");applyAnimation->setIcon(studioIcon("add"));libraryBar->addWidget(applyAnimation);browserSection->content->addLayout(libraryBar);
-        animationList=new StudioLibraryWidget;animationList->setObjectName("animationLibrary");animationList->setMinimumHeight(90);animationList->setViewMode(QListView::IconMode);animationList->setItemDelegate(new StudioLibraryDelegate(animationList));animationList->setIconSize({160,90});animationList->setGridSize({178,124});animationList->setResizeMode(QListView::Adjust);animationList->setMovement(QListView::Static);animationList->setWrapping(false);animationList->setFlow(QListView::LeftToRight);animationList->setWordWrap(false);animationList->setTextElideMode(Qt::ElideRight);animationList->setSpacing(4);animationList->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);animationList->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);animationList->setDragEnabled(true);animationList->setDragDropMode(QAbstractItemView::DragOnly);browserSection->content->addWidget(animationList,1);
-        connect(animationSearch,&QLineEdit::textChanged,this,[this]{filterAnimations();});connect(animationCategory,&QComboBox::currentIndexChanged,this,[this]{filterAnimations();});
-        connect(animationList,&QListWidget::currentRowChanged,this,[this]{applyAnimation->setEnabled(scene.current()&&animationList->currentItem());});filterAnimations();
         patternControls=new QWidget;patternControls->setObjectName("patternControls");auto *patternForm=new QFormLayout(patternControls);patternForm->setContentsMargins(0,0,0,0);
         patternSpeed=new QSpinBox;patternSpeed->setRange(0,300);patternSpeed->setSuffix(" %");patternSpeed->setSingleStep(10);patternForm->addRow("Speed",patternSpeed);
         patternSize=new QSpinBox;patternSize->setObjectName("patternSize");patternSize->setRange(5,45);patternSize->setSuffix(" %");patternSizeLabel=new QLabel("Dot size");patternForm->addRow(patternSizeLabel,patternSize);
         patternSpeed->setObjectName("patternSpeed");
-        auto *advancedFx=new InspectorSection("More controls");advancedFx->heading->setChecked(false);auto *advancedForm=new QFormLayout;advancedForm->setContentsMargins(0,0,0,0);advancedFx->content->addLayout(advancedForm);
-        auto fxSpin=[advancedForm](const QString &label,const QString &id,int min,int max){auto *spin=new QSpinBox;spin->setRange(min,max);spin->setObjectName(id);advancedForm->addRow(label,spin);return spin;};
+        auto fxSpin=[patternForm](const QString &label,const QString &id,int min,int max){auto *spin=new QSpinBox;spin->setRange(min,max);spin->setObjectName(id);patternForm->addRow(label,spin);return spin;};
         patternDensity=fxSpin("Density","patternDensity",4,80);patternDensity->setToolTip("Pattern density. Higher values add finer or more closely spaced detail; adjust size or line width separately.");
         patternFlow=fxSpin("Flow","patternFlow",0,100);patternFlow->setSuffix(" %");patternFlow->setToolTip("Amount of variation in the flowing cell effects.");
         patternAngle=fxSpin("Angle","patternAngle",-180,180);patternAngle->setSuffix(" °");
-        patternPalette=new QComboBox;patternPalette->setObjectName("patternPalette");patternPalette->addItems({"Original palette","White","Cyan","Purple","Amber","Mint"});advancedForm->addRow("Colour",patternPalette);
+        patternPalette=new QComboBox;patternPalette->setObjectName("patternPalette");patternPalette->addItems({"Original palette","White","Cyan","Purple","Amber","Mint"});patternForm->addRow("Colour",patternPalette);
         patternEdge=fxSpin("Soft edge","patternEdge",0,25);patternEdge->setSuffix(" %");patternEdge->setToolTip("Optional fade near the mapped boundary. 0% keeps the whole surface active.");
-        patternReverse=new QCheckBox("Reverse movement");patternReverse->setObjectName("patternReverse");advancedForm->addRow(patternReverse);
+        patternReverse=new QCheckBox("Reverse movement");patternReverse->setObjectName("patternReverse");patternForm->addRow(patternReverse);
         auto updateLook=[this]{if(auto *s=scene.current();s&&s->pattern){auto look=s->fx;look.density=patternDensity->value();look.flow=patternFlow->value();look.angle=patternAngle->value();look.palette=patternPalette->currentIndex();look.edge=patternEdge->value();look.reverse=patternReverse->isChecked();scene.setFxLook(scene.selected,look);}};
         for(auto *spin:{patternDensity,patternFlow,patternAngle,patternEdge})connect(spin,qOverload<int>(&QSpinBox::valueChanged),this,[updateLook](int){updateLook();});
         connect(patternPalette,&QComboBox::currentIndexChanged,this,[updateLook](int){updateLook();});connect(patternReverse,&QCheckBox::toggled,this,[updateLook](bool){updateLook();});
-        patternPause=new QCheckBox("Pause animation");patternPause->setObjectName("patternPause");patternForm->addRow(patternPause);patternForm->addRow(advancedFx);fxSection->content->addWidget(patternControls);
+        patternPause=new QCheckBox("Pause animation");patternPause->setObjectName("patternPause");patternForm->addRow(patternPause);fxSection->content->addWidget(patternControls);
         connect(patternSpeed,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSpeed=v;scene.touch();}});
         connect(patternSize,&QSpinBox::valueChanged,this,[this](int v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternSize=v;scene.touch();}});
         connect(patternPause,&QCheckBox::toggled,this,[this](bool v){if(auto *s=scene.current();s&&s->pattern){scene.checkpoint();s->patternPlaying=!v;scene.touch();}});
-        dynamicSection=new DynamicPanel(&scene);
-        // Content selection and its playback controls come before secondary adjustments.
-        detailLayout->removeWidget(fxSection);detailLayout->insertWidget(0,fxSection);fxSection->heading->hide();scope->hide();
-        inspectorLayout->removeWidget(contentPreview);inspectorLayout->removeWidget(contentTitle);detailLayout->insertWidget(0,contentTitle);detailLayout->insertWidget(0,contentPreview);
-        if(auto *label=fxForm->labelForField(patternPicker)){fxForm->removeWidget(label);label->deleteLater();}fxForm->removeWidget(patternPicker);advancedForm->insertRow(0,"Animation",patternPicker);browseButton->setText("Replace from library…");browseButton->setIcon(studioIcon("library"));
-        auto *mapDetails=new QWidget;auto *mapLayout=new QVBoxLayout(mapDetails);mapLayout->setContentsMargins(0,0,6,0);mapLayout->setSpacing(10);
-        auto *mapping=new InspectorSection("Mapping");mapLayout->addWidget(mapping);mapping->content->addLayout(flags);auto *form=new QFormLayout;
-        mode=new QComboBox;mode->setObjectName("mapEditMode");mode->addItems({"Corners","Mesh points"});form->addRow("Edit",mode);
-        connect(mode,&QComboBox::currentIndexChanged,this,[this](int i){setEditingTool(i==1?EditingTool::Mesh:EditingTool::Corners);});
+        dynamicSection=new DynamicPanel(&scene);dynamicSection->setObjectName("dynamicPanel");detailLayout->addWidget(dynamicSection);
+        auto *mapping=new InspectorSection("Mapping");mapping->setObjectName("mappingSection");mapping->heading->setChecked(false);detailLayout->addWidget(mapping);auto *form=new QFormLayout;
+        mode=new QComboBox;mode->setObjectName("mapEditMode");mode->addItems({"Corners","Mesh points","Select"});form->addRow("Edit",mode);
+        connect(mode,&QComboBox::currentIndexChanged,this,[this](int i){setEditingTool(i==1?EditingTool::Mesh:i==2?EditingTool::Select:EditingTool::Corners);});
         subdivisions=new QSpinBox;subdivisions->setRange(1,16);subdivisions->setSuffix(" × "+QString::number(2)+" cells");form->addRow("Grid",subdivisions);
         connect(subdivisions,&QSpinBox::valueChanged,this,[this](int n){if(auto *s=scene.current();s&&!s->locked){scene.checkpoint();Surface candidate=*s;candidate.subdivide(n);if(candidate.valid()){*s=candidate;scene.touch(true);}else refresh();}});
         fit=new QComboBox;fit->addItems({"Stretch","Fit whole image","Fill / crop"});form->addRow("Media",fit);
         connect(fit,&QComboBox::currentIndexChanged,this,[this](int i){if(auto *s=scene.current()){scene.checkpoint();s->fit=i;scene.touch();}});mapping->content->addLayout(form);
         auto *resetButtons=new QHBoxLayout;
         resetButtons->addWidget(button("Reset mesh",[this]{if(auto *s=scene.current();s&&!s->locked){scene.checkpoint();s->resetMesh();scene.touch();}}));
-        resetButtons->addWidget(button("Fit view",[this]{canvas->resetView();}));mapping->content->addLayout(resetButtons);
-        auto *help=new QLabel("Drag corners to match your surface.\nDrag inside to move. Wheel zooms; middle mouse pans.\nArrow keys nudge; Shift moves 10 pixels.\nEsc closes projector output.");help->setWordWrap(true);help->setObjectName("canvasHint");mapping->content->addWidget(help);mapLayout->addStretch();detailLayout->addStretch();
-        auto makeScroll=[](QWidget *contents){auto *scroll=new QScrollArea;scroll->setWidget(contents);scroll->setWidgetResizable(true);scroll->setFrameShape(QFrame::NoFrame);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);scroll->setMinimumHeight(90);return scroll;};
-        tasks->addTab(makeScroll(mapDetails),"Map");
-        inspector=makeScroll(details);inspector->setObjectName("surfaceInspector");tasks->addTab(inspector,"Content");
-        auto *connectionDetails=new QWidget;auto *connectionLayout=new QVBoxLayout(connectionDetails);connectionLayout->setContentsMargins(2,8,6,0);
-        auto *connectionIntro=new QLabel("Join nearby surface edges, then let a skeleton walk their boundary. Connections keep each surface's content.");connectionIntro->setWordWrap(true);connectionLayout->addWidget(connectionIntro);
+        auto *fitView=button("Fit view",[this]{canvas->resetView();});fitView->setObjectName("fitView");resetButtons->addWidget(fitView);mapping->content->addLayout(resetButtons);
+        auto *help=new QLabel("Drag handles to map • drag inside to move\nWheel: zoom • middle mouse: pan\nArrow keys: nudge • Shift: 10 pixels\nEsc: close projector output");help->setWordWrap(true);help->setStyleSheet("color:#90a0ae;font-size:11px;margin-top:4px;");mapping->content->addWidget(help);
+        auto *zoomRow=new QHBoxLayout;zoomRow->addWidget(new QLabel("Zoom"));
+        auto *zoomOut=button("−",[this]{canvas->setViewZoom(canvas->viewZoom()/1.2);});zoomOut->setObjectName("canvasZoomOut");zoomOut->setToolTip("Zoom out");zoomRow->addWidget(zoomOut);
+        zoomPercent=new QSpinBox;zoomPercent->setObjectName("canvasZoom");zoomPercent->setRange(25,800);zoomPercent->setSuffix(" %");zoomPercent->setValue(100);zoomPercent->setAccessibleName("Canvas zoom");zoomRow->addWidget(zoomPercent,1);
+        auto *zoomIn=button("+",[this]{canvas->setViewZoom(canvas->viewZoom()*1.2);});zoomIn->setObjectName("canvasZoomIn");zoomIn->setToolTip("Zoom in");zoomRow->addWidget(zoomIn);mapping->content->addLayout(zoomRow);
+        connect(zoomPercent,&QSpinBox::valueChanged,this,[this](int value){canvas->setViewZoom(value/100.0);});connect(canvas,&Canvas::viewChanged,this,[this](double value){QSignalBlocker block(zoomPercent);zoomPercent->setValue(qRound(value*100));});
+        setEditingTool(EditingTool::Corners);
+        // Later capabilities follow the original sidebar sections, preserving
+        // the familiar 0.8.8 control order and the full canvas workspace.
+        connectionsSection=new InspectorSection("Connections");connectionsSection->setObjectName("connectionsSection");connectionsSection->heading->setChecked(false);detailLayout->addWidget(connectionsSection);auto *connectionLayout=connectionsSection->content;
+        auto *connectionIntro=new QLabel("Join nearby surface edges. Connections keep each surface's content.");connectionIntro->setWordWrap(true);connectionLayout->addWidget(connectionIntro);
         connectionInfo=new QLabel;connectionInfo->setObjectName("connectionDescription");connectionInfo->setWordWrap(true);connectionLayout->addWidget(connectionInfo);
         fitConnection=new QCheckBox("Fit selected edge");fitConnection->setObjectName("fitConnection");fitConnection->setToolTip("Off keeps mapped positions. Fit may move, rotate and resize this surface to match the proposed edge; the confirmation shows what will change.");connectionLayout->addWidget(fitConnection);
         auto *connectionActions=new QHBoxLayout;connectButton=button("Connect…",[this]{connectSelected();});connectButton->setObjectName("connectSurface");connectionActions->addWidget(connectButton);
         disconnectButton=button("Disconnect",[this]{scene.disconnectSurface(scene.selected);});disconnectButton->setObjectName("disconnectSurface");connectionActions->addWidget(disconnectButton);connectionLayout->addLayout(connectionActions);
         tieConnections=new QCheckBox("Tie group while moving");tieConnections->setObjectName("tieConnections");connectionLayout->addWidget(tieConnections);connect(tieConnections,&QCheckBox::toggled,this,[this](bool tied){scene.setConnectionsTied(scene.selected,tied);});
-        boundaryActors=new QCheckBox("Walking skeleton");boundaryActors->setObjectName("boundaryActors");connectionLayout->addWidget(boundaryActors);connect(boundaryActors,&QCheckBox::toggled,this,[this](bool enabled){scene.setBoundaryActors(enabled);});
-        wizardActors=new QCheckBox("Original wizard duel");wizardActors->setObjectName("wizardActors");connectionLayout->addWidget(wizardActors);connect(wizardActors,&QCheckBox::toggled,this,[this](bool enabled){scene.setWizardActors(enabled);});
-        auto *actorScope=new QLabel("Scene-wide actors · skeleton follows mapped boundaries; wizards duel on mapped surfaces. Projector output uses the same scene clock.");actorScope->setObjectName("scopeLabel");actorScope->setWordWrap(true);connectionLayout->addWidget(actorScope);connectionLayout->addStretch();tasks->addTab(makeScroll(connectionDetails),"Connections");
-        auto *sceneDetails=new QWidget;auto *sceneLayout=new QVBoxLayout(sceneDetails);sceneLayout->setContentsMargins(0,0,6,0);sceneLayout->addWidget(dynamicSection);
-        auto *actorSection=new InspectorSection("Whole scene actors");sceneLayout->addWidget(actorSection);auto *actorForm=new QFormLayout;
-        actorSpeed=new QSpinBox;actorSpeed->setObjectName("actorSpeed");actorSpeed->setRange(10,300);actorSpeed->setSuffix(" %");actorForm->addRow("Speed",actorSpeed);
-        actorSize=new QSpinBox;actorSize->setObjectName("actorSize");actorSize->setRange(50,200);actorSize->setSuffix(" %");actorForm->addRow("Size",actorSize);actorSection->content->addLayout(actorForm);connectionLayout->removeWidget(boundaryActors);connectionLayout->removeWidget(wizardActors);actorSection->content->insertWidget(0,wizardActors);actorSection->content->insertWidget(0,boundaryActors);
+        auto *actorSection=new InspectorSection("Whole scene actors");actorSection->setObjectName("actorsSection");actorSection->heading->setChecked(false);detailLayout->addWidget(actorSection);
+        boundaryActors=new QCheckBox("Walking skeleton");boundaryActors->setObjectName("boundaryActors");actorSection->content->addWidget(boundaryActors);connect(boundaryActors,&QCheckBox::toggled,this,[this](bool enabled){scene.setBoundaryActors(enabled);});
+        wizardActors=new QCheckBox("Original wizard duel");wizardActors->setObjectName("wizardActors");actorSection->content->addWidget(wizardActors);connect(wizardActors,&QCheckBox::toggled,this,[this](bool enabled){scene.setWizardActors(enabled);});
+        auto *actorForm=new QFormLayout;actorSpeed=new QSpinBox;actorSpeed->setObjectName("actorSpeed");actorSpeed->setRange(10,300);actorSpeed->setSuffix(" %");actorForm->addRow("Speed",actorSpeed);
+        actorSize=new QSpinBox;actorSize->setObjectName("actorSize");actorSize->setRange(50,200);actorSize->setSuffix(" %");actorForm->addRow("Size",actorSize);actorSection->content->addLayout(actorForm);
         connect(actorSpeed,&QSpinBox::valueChanged,this,[this](int v){scene.setActorSpeed(v);});connect(actorSize,&QSpinBox::valueChanged,this,[this](int v){scene.setActorSize(v);});
-        auto *actorHint=new QLabel("Speed and size affect the walking skeleton and wizard duel. Surface animations and media keep their own controls.");actorHint->setWordWrap(true);actorSection->content->addWidget(actorHint);sceneLayout->addStretch();sceneInspector=makeScroll(sceneDetails);tasks->addTab(sceneInspector,"Scene");
-        auto *canvasPanel=new QWidget;canvasPanel->setObjectName("canvasPanel");canvasPanel->setMinimumWidth(280);auto *canvasLayout=new QVBoxLayout(canvasPanel);canvasLayout->setContentsMargins(0,0,0,0);canvasLayout->setSpacing(0);
-        auto *canvasTools=new QWidget;canvasToolsWidget=canvasTools;canvasTools->setObjectName("canvasTools");canvasTools->installEventFilter(this);auto *canvasToolsLayout=new QHBoxLayout(canvasTools);canvasToolsLayout->setContentsMargins(8,5,8,5);canvasToolsLayout->setSpacing(5);
-        auto *toolGroup=new QButtonGroup(this);toolGroup->setExclusive(true);
-        auto tool=[&,this](const QString &text,const QString &icon,std::function<void()> fn){auto *b=button(text,fn);b->setIcon(studioIcon(icon));b->setProperty("studioToolText",text);b->setToolTip(text);b->setAccessibleName(text);b->setCheckable(true);toolGroup->addButton(b);canvasToolsLayout->addWidget(b);return b;};
-        selectTool=tool("Select","select",[this]{setEditingTool(EditingTool::Select);});selectTool->setObjectName("selectTool");
-        cornersTool=tool("Corners","corners",[this]{setEditingTool(EditingTool::Corners);});cornersTool->setObjectName("cornersTool");
-        meshTool=tool("Mesh","mesh",[this]{setEditingTool(EditingTool::Mesh);});meshTool->setObjectName("meshTool");setEditingTool(EditingTool::Corners);
-        canvasConnect=button("Connect",[this]{tasks->setCurrentIndex(2);});canvasConnect->setIcon(studioIcon("connect"));canvasConnect->setProperty("studioToolText","Connect");canvasConnect->setAccessibleName("Connect");canvasConnect->setObjectName("canvasConnect");canvasConnect->setToolTip("Open connection preview and fitting controls");canvasToolsLayout->addWidget(canvasConnect);canvasToolsLayout->addStretch();
-        auto *fitView=button("Fit view",[this]{canvas->resetView();});fitView->setIcon(studioIcon("fit"));fitView->setObjectName("fitView");fitView->setProperty("studioToolText","Fit view");fitView->setToolTip("Fit view [F]");canvasToolsLayout->addWidget(fitView);
-        auto *zoomOut=button("−",[this]{canvas->setViewZoom(canvas->viewZoom()/1.2);});zoomOut->setToolTip("Zoom out");zoomOut->setFixedWidth(29);canvasToolsLayout->addWidget(zoomOut);
-        auto *zoomIn=button("+",[this]{canvas->setViewZoom(canvas->viewZoom()*1.2);});zoomIn->setToolTip("Zoom in");zoomIn->setFixedWidth(29);canvasToolsLayout->addWidget(zoomIn);
-        zoomPercent=new QSpinBox;zoomPercent->setObjectName("canvasZoom");zoomPercent->setRange(25,800);zoomPercent->setSuffix(" %");zoomPercent->setValue(100);zoomPercent->setFixedWidth(74);zoomPercent->setAccessibleName("Canvas zoom");canvasToolsLayout->addWidget(zoomPercent);
-        connect(zoomPercent,&QSpinBox::valueChanged,this,[this](int value){canvas->setViewZoom(value/100.0);});connect(canvas,&Canvas::viewChanged,this,[this](double value){QSignalBlocker block(zoomPercent);zoomPercent->setValue(qRound(value*100));});
-        canvasLayout->addWidget(canvasTools);canvasLayout->addWidget(canvas,1);
-        auto *stageSplit=new QSplitter(Qt::Horizontal);stageSplit->setObjectName("stageSplitter");stageSplit->setHandleWidth(5);stageSplit->setChildrenCollapsible(false);stageSplit->addWidget(canvasPanel);stageSplit->addWidget(inspectorPanel);stageSplit->setStretchFactor(0,1);stageSplit->setSizes({760,280});
-        librarySplit=new QSplitter(Qt::Vertical);librarySplit->setObjectName("librarySplitter");librarySplit->setHandleWidth(5);librarySplit->setChildrenCollapsible(false);librarySplit->addWidget(stageSplit);librarySplit->addWidget(browserSection);librarySplit->setStretchFactor(0,1);librarySplit->setSizes({560,196});
-        auto *workspace=new QWidget;auto *workspaceLayout=new QVBoxLayout(workspace);workspaceLayout->setContentsMargins(0,0,0,0);workspaceLayout->setSpacing(0);workspaceLayout->addWidget(librarySplit,1);
-        auto *transport=new QWidget;transport->setObjectName("sceneTransport");auto *transportLayout=new QHBoxLayout(transport);transportLayout->setContentsMargins(12,4,12,4);
-        auto *sceneLabel=new QLabel("Whole scene actors");transportLayout->addWidget(sceneLabel);actorPause=button("Pause",[this]{scene.setActorPlayback(!scene.actorsPlaying);});actorPause->setObjectName("actorPause");actorPause->setIcon(studioIcon("pause"));transportLayout->addWidget(actorPause);
-        auto *sceneControls=button("Scene controls",[this]{tasks->setCurrentIndex(3);});sceneControls->setObjectName("sceneControls");sceneControls->setIcon(studioIcon("chevron"));transportLayout->addWidget(sceneControls);transportLayout->addStretch();
-        outputBadge=new QLabel("Output off");outputBadge->setObjectName("outputBadge");transportLayout->addWidget(outputBadge);workspaceLayout->addWidget(transport);
-        split->addWidget(panel);split->addWidget(workspace);split->setStretchFactor(1,1);
-        const auto sidebarSize=std::clamp(QSettings().value("ui/sidebarWidth",220).toInt(),180,300);split->setSizes({sidebarSize,qMax(500,width()-sidebarSize)});
+        actorPause=button("Pause",[this]{scene.setActorPlayback(!scene.actorsPlaying);});actorPause->setObjectName("actorPause");actorSection->content->addWidget(actorPause);
+        auto *actorHint=new QLabel("Scene-wide actors · skeleton follows mapped boundaries; wizards duel on mapped surfaces. Speed, size and playback affect these actors; surface animations and media keep their own controls.");actorHint->setWordWrap(true);actorSection->content->addWidget(actorHint);
+        detailLayout->addStretch();
+        inspector=new QScrollArea;inspector->setObjectName("surfaceInspector");inspector->setWidget(details);inspector->setWidgetResizable(true);inspector->setFrameShape(QFrame::NoFrame);inspector->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);inspector->setMinimumHeight(90);layout->addWidget(inspector,3);
+        split->addWidget(panel);split->addWidget(canvas);split->setStretchFactor(1,1);split->setSizes({310,970});
+        auto sidebarSize=QSettings().value("ui/sidebarWidth",310).toInt();split->setSizes({std::clamp(sidebarSize,260,600),qMax(320,width()-sidebarSize)});
         connect(split,&QSplitter::splitterMoved,this,[this,split]{if(!smoke)QSettings().setValue("ui/sidebarWidth",split->sizes().value(0));});
+        animationBrowserDialog=new QDialog(this);animationBrowserDialog->setObjectName("animationBrowserDialog");animationBrowserDialog->setWindowTitle("Potato FX — Animation browser");animationBrowserDialog->setModal(false);animationBrowserDialog->setMinimumSize(640,420);animationBrowserDialog->resize(840,600);
+        auto *browserDialogLayout=new QVBoxLayout(animationBrowserDialog);browserDialogLayout->setContentsMargins(14,14,14,14);
+        browserSection=new InspectorSection("Potato FX");browserSection->setObjectName("animationBrowser");browserSection->heading->hide();browserSection->setMinimumHeight(176);browserDialogLayout->addWidget(browserSection,1);
+        auto *libraryBar=new QHBoxLayout;auto *libraryHeading=new QLabel("LIBRARY");libraryHeading->setObjectName("surfaceHeading");libraryBar->addWidget(libraryHeading);
+        animationSearch=new QLineEdit;animationSearch->setObjectName("animationSearch");animationSearch->setPlaceholderText("Search animations…");animationSearch->setClearButtonEnabled(true);animationSearch->setAccessibleName("Search animations");animationSearch->setMaximumWidth(280);libraryBar->addWidget(animationSearch,1);
+        animationCategory=new QComboBox;animationCategory->setObjectName("animationCategory");animationCategory->setAccessibleName("Animation category");
+        for(const auto &entry:QList<QPair<QString,QString>>{{"All","all"},{"Patterns","patterns"},{"Autumn","autumn"},{"Halloween","halloween"},{"Christmas","christmas"}})animationCategory->addItem(entry.first,entry.second);libraryBar->addWidget(animationCategory);
+        browserStatus=new QLabel;browserStatus->setObjectName("browserStatus");browserStatus->setMinimumWidth(0);browserStatus->setMaximumWidth(120);browserStatus->setMaximumHeight(34);browserStatus->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);libraryBar->addWidget(browserStatus,1);
+        applyAnimation=button("Apply to surface",[this]{if(auto *item=animationList->currentItem())scene.setPattern(scene.selected,item->data(Qt::UserRole).toInt());});applyAnimation->setObjectName("applyAnimation");libraryBar->addWidget(applyAnimation);browserSection->content->addLayout(libraryBar);
+        animationList=new StudioLibraryWidget;animationList->setObjectName("animationLibrary");animationList->setMinimumHeight(90);animationList->setViewMode(QListView::IconMode);animationList->setItemDelegate(new StudioLibraryDelegate(animationList));animationList->setIconSize({160,90});animationList->setGridSize({178,124});animationList->setResizeMode(QListView::Adjust);animationList->setMovement(QListView::Static);animationList->setWrapping(true);animationList->setFlow(QListView::LeftToRight);animationList->setWordWrap(false);animationList->setTextElideMode(Qt::ElideRight);animationList->setSpacing(4);animationList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);animationList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);animationList->setDragEnabled(true);animationList->setDragDropMode(QAbstractItemView::DragOnly);browserSection->content->addWidget(animationList,1);
+        connect(animationSearch,&QLineEdit::textChanged,this,[this]{filterAnimations();});connect(animationCategory,&QComboBox::currentIndexChanged,this,[this]{filterAnimations();});
+        connect(animationList,&QListWidget::currentRowChanged,this,[this]{applyAnimation->setEnabled(scene.current()&&animationList->currentItem());});filterAnimations();
+        auto *browserFooter=new QHBoxLayout;auto *browserHelp=new QLabel("Browse without changing your mapping. Apply to the selected surface or drag an animation onto the canvas.");browserHelp->setWordWrap(true);browserFooter->addWidget(browserHelp,1);
+        auto *browserClose=new QPushButton("Close");browserClose->setObjectName("animationBrowserClose");connect(browserClose,&QPushButton::clicked,animationBrowserDialog,&QWidget::hide);browserFooter->addWidget(browserClose);browserDialogLayout->addLayout(browserFooter);
         connect(&scene,&Scene::structureChanged,this,[this]{refresh();});
         connect(&scene,&Scene::message,this,[this](const QString &m){statusBar()->showMessage(m,20000);});
         connect(canvas,&Canvas::graphicsInitialized,this,[this](const QString &m){statusBar()->showMessage(m,12000);});
@@ -292,16 +269,15 @@ public:
         connect(output,&Canvas::graphicsInitialized,this,[this](const QString &details){if(!output->graphicsReady){output->hide();outputInfo->setText("Output could not start: "+details);}});
         for(auto *s:QGuiApplication::screens())watchScreen(s);
         updateDisplays();
-        auto *timer=new QTimer(this);connect(timer,&QTimer::timeout,this,[this]{actorPause->setText(scene.actorsPlaying?"Pause":"Play");actorPause->setIcon(studioIcon(scene.actorsPlaying?"pause":"play"));auto *m=selectedMedia();bool video=m&&m->player;seek->setEnabled(video);playButton->setEnabled(video);restartButton->setEnabled(video);if(video&&!seek->isSliderDown()){qint64 d=m->player->duration();seek->setValue(d>0?int(m->player->position()*1000/d):0);}});timer->start(250);
+        auto *timer=new QTimer(this);connect(timer,&QTimer::timeout,this,[this]{actorPause->setText(scene.actorsPlaying?"Pause":"Play");auto *m=selectedMedia();bool video=m&&m->player;seek->setEnabled(video);playButton->setEnabled(video);restartButton->setEnabled(video);if(video&&!seek->isSliderDown()){qint64 d=m->player->duration();seek->setValue(d>0?int(m->player->position()*1000/d):0);}});timer->start(250);
         auto *fileMenu=menuBar()->addMenu("File");auto *editMenu=menuBar()->addMenu("Edit");
-        const auto projectActions=bar->actions();
-        for(auto *a:projectActions){if(QStringList{"New","Open","Save","Save as","Load media"}.contains(a->text()))fileMenu->addAction(a);if(QStringList{"Undo","Redo","+ Surface","Potato FX","Dynamic FX"}.contains(a->text()))editMenu->addAction(a);if(QStringList{"New","Save as","Load media","+ Surface","Potato FX","Dynamic FX"}.contains(a->text())){addAction(a);bar->removeAction(a);}}
+        for(auto *a:bar->actions()){if(QStringList{"New","Open","Save","Save as","Load media"}.contains(a->text()))fileMenu->addAction(a);if(QStringList{"Undo","Redo","+ Surface","Potato FX","Dynamic FX"}.contains(a->text()))editMenu->addAction(a);}
         fileMenu->addSeparator();fileMenu->addAction("Open app folder",this,[]{QDesktopServices::openUrl(QUrl::fromLocalFile(potatoInstallRoot()));});
         fileMenu->addAction("Open Projects folder",this,[]{QDesktopServices::openUrl(QUrl::fromLocalFile(PotatoProjects::directory(potatoInstallRoot())));});
         auto *recentMenu=fileMenu->addMenu("Recent projects");
         connect(recentMenu,&QMenu::aboutToShow,this,[this,recentMenu]{recentMenu->clear();for(const auto &path:PotatoProjects::recent(potatoInstallRoot())){auto *a=recentMenu->addAction(QFileInfo(path).fileName());a->setToolTip(path);connect(a,&QAction::triggered,this,[this,path]{openProject(path);});}if(recentMenu->isEmpty())recentMenu->addAction("No recent projects")->setEnabled(false);});
         auto *examplesMenu=fileMenu->addMenu("Examples");
-        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")tasks->setCurrentIndex(2);else{tasks->setCurrentIndex(1);fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
+        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
         fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *settingsMenu=menuBar()->addMenu("Settings");
         auto *appearanceMenu=settingsMenu->addMenu("Appearance");auto *themeGroup=new QActionGroup(this);themeGroup->setExclusive(true);
@@ -314,26 +290,26 @@ public:
         qApp->setProperty("potatoReducedMotion",reduceMotion->isChecked());connect(reduceMotion,&QAction::toggled,this,[this](bool reduced){qApp->setProperty("potatoReducedMotion",reduced);if(!smoke)QSettings().setValue("ui/reducedMotion",reduced);});
         auto *specialEvents=settingsMenu->addAction("Special events…",this,[this]{showAnimationBrowser(true);});specialEvents->setObjectName("specialEvents");
         auto *helpMenu=menuBar()->addMenu("Help");
-        helpMenu->addAction("Quick guide",this,[this]{QMessageBox::information(this,"Potato Mapper — Quick guide","1. Connect your projector and extend your desktop.\n2. Add a surface and load or drop media.\n3. Drag corners or choose Mesh points to align it.\n4. Choose your projector and Start output.\n\nRight-click a surface to clear media or rename it.\nClear media keeps the mesh and supports Undo.\nSave your project; media files stay linked on disk.\n\nB: blackout   Esc: stop output   F: fit editor view");});
+        helpMenu->addAction("Quick guide",this,[this]{QMessageBox::information(this,"Potato Mapper — Quick guide","1. Connect your projector and extend your desktop.\n2. Add a surface and load or drop media.\n3. Drag corners or choose Mesh points to align it.\n4. Choose your projector and Start output.\n\nRight-click a surface to choose content, connect, rename or delete it.\nClear media keeps the mesh and supports Undo.\nSave your project; media files stay linked on disk.\n\nB: blackout   Esc: stop output   F: fit editor view");});
         helpMenu->addAction("Check for updates…",this,[this]{if(updateDialog){updateDialog->raise();updateDialog->activateWindow();return;}updateDialog=new UpdateDialog(this,[this]{return prepareRestart();},[this]{return scene.projectPath;});updateDialog->show();});
         helpMenu->addAction("Use previous app version…",this,[this]{rollback();});
         helpMenu->addAction("GitHub releases",this,[]{QDesktopServices::openUrl(QUrl("https://github.com/TheGamingDonKey/potato-mapper/releases"));});
         helpMenu->addAction("About Potato Mapper",this,[this]{QMessageBox::about(this,"About Potato Mapper","Potato Mapper "+QCoreApplication::applicationVersion()+"\nA home projection mapper for one projector.\n\nMIT licensed. Qt and FFmpeg have their own licenses.\nYour projects and media are stored locally.\nUse Help → Check for updates to get new releases.");});
-        for(auto *form:tasks->findChildren<QFormLayout*>()){form->setRowWrapPolicy(QFormLayout::WrapLongRows);form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);}
-        for(auto *a:{undoAction,redoAction})if(auto *b=qobject_cast<QToolButton*>(bar->widgetForAction(a)))b->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        connect(&scene,&Scene::changed,this,[this]{setWindowModified(scene.dirty);projectTitle->setFullText((scene.projectPath.isEmpty()?QString("Untitled mapping"):QFileInfo(scene.projectPath).fileName())+(scene.dirty?" •":""));});
-        scene.add();scene.dirty=false;refresh();tasks->setCurrentIndex(1);
+        connect(&scene,&Scene::changed,this,[this]{setWindowModified(scene.dirty);});
+        for(auto *detailForm:details->findChildren<QFormLayout*>()){detailForm->setRowWrapPolicy(QFormLayout::WrapLongRows);detailForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);}
+        scene.add();scene.dirty=false;refresh();
+        installPotatoMaterial(this);
         statusBar()->showMessage("Add a surface, then drop an image or video onto it.");
     }
     ~MainWindow()override{delete output;}
-    void showDynamicControls(){
-        tasks->setCurrentIndex(3);
-        dynamicSection->heading->setChecked(true);
-        // Scroll after the expanded section has received its layout geometry.
-        QTimer::singleShot(0,this,[this]{
-            sceneInspector->widget()->layout()->activate();sceneInspector->ensureWidgetVisible(dynamicSection);
+    void showSidebarSection(InspectorSection *section){
+        section->heading->setChecked(true);
+        QTimer::singleShot(0,this,[this,section]{
+            inspector->widget()->layout()->activate();
+            inspector->verticalScrollBar()->setValue(section->heading->mapTo(inspector->widget(),QPoint()).y());
         });
     }
+    void showDynamicControls(){showSidebarSection(dynamicSection);}
     bool save(bool as){
         QString path=scene.projectPath;
         if(as||path.isEmpty())path=QFileDialog::getSaveFileName(this,"Save mapping",path.isEmpty()?QDir(projectFolder()).filePath("My mapping.pmap"):path,"Potato Mapper (*.pmap *.hmap)");
@@ -367,14 +343,6 @@ public:
     }
 protected:
     bool eventFilter(QObject *obj,QEvent *event)override{
-        if(list&&obj==list->viewport()&&event->type()==QEvent::MouseButtonRelease){
-            auto *mouse=static_cast<QMouseEvent*>(event);auto *item=list->itemAt(mouse->position().toPoint());
-            if(item&&mouse->button()==Qt::LeftButton){const auto rect=list->visualItemRect(item);const int row=list->row(item);
-                const bool lock=studioSurfaceIndicatorRect(rect,true).contains(mouse->position().toPoint());const bool eye=studioSurfaceIndicatorRect(rect,false).contains(mouse->position().toPoint());
-                if(lock||eye){scene.select(row);scene.checkpoint();auto &surface=scene.surfaces[row];if(lock)surface.locked=!surface.locked;else surface.visible=!surface.visible;scene.touch(true);return true;}
-            }
-        }
-        if(obj==canvasToolsWidget&&event->type()==QEvent::Resize){const bool compact=canvasToolsWidget->width()<610;for(auto *b:canvasToolsWidget->findChildren<QPushButton*>()){const auto label=b->property("studioToolText").toString();if(!label.isEmpty())b->setText(compact?QString():label);}}
         if(obj==output&&event->type()==QEvent::Hide)scene.skipEntrance();
         if(obj==output&&(event->type()==QEvent::Show||event->type()==QEvent::Hide))QTimer::singleShot(0,this,[this]{updateOutputStatus();});
         return QMainWindow::eventFilter(obj,event);
@@ -382,16 +350,13 @@ protected:
     void closeEvent(QCloseEvent *e)override{if(smoke||property("potatoUpdateExit").toBool()||canDiscard()){output->close();e->accept();}else e->ignore();}
 private:
     enum class EditingTool {Select,Corners,Mesh};
-    QPushButton *selectTool=nullptr,*cornersTool=nullptr,*meshTool=nullptr;
     void setEditingTool(EditingTool tool){
         const QSignalBlocker modeBlock(mode);
-        mode->setCurrentIndex(tool==EditingTool::Mesh?1:0);
+        mode->setCurrentIndex(tool==EditingTool::Mesh?1:tool==EditingTool::Select?2:0);
         canvas->setProperty("selectionOnly",tool==EditingTool::Select);canvas->meshMode=tool==EditingTool::Mesh;
-        if(selectTool&&cornersTool&&meshTool){const QSignalBlocker selectBlock(selectTool),cornersBlock(cornersTool),meshBlock(meshTool);selectTool->setChecked(tool==EditingTool::Select);cornersTool->setChecked(tool==EditingTool::Corners);meshTool->setChecked(tool==EditingTool::Mesh);}
         canvas->update();
     }
     QListWidget *list=nullptr;
-    QWidget *canvasToolsWidget=nullptr;
     QSpinBox *zoomPercent=nullptr;
     QComboBox *mode,*fit,*displays;
     QSpinBox *subdivisions;
@@ -401,11 +366,8 @@ private:
     InspectorSection *mediaSection,*fxSection;
     DynamicPanel *dynamicSection;
     QScrollArea *inspector;
-    QTabWidget *tasks;
-    ElidedLabel *taskSurface,*projectTitle,*contentTitle;
-    QLabel *contentPreview,*outputBadge=nullptr;
-    QSplitter *librarySplit;
-    QScrollArea *sceneInspector;
+    InspectorSection *connectionsSection;
+    QDialog *animationBrowserDialog;
     QSpinBox *actorSpeed,*actorSize;
     QPushButton *actorPause;
     InspectorSection *browserSection;
@@ -416,7 +378,7 @@ private:
     int libraryAssignedPattern=-1;
     bool librarySelectionPending=false;
     QLabel *browserStatus,*connectionInfo;
-    QPushButton *applyAnimation,*connectButton,*disconnectButton,*canvasConnect;
+    QPushButton *applyAnimation,*connectButton,*disconnectButton;
     QCheckBox *fitConnection,*tieConnections,*boundaryActors,*wizardActors;
     QSpinBox *patternSpeed,*patternSize;
     QSpinBox *patternDensity,*patternFlow,*patternAngle,*patternEdge;
@@ -462,8 +424,8 @@ private:
         syncLibrarySelection();applyAnimation->setEnabled(scene.current()&&animationList->currentItem());
     }
     void showAnimationBrowser(bool seasonal=false){
-        if(!scene.current())scene.add();tasks->setCurrentIndex(1);fxSection->heading->setChecked(true);browserSection->heading->setChecked(true);librarySplit->setSizes({qMax(240,librarySplit->height()-200),200});
         if(seasonal){animationSearch->clear();animationCategory->setCurrentIndex(animationCategory->findData("halloween"));}
+        animationBrowserDialog->show();animationBrowserDialog->raise();animationBrowserDialog->activateWindow();
         QTimer::singleShot(0,this,[this]{animationSearch->setFocus();});
     }
     void connectSelected(){
@@ -485,14 +447,25 @@ private:
     }
     QString projectFolder() const {return PotatoProjects::directory(potatoInstallRoot());}
     void renameSelected(){auto *s=scene.current();if(!s)return;bool ok=false;const auto name=QInputDialog::getText(this,"Rename surface","Surface name:",QLineEdit::Normal,s->name,&ok);if(ok)scene.renameSurface(scene.selected,name);}
+    void deleteSelectedSurface(){
+        if(!scene.current())return;
+        scene.checkpoint();scene.surfaces.removeAt(scene.selected);
+        scene.selected=std::min(scene.selected,int(scene.surfaces.size())-1);scene.touch(true);
+    }
     void surfaceMenu(int index,const QPoint &pos){
-        if(index<0||index>=scene.surfaces.size())return;scene.select(index);QMenu menu(this);
+        if(index<0||index>=scene.surfaces.size())return;scene.select(index);MaterialSurfaceMenu menu(this);
+        auto *title=new QWidgetAction(&menu);title->setText(scene.current()->name);title->setObjectName("surfaceMenuTarget");
+        auto *targetLabel=new QLabel(scene.current()->name);targetLabel->setAccessibleName("Surface: "+scene.current()->name);
+        targetLabel->setContentsMargins(17,6,17,7);targetLabel->setStyleSheet("background:transparent;color:#e4e7ec;font:600 13px 'Segoe UI';");
+        title->setDefaultWidget(targetLabel);title->setEnabled(false);menu.addAction(title);
         menu.addAction("Load media…",this,[this]{loadMedia();});
         menu.addAction("Choose animation…",this,[this]{showAnimationBrowser();});
         const auto *s=scene.current();auto *clear=menu.addAction("Clear media — white grid",this,[this]{scene.clearMedia(scene.selected);});clear->setEnabled(s&&(!s->media.isEmpty()||s->pattern));
-        menu.addSeparator();menu.addAction("Connect…",this,[this]{tasks->setCurrentIndex(2);connectSelected();});
+        menu.addSeparator();menu.addAction("Connect…",this,[this]{showSidebarSection(connectionsSection);connectSelected();});
         auto *disconnect=menu.addAction("Disconnect",this,[this]{scene.disconnectSurface(scene.selected);});disconnect->setEnabled(scene.hasConnections(scene.selected));
-        menu.addSeparator();menu.addAction("Rename surface…",this,[this]{renameSelected();});menu.exec(pos);
+        menu.addSeparator();menu.addAction("Rename surface…",this,[this]{renameSelected();});
+        menu.addSeparator();auto *remove=menu.addAction("Delete surface",this,[this]{deleteSelectedSurface();});remove->setObjectName("deleteSurfaceAction");
+        menu.exec(pos);
     }
     bool prepareRestart(){
         if(output->isVisible()&&QMessageBox::question(this,"Stop projector output?","Stop projector output and continue with the update?",QMessageBox::Yes|QMessageBox::Cancel,QMessageBox::Cancel)!=QMessageBox::Yes)return false;
@@ -536,11 +509,10 @@ private:
         if(live&&activeOutputScreen){outputInfo->setText(QString("%1 · %2 · %3 × %4 — Esc stops output. B toggles blackout.").arg(scene.blackout?"BLACKOUT":"LIVE").arg(activeOutputScreen->name()).arg(scene.outputSize.width()).arg(scene.outputSize.height()));outputInfo->setStyleSheet(QString("color:%1;font-size:12px;padding:2px;").arg(scene.blackout?"#ffce85":"#91efd1"));}
         else{
             outputInfo->setStyleSheet("color:#b5c6d1;font-size:12px;padding:2px;");
-            if(QGuiApplication::screens().size()<2)outputInfo->setText("OUTPUT OFF · One display detected. Connect projector → Windows + P → Extend. Details has help.");
+            if(QGuiApplication::screens().size()<2)outputInfo->setText("OUTPUT OFF · One display detected. Connect projector → Windows + P → Extend. Choose the projector above.");
             else outputInfo->setText("OUTPUT OFF · Select a projector and Start output. The canvas is an editor preview.");
         }
         outputInfo->setToolTip(outputInfo->text());
-        if(outputBadge){outputBadge->setText(live?(scene.blackout?"Blackout":"Output live"):"Output off");outputBadge->setToolTip(outputInfo->text());}
     }
     void updateEntranceStatus(){
         if(!entrancePlay)return;
@@ -553,23 +525,14 @@ private:
         QSignalBlocker b1(list),b2(visible),b3(locked),b4(subdivisions),b5(fit),b6(mute),b7(patternSpeed),b8(patternSize),b9(patternPause),b10(patternPicker),b11(brightness),b12(opacity),b13(blendPicker),b14(patternDensity),b15(patternFlow),b16(patternAngle),b17(patternPalette),b18(patternEdge),b19(patternReverse);
         const int listScroll=list->verticalScrollBar()->value();const auto previousId=list->currentItem()?list->currentItem()->data(Qt::UserRole).toString():QString();
         QStringList previousOrder,nextOrder;for(int i=0;i<list->count();++i)previousOrder<<list->item(i)->data(Qt::UserRole).toString();
-        list->clear();for(const auto &s:scene.surfaces){const auto content=scene.dynamicSurface(s.id)?QString("Dynamic FX · ")+(scene.dynamic.effect==1?"Hot-Ass Potato":"Potato Focus"):s.pattern?potatoPatterns().value(s.pattern):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();
-            const auto thumb=surfaceThumbnail(s);const auto bounds=s.corners.boundingRect();
-            const auto dimensions=QString("%1 × %2").arg(qRound(bounds.width()*scene.outputSize.width())).arg(qRound(bounds.height()*scene.outputSize.height()));
-            const auto shortContent=content.section(" · ",0,0);const QString type=scene.dynamicSurface(s.id)?"Dynamic FX":s.pattern?"Animation":s.media.isEmpty()?"Grid":scene.source(s.media)->player?"Video":"Image";
-            const auto metadata=s.name.compare(shortContent,Qt::CaseInsensitive)==0?dimensions+" · "+type:shortContent+" · "+dimensions;
-            auto *item=new QListWidgetItem(thumb,s.name+"\n"+metadata,list);item->setData(Qt::UserRole,s.id);item->setData(StudioRoles::Visible,s.visible);item->setData(StudioRoles::Locked,s.locked);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media)+"\nMapped bounds: "+dimensions+" output pixels\nEye: show/hide · Lock: lock mapping");}list->setCurrentRow(scene.selected);
+        list->clear();for(const auto &s:scene.surfaces){const auto content=scene.dynamicSurface(s.id)?QString("Dynamic FX · ")+(scene.dynamic.effect==1?"Hot-Ass Potato":"Potato Focus"):s.pattern?QString("Potato FX · ")+potatoPatterns().value(s.pattern):s.media.isEmpty()?QString("White grid"):QFileInfo(s.media).fileName();auto *item=new QListWidgetItem(s.name+"\n"+content+(s.visible?"":" · hidden"),list);item->setData(Qt::UserRole,s.id);nextOrder<<s.id;item->setToolTip(s.name+"\n"+(s.media.isEmpty()?content:s.media));}list->setCurrentRow(scene.selected);
         if(list->currentItem()){if(previousId==list->currentItem()->data(Qt::UserRole).toString()&&previousOrder==nextOrder)list->verticalScrollBar()->setValue(listScroll);else list->scrollToItem(list->currentItem());}
         auto *s=scene.current();clearButton->setEnabled(s&&(!s->media.isEmpty()||s->pattern));visible->setEnabled(s);locked->setEnabled(s);subdivisions->setEnabled(s&&!s->locked);fit->setEnabled(s);
         if(s&&(librarySurfaceUid!=s->routeUid||libraryAssignedPattern!=s->pattern)){librarySurfaceUid=s->routeUid;libraryAssignedPattern=s->pattern;librarySelectionPending=true;syncLibrarySelection();}
-        taskSurface->setFullText(s?s->name:"No surface selected");
-        contentTitle->setFullText(s?(s->pattern?potatoPatterns().value(s->pattern):s->media.isEmpty()?QString("White grid"):QFileInfo(s->media).fileName()):QString("Select a surface"));
-        contentPreview->setPixmap(s?surfaceThumbnail(*s).pixmap(272,153):QPixmap());
-        projectTitle->setFullText((scene.projectPath.isEmpty()?QString("Untitled mapping"):QFileInfo(scene.projectPath).fileName())+(scene.dirty?" •":""));
         {QSignalBlocker speedBlock(actorSpeed),sizeBlock(actorSize);actorSpeed->setValue(scene.actorSpeed);actorSize->setValue(scene.actorSize);}
-        actorPause->setText(scene.actorsPlaying?"Pause":"Play");actorPause->setIcon(studioIcon(scene.actorsPlaying?"pause":"play"));
+        actorPause->setText(scene.actorsPlaying?"Pause":"Play");
         {QSignalBlocker tieBlock(tieConnections),actorBlock(boundaryActors),wizardBlock(wizardActors);connectionInfo->setText(s?scene.connectionDescription(scene.selected):"Select a surface to see its connections.");tieConnections->setChecked(s&&scene.connectionsTied(scene.selected));boundaryActors->setChecked(scene.boundaryActorsEnabled());wizardActors->setChecked(scene.wizardActorsEnabled());}
-        connectButton->setEnabled(s&&scene.surfaces.size()>1);canvasConnect->setEnabled(s&&scene.surfaces.size()>1);disconnectButton->setEnabled(s&&scene.hasConnections(scene.selected));tieConnections->setEnabled(s&&scene.hasConnections(scene.selected));fitConnection->setEnabled(s&&!s->locked);if(s&&s->locked)fitConnection->setChecked(false);applyAnimation->setEnabled(s&&animationList->currentItem());
+        connectButton->setEnabled(s&&scene.surfaces.size()>1);disconnectButton->setEnabled(s&&scene.hasConnections(scene.selected));tieConnections->setEnabled(s&&scene.hasConnections(scene.selected));fitConnection->setEnabled(s&&!s->locked);if(s&&s->locked)fitConnection->setChecked(false);applyAnimation->setEnabled(s&&animationList->currentItem());
         patternPicker->setEnabled(s);if(s&&s->pattern&&patternPicker->currentData().toInt()!=s->pattern)fxSection->heading->setChecked(true);patternPicker->setCurrentIndex(patternPicker->findData(s?s->pattern:0));patternControls->setVisible(s&&s->pattern);
         brightness->setEnabled(s);opacity->setEnabled(s);blendPicker->setEnabled(s);blendPicker->setCurrentIndex(s?s->blend:0);patternSizeLabel->setText(potatoPatternSizeLabel(s?s->pattern:0));resetAppearance->setEnabled(s&&(s->brightness!=100||s->opacity!=100||s->blend));
         if(auto *patternForm=patternDensity->parentWidget()->findChild<QFormLayout*>()){
@@ -634,6 +597,7 @@ int main(int argc,char **argv){
     if(args.contains("--smoke-themes")){window.smoke=true;runAppearanceThemeChecks(window,app,args);}
     if(args.contains("--smoke-connections")){window.smoke=true;runConnectionActorChecks(window,app,args);}
     if(args.contains("--smoke-studio")){window.smoke=true;runStudioChecks(window,app,args);}
+    if(args.contains("--smoke-material")){window.smoke=true;runMaterialUiCheck(window,app,args);}
     if(args.contains("--seasonal-check")){window.smoke=true;runSeasonalChecks(window,app,args);}
     if(args.contains("--test-restart")){
         window.smoke=true;QTimer::singleShot(300,&window,[&window,&app]{

@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 31 whole-app material finish installed locally
+
+Shane approved the visible component and explicitly authorized the wider implementation. Version 0.9.2 now applies shared painter material across the native app while restoring the 0.8.8 two-toolbar/left-sidebar/right-canvas layout. Later animations, themes, connections, actors and version 2/3 projects remain supported. See [changes, feature locations, evidence and limits](docs/0.9.2-material-finish.md). Source is on `codex/material-finish`; normal launcher selects 0.9.2, previous selects 0.8.8. No public release or new Store certification is claimed.
+
+Final extracted runtime passed twelve native checks and four model/storage/Dynamic suites; actual launcher update/reopen/rollback with synthetic saved work passed, along with corrected ZIP failure/cancellation checks. Installed payload, original project/index hashes and retained 0.8.8 inventory were checked. Actual installed windows were visually inspected. Total storage is about 1.39 GB under the 1.5 GB cap; reuse the existing build tree and inventory disposable outputs before another package. Next: Shane's visual/workflow feedback; preserve the familiar arrangement through any corrections.
+
 ## Current handoff — October 31 single-component material proof
 
 Shane authorized one working visual piece, not the full redesign. Branch `codex/surface-material-proof` adds an isolated [surface-menu proof](proofs/surface-material/README.md). It generates the 0.8.8 shell from Git, preserves its arrangement and reuses the existing C++/Qt/OpenGL source without core edits. The menu uses app-rendered sampled frost; it is not verified Windows DWM Acrylic. No additional dependencies were installed. The normal launcher still selects 0.8.8, and personal projects/media are outside the proof session.
