@@ -29,6 +29,9 @@ foreach ($required in $exe, $launcher, $refresh, (Join-Path $QtPath 'bin\windepl
 $version = (Get-Item -LiteralPath $exe).VersionInfo.FileVersion
 if (-not $version) { throw 'Executable has no file version.' }
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Executable version must be X.Y.Z.' }
+$projectDefinition = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'CMakeLists.txt') -Raw
+if ($projectDefinition -notmatch 'project\(PotatoMapper VERSION ([0-9]+\.[0-9]+\.[0-9]+)') { throw 'Cannot determine the configured source version.' }
+if ($version -ne $Matches[1]) { throw "Executable metadata version $version does not match source version $($Matches[1]). Update the Windows resource and rebuild before packaging." }
 $name = "PotatoMapper-$version-windows-x64"
 # Always stage in a fresh directory; never package the developer's app folder.
 if ($DestinationDirectory) {

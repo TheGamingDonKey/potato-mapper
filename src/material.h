@@ -9,6 +9,7 @@
 #include <QCursor>
 #include <QDialog>
 #include <QDoubleSpinBox>
+#include <QElapsedTimer>
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QMenuBar>
@@ -23,16 +24,17 @@
 #include <QStyleOptionComboBox>
 #include <QStyleOptionSpinBox>
 #include <QToolBar>
+#include <QTimer>
 #include "material-menu.h"
 #include "liquid-glass.h"
 #include "aurora-glass.h"
+#include "ambient-glass.h"
 
 namespace PotatoMaterial {
 enum class Surface { None,Foundation,Shell,Panel,Section,Heading,Button,Input,Well,Dialog,FocusOnly };
 
-// One bounded cache per selected profile for the editor and owned dialogs. Static material never
-// samples the animated canvas and has no timer or graphics effect. Foundation,
-// content, controls and transient surfaces have distinct, quiet material roles.
+// Materials never sample the animated scene canvas. Ambient alone uses a
+// shared, bounded environment and clock; other profiles remain static.
 class ChromeMaterial final : public QObject {
 public:
     explicit ChromeMaterial(QWidget *editor):QObject(editor),m_editor(editor),m_cache(16384){
@@ -42,31 +44,44 @@ public:
         qApp->installEventFilter(this);
         prepare(editor);
         for(auto *widget:editor->findChildren<QWidget*>())prepare(widget);
+        m_ambientTimer.setTimerType(Qt::PreciseTimer);m_ambientTimer.setInterval(34);
+        connect(&m_ambientTimer,&QTimer::timeout,this,[this]{
+            if(!ambientShouldRun()){syncAmbientClock();return;}
+            const qreal seconds=qMin(.1,m_ambientClock.restart()/1000.0)*PotatoAmbient::speed();
+            PotatoAmbient::advance(seconds);repaintAmbientChrome();
+        });
+        syncAmbientClock();
     }
     ~ChromeMaterial()override{if(qApp)qApp->removeEventFilter(this);}
     void syncTheme(){
         if(m_refreshing||!m_editor)return;
-        m_refreshing=true;m_cache.clear();PotatoGlass::clearCaches();PotatoAurora::clearCaches();setProperty("potatoMaterialEnabled",enabled());
+        m_refreshing=true;m_cache.clear();PotatoGlass::clearCaches();PotatoAurora::clearCaches();PotatoAmbient::clearCaches();setProperty("potatoMaterialEnabled",enabled());
         prepare(m_editor);m_editor->update();
         for(auto *widget:m_editor->findChildren<QWidget*>()){
             if(excluded(widget))continue;
             prepare(widget);widget->update();
         }
         m_refreshing=false;
+        syncAmbientClock();
     }
 protected:
     bool eventFilter(QObject *object,QEvent *event)override{
         if(object==qApp&&event->type()==QEvent::DynamicPropertyChange){
             const auto property=static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName();
             if(property=="potatoInterfaceTheme"||property=="potatoTheme")syncTheme();
-            else if((PotatoGlass::active()||PotatoAurora::active())&&(property=="potatoReducedTransparency"||property=="potatoIncreasedContrast"||property=="potatoReducedMotion"))syncTheme();
+            else if((PotatoGlass::active()||PotatoAurora::active()||PotatoAmbient::active())&&(property=="potatoReducedTransparency"||property=="potatoIncreasedContrast"||property=="potatoReducedMotion"))syncTheme();
+            else if(property=="potatoAmbientPaused"||property=="potatoAmbientSpeed"||property=="potatoAmbientIntensity"||property=="potatoAmbientGlass"){
+                syncAmbientClock();
+                if(PotatoAmbient::active())repaintAmbientChrome();
+            }
             return false;
         }
         auto *widget=qobject_cast<QWidget*>(object);
         if(!widget||!owned(widget)||excluded(widget))return false;
+        if(widget==m_editor&&(event->type()==QEvent::Show||event->type()==QEvent::Hide||event->type()==QEvent::WindowStateChange))syncAmbientClock();
         if(event->type()==QEvent::Polish||event->type()==QEvent::Show||event->type()==QEvent::StyleChange){prepare(widget);}
         if(!enabled()||qobject_cast<QMenu*>(widget))return false;
-        if((PotatoGlass::active()||PotatoAurora::active())&&event->type()==QEvent::Move){
+        if((PotatoGlass::active()||PotatoAurora::active()||PotatoAmbient::active())&&event->type()==QEvent::Move){
             // Windows may move a top-level dialog by reusing its backing store.
             // Its editor-relative sample origin still changed: schedule each
             // owned chrome surface once, without capture or work in this event.
@@ -77,7 +92,7 @@ protected:
             };
             if(widget==m_editor){
                 for(auto *dialog:m_editor->findChildren<QDialog*>())repaintDialog(dialog);
-            }else if(PotatoAurora::active()){
+            }else if(PotatoAurora::active()||PotatoAmbient::active()){
                 // Scrolling can otherwise reuse backing-store pixels after a
                 // child moves, making its glass drift with the control.
                 widget->update();
@@ -86,10 +101,10 @@ protected:
                 if(auto *dialog=qobject_cast<QDialog*>(widget))repaintDialog(dialog);
             }
         }
-        if(PotatoAurora::active()&&widget==m_editor&&event->type()==QEvent::Resize){
+        if((PotatoAurora::active()||PotatoAmbient::active())&&widget==m_editor&&event->type()==QEvent::Resize){
             for(auto *child:m_editor->findChildren<QWidget*>())if(!excluded(child))child->update();
         }
-        if((PotatoGlass::active()||PotatoAurora::active())&&(event->type()==QEvent::HoverMove||event->type()==QEvent::WindowActivate||event->type()==QEvent::WindowDeactivate)){
+        if((PotatoGlass::active()||PotatoAurora::active()||PotatoAmbient::active())&&(event->type()==QEvent::HoverMove||event->type()==QEvent::WindowActivate||event->type()==QEvent::WindowDeactivate)){
             const auto surface=role(widget);
             if(surface==Surface::Button||surface==Surface::Heading||surface==Surface::Input)widget->update();
             if(event->type()!=QEvent::HoverMove){widget->update();for(auto *child:widget->findChildren<QWidget*>())if(!excluded(child))child->update();}
@@ -110,6 +125,32 @@ protected:
         return false; // QWidget/Qt still paint content and own all interactions.
     }
 private:
+    bool ambientShouldRun()const{
+        return m_editor&&m_editor->isVisible()&&!m_editor->isMinimized()&&PotatoAmbient::active()&&
+            !qApp->property("potatoAmbientPaused").toBool()&&!PotatoGlass::reducedMotion()&&!PotatoAmbient::opaque();
+    }
+    void syncAmbientClock(){
+        const bool running=ambientShouldRun();
+        if(running&&!m_ambientTimer.isActive()){m_ambientClock.start();m_ambientTimer.start();}
+        else if(!running){m_ambientTimer.stop();m_ambientClock.invalidate();}
+        if(qApp&&(!qApp->property("potatoAmbientRunning").isValid()||qApp->property("potatoAmbientRunning").toBool()!=running))qApp->setProperty("potatoAmbientRunning",running);
+    }
+    void repaintAmbientChrome(){
+        if(!m_editor||!m_editor->isVisible()||m_editor->isMinimized())return;
+        QRegion foundation(m_editor->rect());
+        const auto widgets=m_editor->findChildren<QWidget*>();
+        for(auto *widget:widgets){
+            if(!widget->isVisible())continue;
+            if(excluded(widget)){
+                // Do not invalidate the OpenGL canvas while animating chrome.
+                if(widget->inherits("QOpenGLWidget")&&!widget->isWindow())foundation-=QRect(widget->mapTo(m_editor,QPoint()),widget->size());
+                continue;
+            }
+            if(qobject_cast<QMenu*>(widget)||role(widget)!=Surface::None)widget->update();
+            if(auto *view=qobject_cast<QAbstractItemView*>(widget))view->viewport()->update();
+        }
+        m_editor->update(foundation);
+    }
     bool owned(QWidget *widget)const{
         for(auto *parent=widget;parent;parent=parent->parentWidget())if(parent==m_editor)return true;
         return false;
@@ -123,7 +164,7 @@ private:
         if(widget==m_editor)return Surface::Foundation;
         if(qobject_cast<QMenu*>(widget))return Surface::None;
         if(qobject_cast<QDialog*>(widget))return Surface::Dialog;
-        if(PotatoAurora::active()&&widget->objectName()=="outputToolbar")return Surface::Panel;
+        if((PotatoAurora::active()||PotatoAmbient::active())&&widget->objectName()=="outputToolbar")return Surface::Panel;
         if(qobject_cast<QMenuBar*>(widget)||qobject_cast<QToolBar*>(widget)||qobject_cast<QStatusBar*>(widget))return Surface::Shell;
         const auto name=widget->objectName();
         if(name=="projectHeader"||name=="projectToolbar"||name=="outputToolbar"||name=="canvasTools"||
@@ -236,7 +277,7 @@ private:
     }
     void paint(QWidget *widget,QPaintEvent *event,Surface surface){
         if(!enabled()||widget->width()<2||widget->height()<2)return;
-        if(PotatoGlass::active()||PotatoAurora::active()){paintGlass(widget,event,surface);return;}
+        if(PotatoGlass::active()||PotatoAurora::active()||PotatoAmbient::active()){paintGlass(widget,event,surface);return;}
         if(surface==Surface::FocusOnly){
             if(hasFocusWithin(widget)&&widget->isEnabled()){
                 setProperty("potatoMaterialPaintCount",QVariant::fromValue(++m_paintCount));
@@ -310,8 +351,8 @@ private:
     }
     void paintGlass(QWidget *widget,QPaintEvent *event,Surface surface){
         using Role=PotatoGlass::Role;
-        const bool clearGlass=PotatoAurora::active();
-        const QColor glassAccent=clearGlass?PotatoAurora::accent():PotatoGlass::accent();
+        const bool ambient=PotatoAmbient::active(),clearGlass=PotatoAurora::active()||ambient;
+        const QColor glassAccent=ambient?PotatoAmbient::accent():(clearGlass?PotatoAurora::accent():PotatoGlass::accent());
         const bool focus=hasFocusWithin(widget)&&widget->isEnabled();
         if(surface==Surface::FocusOnly){
             if(focus){
@@ -348,13 +389,14 @@ private:
         QPainter p(widget);p.setClipRegion(event->region());p.setRenderHint(QPainter::Antialiasing);
         const QRectF rect(widget->rect());
         const QPointF origin=m_editor->mapFromGlobal(widget->mapToGlobal(QPoint(0,0)));
-        if(clearGlass)PotatoAurora::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
+        if(ambient)PotatoAmbient::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
+        else if(clearGlass)PotatoAurora::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
         else PotatoGlass::paintSurface(p,rect,role,origin,m_editor->size(),state);
         // Pointer light changes only this control's vector reflection. It never
-        // invalidates the source/refraction cache and has no animation timer.
+        // invalidates the source/refraction cache or alters the ambient clock.
         if((state&1)&&!(state&8)&&!PotatoGlass::reducedMotion()&&!PotatoGlass::reducedTransparency()&&!PotatoGlass::increasedContrast()){
             const QPoint pointer=widget->mapFromGlobal(QCursor::pos());
-            const qreal r=clearGlass?PotatoAurora::radius(role):PotatoGlass::radius(role);QPainterPath shape;shape.addRoundedRect(rect.adjusted(1,1,-1,-1),qMax(1.0,r-1),qMax(1.0,r-1));
+            const qreal r=ambient?PotatoAmbient::radius(role):(clearGlass?PotatoAurora::radius(role):PotatoGlass::radius(role));QPainterPath shape;shape.addRoundedRect(rect.adjusted(1,1,-1,-1),qMax(1.0,r-1),qMax(1.0,r-1));
             p.save();p.setClipPath(shape,Qt::IntersectClip);
             const QPointF light(qBound(0,pointer.x(),widget->width()),qMin(widget->height()*.28,qreal(pointer.y())));
             QRadialGradient sheen(light,qMin<qreal>(110,qMax<qreal>(28,widget->width()*.55)));
@@ -364,7 +406,7 @@ private:
         }
         if(focus&&(interactive||surface==Surface::Well)){
             p.setBrush(Qt::NoBrush);p.setPen(QPen(clearGlass?QColor(16,39,68):QColor(8,19,13),3));
-            const QRectF ring=rect.adjusted(1.5,1.5,-1.5,-1.5);const qreal r=qMax(2.0,(clearGlass?PotatoAurora::radius(role):PotatoGlass::radius(role))-1);
+            const QRectF ring=rect.adjusted(1.5,1.5,-1.5,-1.5);const qreal r=qMax(2.0,(ambient?PotatoAmbient::radius(role):(clearGlass?PotatoAurora::radius(role):PotatoGlass::radius(role)))-1);
             p.drawRoundedRect(ring,r,r);p.setPen(QPen(glassAccent.lighter(clearGlass?100:110),1.7));p.drawRoundedRect(ring,r,r);
         }
         auto arrow=[&](const QRect &area,bool up,bool enabled){
@@ -391,6 +433,7 @@ private:
         }
     }
     QPointer<QWidget> m_editor;QCache<QString,QPixmap> m_cache;
+    QTimer m_ambientTimer;QElapsedTimer m_ambientClock;
     bool m_refreshing=false;qulonglong m_paintCount=0;
 };
 }

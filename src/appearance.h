@@ -10,10 +10,33 @@ inline QString accentId(const QString &id){
 // Retain the original palette IDs for older runtimes and catalogue checks.
 inline QString themeId(const QString &id){return accentId(id);}
 inline QString interfaceThemeId(const QString &id){
-    if(id=="classic1"||id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1")return id;
+    if(id=="classic1"||id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1"||id=="ambientglass1")return id;
     return QStringLiteral("material");
 }
-inline bool clearGlass(const QString &id){return id=="auroraclear1"||id=="transparentglass1";}
+inline bool clearGlass(const QString &id){return id=="auroraclear1"||id=="transparentglass1"||id=="ambientglass1";}
+struct AmbientPreferences {
+    QString glass=QStringLiteral("smoked");
+    bool paused=false;
+    int speed=50;
+    int intensity=65;
+};
+inline AmbientPreferences normalizedAmbientPreferences(AmbientPreferences value){
+    value.glass=value.glass=="clear"?QStringLiteral("clear"):QStringLiteral("smoked");
+    value.speed=qBound(20,value.speed,120);value.intensity=qBound(20,value.intensity,100);
+    return value;
+}
+inline AmbientPreferences readAmbientPreferences(QSettings &settings){
+    bool speedOk=false,intensityOk=false;
+    const int speed=settings.value("ui/ambientSpeed",50).toInt(&speedOk);
+    const int intensity=settings.value("ui/ambientIntensity",65).toInt(&intensityOk);
+    return normalizedAmbientPreferences({settings.value("ui/ambientGlass","smoked").toString(),
+        settings.value("ui/ambientPaused",false).toBool(),speedOk?speed:50,intensityOk?intensity:65});
+}
+inline void writeAmbientPreferences(QSettings &settings,const AmbientPreferences &requested){
+    const auto value=normalizedAmbientPreferences(requested);
+    settings.setValue("ui/ambientGlass",value.glass);settings.setValue("ui/ambientPaused",value.paused);
+    settings.setValue("ui/ambientSpeed",value.speed);settings.setValue("ui/ambientIntensity",value.intensity);
+}
 struct Preferences {
     QString interfaceTheme=QStringLiteral("material");
     QString accent=QStringLiteral("classic1");

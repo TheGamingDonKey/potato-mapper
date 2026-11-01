@@ -216,12 +216,43 @@ QMenu::item:selected { background:#246B91; color:#FFFFFF; }
     return style;
 }
 
+inline QString potatoAmbientStyle(){
+    // Preserve established metrics and input behaviour. Ambient's shared
+    // procedural environment supplies the moving material, not this stylesheet.
+    auto style=potatoAuroraStyle(false);
+    style+=QStringLiteral(R"QSS(
+QWidget { color:#EDF1F7; }
+QToolButton,QPushButton { color:#EDF1F7; }
+QPushButton#outputStart,QToolButton#outputStart { color:#F7FAFF; }
+QLabel:disabled,QToolButton:disabled,QPushButton:disabled,QMenu::item:disabled { color:#8E9CA8; }
+QMenu::item:selected { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 rgba(169,210,202,65),stop:1 rgba(146,183,199,30)); color:#FFFFFF; }
+QListWidget::item:selected,QAbstractItemView::item:selected { background:rgba(141,189,202,45); border-left-color:#A9D2CA; }
+QComboBox QAbstractItemView { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #1B353B,stop:.5 #252B37,stop:1 #302735); color:#EDF1F7; selection-background-color:#355C63; border-color:#8AA9AE; }
+QToolTip { background:#16252E; color:#EDF1F7; border-color:#8AA9AE; }
+QSlider::groove:horizontal { background:rgba(160,185,197,40); border-color:rgba(185,211,218,45); }
+QSlider::sub-page:horizontal { background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #A9D2CA,stop:1 #8DB5C4); }
+QSlider::handle:horizontal { background:#EFF7F4; border-color:#BCD5D1; }
+QCheckBox::indicator { background:rgba(7,17,25,100); border-color:#8AA9AE; }
+QCheckBox::indicator:checked { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #476C76,stop:1 #355384); border-color:#A9D2CA; }
+QRadioButton::indicator { background:#13242C; border-color:#8AA9AE; }
+QRadioButton::indicator:checked { background:#13242C; border-color:#A9D2CA; }
+QScrollBar:vertical,QScrollBar:horizontal { background:rgba(8,16,23,32); }
+QScrollBar::handle:vertical,QScrollBar::handle:horizontal { background:rgba(180,207,212,100); border-color:rgba(220,240,248,35); }
+QSplitter::handle { background:rgba(138,169,174,38); }
+QSplitter::handle:hover { background:#A9D2CA; }
+QProgressBar { background:#14242D; border-color:#8AA9AE; }
+)QSS");
+    if(qApp&&qApp->property("potatoIncreasedContrast").toBool())style+=QStringLiteral("QWidget { color:#FFFFFF; } QComboBox QAbstractItemView,QToolTip { background:#101B24; color:#FFFFFF; border-color:#E2F2F0; }\n");
+    return style;
+}
+
 // Keep the familiar compact widget geometry. material.h paints the surfaces;
 // transparent bases let Qt paint real text, icons, values and native interaction
 // states without concealing the app-rendered layers, light and rounded rims.
 inline QString potatoStyle(const QString &theme=QStringLiteral("classic1"),const QString &interfaceTheme=QStringLiteral("material")){
     if(interfaceTheme==QStringLiteral("classic1"))return potatoClassicStyle();
     if(interfaceTheme==QStringLiteral("liquidglass1"))return potatoLiquidGlassStyle();
+    if(interfaceTheme==QStringLiteral("ambientglass1"))return potatoAmbientStyle();
     if(PotatoAppearance::clearGlass(interfaceTheme))return potatoAuroraStyle(interfaceTheme=="transparentglass1");
     QString accent=QStringLiteral("#F3B34C"),focus=QStringLiteral("#FFD185");
     const auto id=PotatoAppearance::themeId(theme);

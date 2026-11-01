@@ -38,7 +38,7 @@ inline QIcon studioIcon(const QString &name){
 }
 
 inline bool studioClearGlass(){return qApp&&PotatoAppearance::clearGlass(qApp->property("potatoInterfaceTheme").toString());}
-inline bool studioAuroraClear(){return qApp&&qApp->property("potatoInterfaceTheme").toString()=="auroraclear1";}
+inline bool studioAuroraClear(){const auto profile=qApp?qApp->property("potatoInterfaceTheme").toString():QString();return profile=="auroraclear1"||profile=="ambientglass1";}
 
 // Small cached tiles reuse the shipped Fluent glyphs. No replacement action,
 // font glyph dependency, SVG module or scene artwork is introduced.

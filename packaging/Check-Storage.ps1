@@ -1,11 +1,11 @@
 param(
-    [ValidateRange(0,1800000000)][long]$ReserveBytes=0,
+    [ValidateRange(0,1900000000)][long]$ReserveBytes=0,
     [string]$DesignWorkspace=(Join-Path $env:USERPROFILE 'OneDrive\Music\Documents\ChatGPT\Potato mapper'),
     [switch]$PassThru
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$cap=1800000000L # Explicitly authorized by Shane on 2026-11-01.
+$cap=1900000000L # Explicitly authorized for native Ambient Glass by Shane on 2026-11-01.
 $countedRoots=[Collections.Generic.List[string]]::new()
 $countedRoots.Add($root.TrimEnd('\','/'))
 $bytes=(Get-ChildItem -LiteralPath $root -File -Recurse -Force | Measure-Object Length -Sum).Sum
@@ -27,6 +27,6 @@ if(Test-Path -LiteralPath $conceptManifest){
         if(!$alreadyCounted -and $seen.Add($previewPath) -and (Test-Path -LiteralPath $previewPath -PathType Leaf)){$bytes+=(Get-Item -LiteralPath $previewPath).Length}
     }
 }
-if($bytes+$ReserveBytes -gt $cap){throw "Project storage limit: $bytes bytes used + $ReserveBytes reserved exceeds 1,800,000,000. Preserve projects/media; remove only verified replaceable outputs before proceeding."}
+if($bytes+$ReserveBytes -gt $cap){throw "Project storage limit: $bytes bytes used + $ReserveBytes reserved exceeds 1,900,000,000. Preserve projects/media; remove only verified replaceable outputs before proceeding."}
 if($PassThru){[pscustomobject]@{Bytes=[long]$bytes;ReserveBytes=$ReserveBytes;CapBytes=$cap;Roots=$countedRoots.ToArray()}}
 else{Write-Output "Storage: $bytes bytes used; $ReserveBytes bytes reserved; cap $cap."}
