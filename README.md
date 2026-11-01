@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**Local desktop runtime: 0.9.3.** The familiar 0.8.8 layout now supports two complete interface styles: Classic 1 (original 0.8.8 styling) and Material (the approved Windows-inspired finish). Choose **Settings → Appearance → Interface theme**; both retain current mapping, animation, connection and project features. See the [local changes and verification](docs/0.9.3-interface-themes.md). The public download linked below is v0.8.8; this local update has not been publicly released. [Development handoff](DEVELOPMENT.md) records installation and saved-work recovery.
+**Local desktop runtime: 0.9.4.** The familiar 0.8.8 layout supports three complete interface styles: Classic 1, Material, and **Windows Liquid Glass 1** with app-rendered optical glass. Choose **Settings → Appearance → Interface theme**; all retain current mapping, animation, connection and project features. See the [local changes and verification](docs/0.9.4-windows-liquid-glass1.md) and [design research](docs/research/2026-10-31-liquid-glass/README.md). The public download linked below is v0.8.8; this local update has not been publicly released. [Development handoff](DEVELOPMENT.md) records installation and preservation evidence.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 

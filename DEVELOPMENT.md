@@ -1,5 +1,11 @@
 # Development handoff
 
+## Current handoff — October 31 Windows Liquid Glass 1 installed as 0.9.4
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/liquid-glass-theme`. Normal `app/PotatoMapper.exe` selects 0.9.4; previous is 0.9.3; original 0.8.8 remains. [Research, implementation, exact evidence and limits](docs/0.9.4-windows-liquid-glass1.md). The third complete profile uses neutral optical glass, pearl and jade, preserving the other themes, familiar layout and all features. Cached procedural refraction, real opening-only menu lensing, local pointer light and explicit readability preferences use the existing Qt stack. No scene/output format changes or native DWM claim.
+
+Seven final staged native checks plus effective 2× theme checks passed without developer PATH. Native full app, Delete menu, animation browser/dialog movement and normal saved-project reopen were inspected. An initial 16 MiB optical cache churn defect was corrected without raising its budget or weakening the test. Five protected hashes, installed/retained payloads and launcher/profile verified. About 1.46 GB used under 1.5 GB. Cleanup was blocked by automatic review; a verified generated stage was reused instead, with no deletion or new ZIP. Existing build tree: `out/build-desktop`; Qt/CMake from the cached tools documented below. No public release/Store certification/physical projector claim. Next: Shane's visual review; refine this profile without moving tools or altering Classic/Material.
+
 ## Current handoff — October 31 complete interface themes installed as 0.9.3
 
 Shane clarified that themes are complete interface designs. Settings → Appearance → Interface theme now offers Classic 1 (tagged 0.8.8 QSS, Material paint/capture bypassed) and refined Material, with old colour choices correctly separated as Material accents. Both retain the current software and familiar layout. [Local handoff, preservation and checks](docs/0.9.3-interface-themes.md). Source branch: `codex/interface-themes`; current 0.9.3, previous 0.9.2, original 0.8.8 retained. No public release/Store certification.
