@@ -10,6 +10,8 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenuBar>
+#include <QMessageBox>
+#include <QMap>
 #include <QPointer>
 #include <QPushButton>
 #include <QScrollBar>
@@ -85,7 +87,7 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         preferences.setValue("ui/interfaceTheme","unknown");preferences.setValue("ui/accent","unknown");read=PotatoAppearance::readPreferences(preferences);
         require(read.interfaceTheme=="material"&&read.accent=="classic1","unknown preferences normalize safely");
         preferences.setValue("ui/reducedTransparency",true);preferences.setValue("ui/increasedContrast",true);
-        for(const auto &id:QStringList{"classic1","material","liquidglass1"}){
+        for(const auto &id:QStringList{"classic1","material","liquidglass1","auroraclear1","transparentglass1"}){
             PotatoAppearance::writePreferences(preferences,{id,"christmas"});preferences.sync();QSettings reopened(preferencesPath,QSettings::IniFormat);read=PotatoAppearance::readPreferences(reopened);
             require(reopened.status()==QSettings::NoError&&read.interfaceTheme==id&&read.accent=="christmas"&&reopened.value("ui/theme").toString()=="christmas","new keys survive reopen and retain legacy accent: "+id);
             require(reopened.value("ui/reducedTransparency").toBool()&&reopened.value("ui/increasedContrast").toBool(),"saving interface does not discard independent glass accessibility preferences: "+id);
@@ -103,6 +105,8 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         auto *classic=window.template findChild<QAction*>("interfaceTheme_classic1");
         auto *material=window.template findChild<QAction*>("interfaceTheme_material");
         auto *glass=window.template findChild<QAction*>("interfaceTheme_liquidglass1");
+        auto *aurora=window.template findChild<QAction*>("interfaceTheme_auroraclear1");
+        auto *transparent=window.template findChild<QAction*>("interfaceTheme_transparentglass1");
         auto *reduceTransparency=window.template findChild<QAction*>("reduceInterfaceTransparency");
         auto *increaseContrast=window.template findChild<QAction*>("increaseInterfaceContrast");
         auto *splitter=window.template findChild<QSplitter*>("editorSplitter");
@@ -110,8 +114,9 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         auto *outputBar=window.template findChild<QToolBar*>("outputToolbar");
         auto *chrome=window.template findChild<QObject*>("potatoChromeMaterial");
         QMenu *existingMenu=nullptr;for(auto *action:window.menuBar()->actions())if(action->text()=="Settings")existingMenu=action->menu();
-        require(browser&&browse&&closeButton&&connections&&picker&&category&&search&&library&&apply&&classic&&material&&glass&&reduceTransparency&&increaseContrast&&splitter&&projectBar&&outputBar&&chrome&&existingMenu,"native three-profile themes, accessibility, layout, browser and material controls exist");
+        require(browser&&browse&&closeButton&&connections&&picker&&category&&search&&library&&apply&&classic&&material&&glass&&aurora&&transparent&&reduceTransparency&&increaseContrast&&splitter&&projectBar&&outputBar&&chrome&&existingMenu,"native five-profile themes, accessibility, layout, browser and material controls exist");
         if(!failures.isEmpty()){finish();return;}
+        const QMap<QString,QAction*> themeActions{{"classic1",classic},{"material",material},{"liquidglass1",glass},{"auroraclear1",aurora},{"transparentglass1",transparent}};
         reduceTransparency->setChecked(false);increaseContrast->setChecked(false);
 
         // Both history directions are populated. Later real Undo/Redo catches
@@ -127,6 +132,8 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         }
         const auto projectActions=projectBar->actions(),outputActions=outputBar->actions();
         window.resize(1280,800);material->trigger();settle(app,80);reveal(browse,app);browse->click();settle(app,60);
+        struct Command {QAction *action;QString text;QList<QKeySequence> shortcuts;QImage icon;};QList<Command> commands;
+        for(auto *action:projectActions)commands.append({action,action->text(),action->shortcuts(),action->icon().pixmap(20,20).toImage()});
         require(browser->isVisible()&&library->isVisible(),"animation browser reachable from sidebar");
         const auto oldMinimum=closeButton->minimumSize(),oldMaximum=closeButton->maximumSize();closeButton->setFixedSize(196,42);closeButton->clearFocus();
         browser->resize(760,520);browser->move(window.mapToGlobal(QPoint(70,40)));settle(app,40);
@@ -139,28 +146,45 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         // Keep the actual production context-menu class alive across switches
         // to catch private Material QSS or flags accidentally overriding Classic.
         MaterialSurfaceMenu surfaceMenu(&window);surfaceMenu.addAction("Keep mapped surface");surfaceMenu.addAction("Choose animation…");
-        const QList<QMenu*> menus{existingMenu,&surfaceMenu};QImage classicImage,materialImage,glassImage,materialBand,glassBand;
-        for(const auto &id:QStringList{"material","classic1","liquidglass1","material","liquidglass1","classic1","material","liquidglass1"}){
-            auto *action=id=="classic1"?classic:id=="material"?material:glass;action->trigger();settle(app,70);const bool useMaterial=id!="classic1";
-            require(app.property("potatoInterfaceTheme").toString()==id&&int(classic->isChecked())+int(material->isChecked())+int(glass->isChecked())==1&&action->isChecked(),"live exclusive interface action: "+id);
+        const QList<QMenu*> menus{existingMenu,&surfaceMenu};QImage classicImage,materialImage,glassImage,auroraImage,transparentImage,materialBand,glassBand;
+        QMap<QString,QString> originalStyles;
+        search->setText("Ghost");
+        for(const auto &id:QStringList{"material","classic1","liquidglass1","auroraclear1","transparentglass1","classic1","auroraclear1","material","transparentglass1","liquidglass1"}){
+            browser->raise();browser->activateWindow();settle(app,25);search->setFocus(Qt::OtherFocusReason);search->setSelection(1,3);settle(app,25);
+            require(search->hasFocus(),"search focused before live profile switch: "+id);
+            const int cursor=search->cursorPosition();
+            auto *action=themeActions.value(id);action->trigger();settle(app,70);const bool useMaterial=id!="classic1";
+            int checked=0;for(auto *choice:themeActions)checked+=int(choice->isChecked());
+            require(app.property("potatoInterfaceTheme").toString()==id&&checked==1&&action->isChecked(),"live exclusive interface action: "+id);
+            require(search->hasFocus()&&search->text()=="Ghost"&&search->selectedText()=="hos"&&search->selectionStart()==1&&search->cursorPosition()==cursor,"profile switch retains input, selection, cursor and keyboard focus: "+id);
+            if(id=="classic1"||id=="material"||id=="liquidglass1"){
+                if(!originalStyles.contains(id))originalStyles.insert(id,app.styleSheet());
+                else require(app.styleSheet()==originalStyles.value(id),"original profile stylesheet restored after new glass profiles: "+id);
+            }
+            for(const auto &command:commands){
+                require(command.action->text()==command.text&&command.action->shortcuts()==command.shortcuts,"command label and shortcuts retained: "+command.text+" "+id);
+                if(id!="auroraclear1")require(command.action->icon().pixmap(20,20).toImage()==command.icon,"original command icon restored: "+command.text+" "+id);
+            }
             require(chrome->property("potatoMaterialEnabled").toBool()==useMaterial,"chrome renderer follows interface: "+id);
             const auto paints=chrome->property("potatoMaterialPaintCount").toULongLong();
             window.repaint();browser->repaint();const auto image=closeButton->grab().toImage().convertToFormat(QImage::Format_RGB32);settle(app);
             require(!image.isNull(),"actual fixed native button captured: "+id);
             require(useMaterial?chrome->property("potatoMaterialPaintCount").toULongLong()>paints:chrome->property("potatoMaterialPaintCount").toULongLong()==paints,"custom chrome paints only for optical interfaces: "+id);
             if(id=="liquidglass1"){glassImage=image;glassBand=projectBar->grab().toImage();}
-            else if(id=="material"){materialImage=image;materialBand=projectBar->grab().toImage();}else classicImage=image;
+            else if(id=="material"){materialImage=image;materialBand=projectBar->grab().toImage();}
+            else if(id=="auroraclear1")auroraImage=image;else if(id=="transparentglass1")transparentImage=image;else classicImage=image;
             for(auto *menu:menus){
                 auto *renderer=menu->template findChild<QObject*>("potatoMenuMaterial");require(renderer,"existing menu renderer retained: "+id);if(!renderer)continue;
                 const auto captures=renderer->property("potatoMaterialCaptureCount").toULongLong(),menuPaints=renderer->property("potatoMaterialPaintCount").toULongLong();
                 menu->popup(window.mapToGlobal(QPoint(400,160)));settle(app,45);require(menu->isVisible()&&!menu->grab().isNull(),"real popup opens after switch: "+id);
                 require(renderer->property("potatoMaterialEnabled").toBool()==useMaterial,"existing popup material state follows interface: "+id);
-                require(useMaterial?renderer->property("potatoMaterialCaptureCount").toULongLong()>captures:renderer->property("potatoMaterialCaptureCount").toULongLong()==captures,"menu samples editor only for optical interfaces: "+id);
+                const bool samplesEditor=id=="material"||id=="liquidglass1";
+                require(samplesEditor?renderer->property("potatoMaterialCaptureCount").toULongLong()>captures:renderer->property("potatoMaterialCaptureCount").toULongLong()==captures,"menu samples editor only for legacy sampled profiles: "+id);
                 require(useMaterial?renderer->property("potatoMaterialPaintCount").toULongLong()>menuPaints:renderer->property("potatoMaterialPaintCount").toULongLong()==menuPaints,"menu paints glass only for optical interfaces: "+id);
-                if(id=="liquidglass1"){
+                if(id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1"){
                     const auto openingCaptures=renderer->property("potatoMaterialCaptureCount").toULongLong();
                     menu->repaint();settle(app,60);menu->repaint();settle(app,60);
-                    require(renderer->property("potatoMaterialCaptureCount").toULongLong()==openingCaptures,"visible glass menu does not resample on repaint or idle");
+                    require(renderer->property("potatoMaterialCaptureCount").toULongLong()==openingCaptures,"visible glass menu does not resample on repaint or idle: "+id);
                 }
                 if(!useMaterial)require(!menu->testAttribute(Qt::WA_TranslucentBackground)&&!menu->windowFlags().testFlag(Qt::FramelessWindowHint),"Classic restores opaque ordinary popup flags");
                 menu->close();settle(app);require(!menu->isVisible(),"popup dismissal survives switch: "+id);
@@ -178,6 +202,8 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         const double glassDetail=PotatoThemeCheck::detailDifference(materialImage,glassImage),glassEdges=PotatoThemeCheck::edgeDifference(materialImage,glassImage),bandDetail=PotatoThemeCheck::detailDifference(materialBand,glassBand);
         qInfo()<<"GLASS DESIGN button luminance detail"<<glassDetail<<"border gradient difference"<<glassEdges<<"command-band detail"<<bandDetail;
         require(materialImage.size()==glassImage.size()&&glassDetail>.35&&glassEdges>.5&&bandDetail>.35,"Liquid Glass changes real control rims and persistent command-band structure beyond a Material recolour");
+        require(!auroraImage.isNull()&&auroraImage.size()==glassImage.size()&&auroraImage!=glassImage,"AuroraClear paints its own native control instead of aliasing Liquid Glass");
+        require(!transparentImage.isNull()&&transparentImage.size()==auroraImage.size()&&transparentImage!=auroraImage&&transparentImage!=glassImage,"Transparent Glass paints a distinct native control from both other glass profiles");
         // An already-open native popup must safely leave the custom paint path,
         // then restore its ordinary flags when hidden and reopen optically.
         auto *popupRenderer=surfaceMenu.template findChild<QObject*>("potatoMenuMaterial");
@@ -190,17 +216,20 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         require(scene.json()==saved&&!scene.dirty&&window.output->grabFramebuffer()==outputBefore&&browser->geometry()==browserGeometry&&window.geometry()==windowGeometry,"visible popup switching preserves mapping, projector pixels and window geometry");
         // Observe a small warm batch, without a hardware-dependent FPS gate.
         // A capture-on-paint or continually rebuilt cache must still fail.
+        for(const auto &glassId:QStringList{"liquidglass1","auroraclear1","transparentglass1"}){
+        themeActions.value(glassId)->trigger();settle(app,70);
+        const QByteArray metrics=glassId=="liquidglass1"?"potatoGlass":"potatoAurora";
         window.repaint();browser->repaint();settle(app,40);window.repaint();browser->repaint();
-        const auto environmentBuilds=app.property("potatoGlassEnvironmentBuilds").toULongLong(),plateBuilds=app.property("potatoGlassPlateBuilds").toULongLong();
+        const auto environmentBuilds=app.property((metrics+"EnvironmentBuilds").constData()).toULongLong(),plateBuilds=app.property((metrics+"PlateBuilds").constData()).toULongLong();
         QList<QPair<QObject*,qulonglong>> idleCaptures;for(auto *menu:menus)if(auto *renderer=menu->template findChild<QObject*>("potatoMenuMaterial"))idleCaptures.append({renderer,renderer->property("potatoMaterialCaptureCount").toULongLong()});
         QElapsedTimer repaintTime;repaintTime.start();constexpr int repaintBatch=8;
         for(int i=0;i<repaintBatch;++i){window.repaint();browser->repaint();}
         const double milliseconds=repaintTime.nsecsElapsed()/1000000.;settle(app,80);
-        const auto environmentBytes=app.property("potatoGlassEnvironmentBytes").toLongLong(),cacheBytes=app.property("potatoGlassCacheBytes").toLongLong();
-        const auto environmentBuildsAfter=app.property("potatoGlassEnvironmentBuilds").toULongLong(),plateBuildsAfter=app.property("potatoGlassPlateBuilds").toULongLong();
-        qInfo()<<"GLASS WARM REPAINT batch"<<repaintBatch<<"milliseconds"<<milliseconds<<"per editor+dialog repaint"<<milliseconds/repaintBatch<<"environment bytes"<<environmentBytes<<"cache bytes"<<cacheBytes<<"environment builds before/after"<<environmentBuilds<<environmentBuildsAfter<<"plate builds before/after"<<plateBuilds<<plateBuildsAfter;
-        require(environmentBytes>0&&environmentBytes<=4000000&&cacheBytes>0&&cacheBytes<=16777216,"observed glass environment and plate cache stay within bounded byte budgets");
-        require(environmentBuildsAfter==environmentBuilds&&plateBuildsAfter==plateBuilds,"warm repaint and idle reuse the optical environment and plates");
+        const auto environmentBytes=app.property((metrics+"EnvironmentBytes").constData()).toLongLong(),cacheBytes=app.property((metrics+"CacheBytes").constData()).toLongLong();
+        const auto environmentBuildsAfter=app.property((metrics+"EnvironmentBuilds").constData()).toULongLong(),plateBuildsAfter=app.property((metrics+"PlateBuilds").constData()).toULongLong();
+        qInfo()<<"GLASS WARM REPAINT"<<glassId<<"batch"<<repaintBatch<<"milliseconds"<<milliseconds<<"per editor+dialog repaint"<<milliseconds/repaintBatch<<"environment bytes"<<environmentBytes<<"cache bytes"<<cacheBytes<<"environment builds before/after"<<environmentBuilds<<environmentBuildsAfter<<"plate builds before/after"<<plateBuilds<<plateBuildsAfter;
+        require(environmentBytes>0&&environmentBytes<=4000000&&cacheBytes>0&&cacheBytes<=16777216,"observed glass environment and plate cache stay within bounded byte budgets: "+glassId);
+        require(environmentBuildsAfter==environmentBuilds&&plateBuildsAfter==plateBuilds,"warm repaint and idle reuse the optical environment and plates: "+glassId);
         for(const auto &entry:idleCaptures)require(entry.first->property("potatoMaterialCaptureCount").toULongLong()==entry.second,"closed menus do not capture during editor repaint or idle");
 
         // A stylesheet refresh must preserve an in-progress input operation,
@@ -211,15 +240,15 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         QImage normalGlass,reducedGlass,contrastGlass;
         for(const auto flags:QList<QPair<bool,bool>>{{false,false},{true,false},{true,true},{false,true},{false,false}}){
             reduceTransparency->setChecked(flags.first);increaseContrast->setChecked(flags.second);settle(app,70);
-            require(app.property("potatoInterfaceTheme").toString()=="liquidglass1"&&glass->isChecked()&&app.property("potatoReducedTransparency").toBool()==flags.first&&app.property("potatoIncreasedContrast").toBool()==flags.second,"glass accessibility actions apply their independent live state");
+            require(app.property("potatoInterfaceTheme").toString()==glassId&&themeActions.value(glassId)->isChecked()&&app.property("potatoReducedTransparency").toBool()==flags.first&&app.property("potatoIncreasedContrast").toBool()==flags.second,"glass accessibility actions apply their independent live state: "+glassId);
             require(search->hasFocus()&&search->text()==inputText&&search->selectedText()==inputSelection&&search->cursorPosition()==inputCursor&&search->selectionStart()==inputSelectionStart,"glass accessibility changes retain edit text, selection, cursor and keyboard focus");
             require(scene.json()==saved&&!scene.dirty&&scene.selected==selected&&scene.current()->patternPhase==phase&&window.output->grabFramebuffer()==outputBefore,"glass accessibility changes preserve clean selected mapping and exact projector pixels");
             require(browser->isVisible()&&window.geometry()==windowGeometry&&browser->geometry()==browserGeometry&&splitter->sizes()==splitterSizes&&inspector&&inspector->verticalScrollBar()->value()==sidebarScroll,"glass accessibility changes retain window/open dialog geometry, splitter and sidebar scroll");
-            const double contrast=PotatoThemeCheck::textBedContrast(search);qInfo()<<"GLASS TEXT BED reduced"<<flags.first<<"contrast"<<flags.second<<"ratio"<<contrast;
-            require(contrast>=4.5,"actual composited glass search bed meets normal-text contrast");
+            const double contrast=PotatoThemeCheck::textBedContrast(search);qInfo()<<"GLASS TEXT BED"<<glassId<<"reduced"<<flags.first<<"contrast"<<flags.second<<"ratio"<<contrast;
+            require(contrast>=4.5,"actual composited glass search bed meets normal-text contrast: "+glassId);
             const auto frame=closeButton->grab().toImage();if(!flags.first&&!flags.second)normalGlass=frame;else if(flags.first&&!flags.second)reducedGlass=frame;else if(!flags.first&&flags.second)contrastGlass=frame;
         }
-        require(!normalGlass.isNull()&&normalGlass!=reducedGlass&&normalGlass!=contrastGlass,"reduced transparency and stronger contrast visibly affect actual glass chrome");
+        require(!normalGlass.isNull()&&normalGlass!=reducedGlass&&normalGlass!=contrastGlass,"reduced transparency and stronger contrast visibly affect actual glass chrome: "+glassId);
         for(const auto flags:QList<QPair<bool,bool>>{{true,false},{false,true}}){
             reduceTransparency->setChecked(flags.first);increaseContrast->setChecked(flags.second);settle(app,40);
             const auto captures=popupRenderer?popupRenderer->property("potatoMaterialCaptureCount").toULongLong():0;
@@ -229,6 +258,7 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
             surfaceMenu.close();settle(app,25);require(scene.json()==saved&&!scene.dirty&&window.output->grabFramebuffer()==outputBefore,"fallback popup preserves mapping and exact projector output");
         }
         reduceTransparency->setChecked(false);increaseContrast->setChecked(false);settle(app,40);
+        }
         closeButton->setMinimumSize(oldMinimum);closeButton->setMaximumSize(oldMaximum);
         scene.undo();require(scene.json()==undoState,"interface switches preserve the prior real Undo checkpoint");scene.redo();require(scene.json()==saved,"interface switches preserve Redo back to selected content");scene.redo();require(scene.json()==redoState,"interface switches preserve the existing future checkpoint");scene.undo();scene.dirty=false;
 
@@ -240,7 +270,13 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         }
         styles.removeDuplicates();require(styles.size()==4,"four distinct Material accent palettes");
         classic->trigger();const auto classicStyle=app.styleSheet();auto *autumn=window.template findChild<QAction*>("theme_autumn");if(autumn)autumn->trigger();require(app.styleSheet()==classicStyle&&app.property("potatoInterfaceTheme").toString()=="classic1"&&app.property("potatoTheme").toString()=="autumn","Classic stays original while retaining accent preference");material->trigger();
-        glass->trigger();const auto glassStyle=app.styleSheet();auto *halloween=window.template findChild<QAction*>("theme_halloween");if(halloween)halloween->trigger();require(app.styleSheet()==glassStyle&&app.property("potatoInterfaceTheme").toString()=="liquidglass1"&&app.property("potatoTheme").toString()=="halloween","Liquid Glass retains its own optical palette while remembering Material accent");material->trigger();
+        auto *halloween=window.template findChild<QAction*>("theme_halloween");
+        for(const auto &id:QStringList{"liquidglass1","auroraclear1","transparentglass1"}){
+            if(autumn)autumn->trigger();themeActions.value(id)->trigger();const auto glassStyle=app.styleSheet();if(halloween)halloween->trigger();
+            require(app.styleSheet()==glassStyle&&app.property("potatoInterfaceTheme").toString()==id&&app.property("potatoTheme").toString()=="halloween","glass profile keeps its own palette while remembering Material accent: "+id);
+            require(scene.json()==saved&&!scene.dirty,"glass accent change preserves clean mapping: "+id);
+        }
+        material->trigger();
         category->setCurrentIndex(category->findData("christmas"));search->setText("Snowfall");
         require(scene.current()->pattern==pattern&&scene.json()==saved&&!scene.dirty,"category and search preserve assigned Halloween content");
         require(picker->findData(17)>=0,"assigned content remains editable across categories");
@@ -251,11 +287,60 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         browser->close();auto *connectionHeading=connections->template findChild<QToolButton*>("sectionHeading");require(connectionHeading,"direct Connections section navigation");
         if(connectionHeading){connectionHeading->setChecked(true);scene.select(0);require(connectionHeading->isChecked(),"selection preserves expanded Connections section");}
         require(!window.template findChild<QWidget*>("taskTabs"),"restored sidebar does not require Studio task tabs");
-        window.resize(1024,640);reveal(picker,app);app.processEvents();
-        const int snapshot=args.indexOf("--snapshot");if(snapshot>=0&&snapshot+1<args.size()){
-            const QFileInfo path(args[snapshot+1]);require(window.grab().save(path.absoluteFilePath()),"save actual task UI snapshot");
-            require(classicImage.save(path.dir().filePath(path.completeBaseName()+"-classic-control.png"))&&materialImage.save(path.dir().filePath(path.completeBaseName()+"-material-control.png"))&&glassImage.save(path.dir().filePath(path.completeBaseName()+"-liquidglass-control.png")),"save real three-profile control evidence");
+        window.resize(1024,640);reveal(picker,app);settle(app,60);
+        const auto compactScene=scene.json();const bool compactDirty=scene.dirty;
+        const QStringList labelledCommands{"New","Open","Save","Save as","Undo","Redo","+ Surface","Load media","Potato FX","Dynamic FX"};
+        for(auto it=themeActions.cbegin();it!=themeActions.cend();++it){
+            it.value()->trigger();settle(app,60);QStringList found;
+            for(auto *action:projectBar->actions())if(labelledCommands.contains(action->text())){
+                found<<action->text();auto *button=qobject_cast<QToolButton*>(projectBar->widgetForAction(action));
+                // Qt's effective paint style is TextOnly for a named button
+                // without an icon/arrow, even when its stored style is IconOnly.
+                const bool textPainted=button&&(button->toolButtonStyle()!=Qt::ToolButtonIconOnly||(button->icon().isNull()&&button->arrowType()==Qt::NoArrow));
+                require(button&&visible(button,&window)&&textPainted&&button->text()==action->text()&&button->fontMetrics().horizontalAdvance(button->text())<=button->contentsRect().width(),"1024px toolbar keeps visible command label: "+action->text()+" "+it.key());
+            }
+            require(found==labelledCommands&&scene.json()==compactScene&&scene.dirty==compactDirty,"compact profile switch keeps original command order and mapping: "+it.key());
         }
+        material->trigger();settle(app,40);
+        const int snapshot=args.indexOf("--snapshot");if(snapshot>=0&&snapshot+1<args.size()){
+            const QFileInfo path(args[snapshot+1]);require(QDir().mkpath(path.absolutePath()),"create requested native capture folder");
+            auto evidencePath=[&](const QString &suffix){return path.dir().filePath(path.completeBaseName()+suffix+".png");};
+            const int capture=args.indexOf("--capture-theme");
+            if(capture>=0){
+                const QString id=capture+1<args.size()?args[capture+1]:QString();require(themeActions.contains(id),"capture profile is a supported interface ID");
+                if(themeActions.contains(id)){
+                    themeActions.value(id)->trigger();window.resize(1280,800);window.output->hide();browser->close();
+                    reveal(picker,app);window.raise();window.activateWindow();settle(app,100);
+                    require(window.grab().save(path.absoluteFilePath()),"save actual selected-profile workspace: "+id);
+                    const auto captureScene=scene.json();const bool captureDirty=scene.dirty;
+                    auto findSurfaceMenu=[]()->QMenu*{for(auto *widget:QApplication::topLevelWidgets())if(widget->isVisible()&&widget->objectName()=="materialSurfaceMenu")return qobject_cast<QMenu*>(widget);return nullptr;};
+                    bool menuSeen=false;QTimer inspectMenu,menuWatchdog;inspectMenu.setSingleShot(true);menuWatchdog.setSingleShot(true);
+                    QObject::connect(&inspectMenu,&QTimer::timeout,&window,[&]{
+                        auto *menu=findSurfaceMenu();require(menu,"actual canvas context menu opens for native evidence");if(!menu)return;menuSeen=true;
+                        require(menu->template findChild<QAction*>("deleteSurfaceAction")&&menu->grab().save(evidencePath("-surface-menu")),"capture actual surface menu with Delete command");menu->close();
+                    });
+                    QObject::connect(&menuWatchdog,&QTimer::timeout,&window,[&]{if(auto *menu=findSurfaceMenu())menu->close();});
+                    QPointF centre;for(const auto &corner:scene.current()->corners)centre+=corner;centre/=scene.current()->corners.size();
+                    const auto stage=window.canvas->canvasRect();const QPoint local(qRound(stage.x()+stage.width()*centre.x()),qRound(stage.y()+stage.height()*centre.y()));
+                    inspectMenu.start(120);menuWatchdog.start(1800);QContextMenuEvent context(QContextMenuEvent::Mouse,local,window.canvas->mapToGlobal(local));QApplication::sendEvent(window.canvas,&context);inspectMenu.stop();menuWatchdog.stop();
+                    require(menuSeen&&scene.json()==captureScene&&scene.dirty==captureDirty,"real context capture cancels without scene edits");
+                    category->setCurrentIndex(category->findData("all"));search->clear();browse->click();settle(app,100);
+                    require(browser->isVisible()&&browser->grab().save(evidencePath("-animation-browser")),"capture actual selected-profile animation browser");browser->close();
+                    QAction *about=nullptr;for(auto *action:window.template findChildren<QAction*>())if(action->text()=="About Potato Mapper")about=action;
+                    require(about,"real About command available for dialog capture");
+                    if(about){
+                        bool aboutSeen=false;QTimer inspectAbout,aboutWatchdog;inspectAbout.setSingleShot(true);aboutWatchdog.setSingleShot(true);
+                        auto findAbout=[]()->QMessageBox*{for(auto *widget:QApplication::topLevelWidgets())if(widget->isVisible()&&widget->windowTitle()=="About Potato Mapper")if(auto *dialog=qobject_cast<QMessageBox*>(widget))return dialog;return nullptr;};
+                        QObject::connect(&inspectAbout,&QTimer::timeout,&window,[&]{auto *dialog=findAbout();require(dialog,"real About dialog opened");if(dialog){aboutSeen=true;require(dialog->grab().save(evidencePath("-about-dialog")),"capture real selected-profile About dialog");dialog->accept();}});
+                        QObject::connect(&aboutWatchdog,&QTimer::timeout,&window,[&]{if(auto *dialog=findAbout())dialog->reject();});
+                        inspectAbout.start(150);aboutWatchdog.start(1800);about->trigger();inspectAbout.stop();aboutWatchdog.stop();require(aboutSeen,"About capture callback completed");
+                    }
+                    require(scene.json()==captureScene&&scene.dirty==captureDirty,"native browser and dialog captures preserve scene");
+                }
+            }else require(window.grab().save(path.absoluteFilePath()),"save actual task UI snapshot");
+            require(classicImage.save(evidencePath("-classic-control"))&&materialImage.save(evidencePath("-material-control"))&&glassImage.save(evidencePath("-liquidglass-control"))&&auroraImage.save(evidencePath("-auroraclear-control"))&&transparentImage.save(evidencePath("-transparentglass-control")),"save real five-profile control evidence");
+        }
+        else require(!args.contains("--capture-theme"),"capture theme requires an explicit --snapshot destination");
         finish();
     });
 }

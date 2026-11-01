@@ -25,5 +25,6 @@ chevron = Chevron Right
 trash = Delete
 duplicate = Copy
 check = Checkmark (dark fill on amber checkbox)
+check-light = Checkmark (white fill on AuroraClear teal checkbox; original path retained)
 unlock = Lock Open
 eye-off = Eye Off

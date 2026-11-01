@@ -56,6 +56,7 @@
 #include <QScreen>
 #include <QWindow>
 #include <QCloseEvent>
+#include <QResizeEvent>
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -284,13 +285,15 @@ public:
         auto *appearanceMenu=settingsMenu->addMenu("Appearance");
         auto *interfaceMenu=appearanceMenu->addMenu("Interface theme");interfaceMenu->setObjectName("interfaceThemeMenu");
         auto *interfaceGroup=new QActionGroup(this);interfaceGroup->setExclusive(true);
-        for(const auto &entry:QList<QPair<QString,QString>>{{"Classic 1 — 0.8.8","classic1"},{"Material — Windows 11","material"},{"Windows Liquid Glass 1","liquidglass1"}}){
+        for(const auto &entry:QList<QPair<QString,QString>>{{"Classic 1 — 0.8.8","classic1"},{"Material — Windows 11","material"},{"Windows Liquid Glass 1","liquidglass1"},{"AuroraClear 1","auroraclear1"},{"Transparent Glass 1","transparentglass1"}}){
             auto *interfaceAction=interfaceMenu->addAction(entry.first);interfaceAction->setObjectName("interfaceTheme_"+entry.second);interfaceAction->setData(entry.second);interfaceAction->setCheckable(true);interfaceAction->setChecked(entry.second==qApp->property("potatoInterfaceTheme").toString());interfaceGroup->addAction(interfaceAction);
             if(entry.second=="liquidglass1")interfaceAction->setToolTip("App-rendered optical glass with a smoke, pearl and jade palette. Not native Windows DWM or Apple Liquid Glass.");
+            else if(entry.second=="auroraclear1")interfaceAction->setToolTip("Clear teal, azure and iris glass with rich colour icons. Keeps your familiar workspace and projected content.");
+            else if(entry.second=="transparentglass1")interfaceAction->setToolTip("Soft transparent glass with white text and mint controls. Keeps your familiar workspace and projected content.");
             connect(interfaceAction,&QAction::triggered,this,[this,id=entry.second]{applyAppearance({id,qApp->property("potatoTheme").toString()});});
         }
         auto *accentMenu=appearanceMenu->addMenu("Material accent");accentMenu->setObjectName("materialAccentMenu");accentMenu->setToolTipsVisible(true);
-        accentMenu->menuAction()->setToolTip("Colour adjustments for Material. Classic 1 and Windows Liquid Glass 1 keep their own design palettes and remember this choice for Material.");
+        accentMenu->menuAction()->setToolTip("Colour adjustments for Material. The other interface themes keep their own design palettes and remember this choice for Material.");
         auto *accentGroup=new QActionGroup(this);accentGroup->setExclusive(true);
         for(const auto &entry:QList<QPair<QString,QString>>{{"Original gold","classic1"},{"Halloween","halloween"},{"Autumn","autumn"},{"Christmas","christmas"}}){
             auto *accentAction=accentMenu->addAction(entry.first);accentAction->setObjectName("theme_"+entry.second);accentAction->setData(entry.second);accentAction->setCheckable(true);accentAction->setChecked(entry.second==qApp->property("potatoTheme").toString());accentAction->setToolTip("Adjusts Material colours. The other interface themes keep their own palettes.");accentGroup->addAction(accentAction);
@@ -300,7 +303,7 @@ public:
         qApp->setProperty("potatoReducedMotion",reduceMotion->isChecked());connect(reduceMotion,&QAction::toggled,this,[this](bool reduced){qApp->setProperty("potatoReducedMotion",reduced);if(!smoke)QSettings().setValue("ui/reducedMotion",reduced);});
         for(const auto &option:QList<QStringList>{{"Reduce glass transparency","reduceInterfaceTransparency","ui/reducedTransparency","potatoReducedTransparency"},{"Increase glass contrast","increaseInterfaceContrast","ui/increasedContrast","potatoIncreasedContrast"}}){
             auto *effectAction=appearanceMenu->addAction(option[0]);effectAction->setObjectName(option[1]);effectAction->setCheckable(true);effectAction->setChecked(QSettings().value(option[2],false).toBool());
-            effectAction->setToolTip("Windows Liquid Glass 1 editor appearance. Does not change projected content.");
+            effectAction->setToolTip("Glass editor appearance. Does not change projected content.");
             qApp->setProperty(option[3].toLatin1().constData(),effectAction->isChecked());
             connect(effectAction,&QAction::toggled,this,[this,option](bool checked){
                 qApp->setProperty(option[3].toLatin1().constData(),checked);
@@ -311,7 +314,7 @@ public:
         auto *specialEvents=settingsMenu->addAction("Special events…",this,[this]{showAnimationBrowser(true);});specialEvents->setObjectName("specialEvents");
         auto *helpMenu=menuBar()->addMenu("Help");
         helpMenu->addAction("Quick guide",this,[this]{QMessageBox::information(this,"Potato Mapper — Quick guide","1. Connect your projector and extend your desktop.\n2. Add a surface and load or drop media.\n3. Drag corners or choose Mesh points to align it.\n4. Choose your projector and Start output.\n\nRight-click a surface to choose content, connect, rename or delete it.\nClear media keeps the mesh and supports Undo.\nSave your project; media files stay linked on disk.\n\nB: blackout   Esc: stop output   F: fit editor view");});
-        helpMenu->addAction("Check for updates…",this,[this]{if(updateDialog){updateDialog->raise();updateDialog->activateWindow();return;}updateDialog=new UpdateDialog(this,[this]{return prepareRestart();},[this]{return scene.projectPath;});updateDialog->show();});
+        helpMenu->addAction("Check for updates…",this,[this]{if(updateDialog){updateDialog->raise();updateDialog->activateWindow();return;}updateDialog=new UpdateDialog(this,[this]{return prepareRestart();},[this]{return scene.projectPath;});studioApplyAppearanceIcons(updateDialog);updateDialog->show();});
         helpMenu->addAction("Use previous app version…",this,[this]{rollback();});
         helpMenu->addAction("GitHub releases",this,[]{QDesktopServices::openUrl(QUrl("https://github.com/TheGamingDonKey/potato-mapper/releases"));});
         helpMenu->addAction("About Potato Mapper",this,[this]{QMessageBox::about(this,"About Potato Mapper","Potato Mapper "+QCoreApplication::applicationVersion()+"\nA home projection mapper for one projector.\n\nMIT licensed. Qt and FFmpeg have their own licenses.\nYour projects and media are stored locally.\nUse Help → Check for updates to get new releases.");});
@@ -320,6 +323,7 @@ public:
         scene.add();scene.dirty=false;refresh();
         installPotatoMaterial(this);
         updateAppearanceLabels();
+        studioApplyAppearanceIcons(this);updateProjectCommandStyle();
         statusBar()->showMessage("Add a surface, then drop an image or video onto it.");
     }
     ~MainWindow()override{delete output;}
@@ -363,6 +367,9 @@ public:
         updateOutputStatus();
     }
 protected:
+    void resizeEvent(QResizeEvent *event)override{
+        QMainWindow::resizeEvent(event);updateProjectCommandStyle();
+    }
     bool eventFilter(QObject *obj,QEvent *event)override{
         if(obj==output&&event->type()==QEvent::Hide)scene.skipEntrance();
         if(obj==output&&(event->type()==QEvent::Show||event->type()==QEvent::Hide))QTimer::singleShot(0,this,[this]{updateOutputStatus();});
@@ -371,21 +378,39 @@ protected:
     void closeEvent(QCloseEvent *e)override{if(smoke||property("potatoUpdateExit").toBool()||canDiscard()){output->close();e->accept();}else e->ignore();}
 private:
     quint64 appearanceRevision=0;
+    void updateProjectCommandStyle(){
+        auto *bar=findChild<QToolBar*>("projectToolbar");if(!bar)return;
+        const bool rich=studioAuroraClear();
+        if(!bar->property("potatoOriginalToolButtonStyle").isValid()){
+            bar->setProperty("potatoOriginalToolButtonStyle",int(bar->toolButtonStyle()));bar->setProperty("potatoOriginalIconSize",bar->iconSize());
+        }
+        // At narrow desktop widths retain every labelled command. At wider
+        // widths the same actions gain the approved compact Fluent tiles.
+        const bool tiles=rich&&width()>=1180;
+        bar->setToolButtonStyle(tiles?Qt::ToolButtonTextBesideIcon:rich?Qt::ToolButtonTextOnly:Qt::ToolButtonStyle(bar->property("potatoOriginalToolButtonStyle").toInt()));
+        bar->setIconSize(rich?QSize(20,20):bar->property("potatoOriginalIconSize").toSize());
+        for(auto *action:bar->actions())if(auto *button=qobject_cast<QToolButton*>(bar->widgetForAction(action))){
+            button->setProperty("potatoIconFamily",action->property("potatoIconFamily"));
+        }
+    }
     void updateAppearanceLabels(){
-        const bool glass=qApp->property("potatoInterfaceTheme").toString()=="liquidglass1";
+        const auto profile=qApp->property("potatoInterfaceTheme").toString();
+        const bool glass=profile=="liquidglass1",clear=PotatoAppearance::clearGlass(profile);
         // These labels predate the shared styles and have local sheets. Keep
         // their existing metrics/legacy colours while completing the new palette.
-        auto labelStyle=[this,glass](const QString &name,const QString &legacy,const QString &optical){
-            if(auto *label=findChild<QLabel*>(name))label->setStyleSheet(glass?optical:legacy);
+        auto labelStyle=[this,glass,clear](const QString &name,const QString &legacy,const QString &optical,const QString &aurora){
+            for(auto *label:findChildren<QLabel*>(name))label->setStyleSheet(clear?aurora:glass?optical:legacy);
         };
-        labelStyle("brandName","font-size:16px;font-weight:700;color:#f6d396;padding-right:12px;","font-size:16px;font-weight:700;color:#F2F3EF;padding-right:12px;");
-        labelStyle("surfaceHeading","font-weight:600;color:#90a8b5;","font-weight:600;color:#C7D4CB;");
-        labelStyle("potatoScanLabel","color:#91d6d8;font-size:11px;font-weight:600;","color:#AFDEC7;font-size:11px;font-weight:600;");
-        labelStyle("entranceInfo","color:#9caab6;font-size:11px;","color:#C2CCC5;font-size:11px;");
-        labelStyle("mappingHelp","color:#90a0ae;font-size:11px;margin-top:4px;","color:#BECAC2;font-size:11px;margin-top:4px;");
-        labelStyle("updateDialogTitle","font-size:20px;font-weight:700;color:#f6d396","font-size:20px;font-weight:700;color:#F2F3EF");
-        if(mediaLabel)mediaLabel->setStyleSheet(glass?"color:#C9D2CC;":"color:#b9c5cd;");
-        if(!output->isVisible())outputInfo->setStyleSheet(glass?"color:#C6D2C9;font-size:12px;padding:2px;":"color:#b5c6d1;font-size:12px;padding:2px;");
+        labelStyle("brandName","font-size:16px;font-weight:700;color:#f6d396;padding-right:12px;","font-size:16px;font-weight:700;color:#F2F3EF;padding-right:12px;","font-size:16px;font-weight:700;color:#F7FAFF;padding-right:12px;");
+        labelStyle("surfaceHeading","font-weight:600;color:#90a8b5;","font-weight:600;color:#C7D4CB;","font-weight:600;color:#E5EEFF;");
+        labelStyle("potatoScanLabel","color:#91d6d8;font-size:11px;font-weight:600;","color:#AFDEC7;font-size:11px;font-weight:600;","color:#BAFFF2;font-size:11px;font-weight:600;");
+        labelStyle("entranceInfo","color:#9caab6;font-size:11px;","color:#C2CCC5;font-size:11px;","color:#E5EEFF;font-size:11px;");
+        labelStyle("mappingHelp","color:#90a0ae;font-size:11px;margin-top:4px;","color:#BECAC2;font-size:11px;margin-top:4px;","color:#D2E5FA;font-size:11px;margin-top:4px;");
+        labelStyle("updateDialogTitle","font-size:20px;font-weight:700;color:#f6d396","font-size:20px;font-weight:700;color:#F2F3EF","font-size:20px;font-weight:700;color:#F7FAFF");
+        labelStyle("dynamicStage","color:#a4d6e9;font-size:11px;","color:#a4d6e9;font-size:11px;","color:#D3EEFF;font-size:11px;");
+        if(mediaLabel)mediaLabel->setStyleSheet(clear?"color:#E5EEFF;":glass?"color:#C9D2CC;":"color:#b9c5cd;");
+        if(!output->isVisible())outputInfo->setStyleSheet(clear?"color:#E5EEFF;font-size:12px;padding:2px;":glass?"color:#C6D2C9;font-size:12px;padding:2px;":"color:#b5c6d1;font-size:12px;padding:2px;");
+        else updateOutputStatus();
     }
     void applyAppearance(const PotatoAppearance::Preferences &requested,bool refreshEffects=false){
         const PotatoAppearance::Preferences preferences{PotatoAppearance::interfaceThemeId(requested.interfaceTheme),PotatoAppearance::accentId(requested.accent)};
@@ -413,6 +438,7 @@ private:
         qApp->setProperty("potatoTheme",preferences.accent);
         qApp->setStyleSheet(potatoStyle(preferences.accent,preferences.interfaceTheme));
         updateAppearanceLabels();
+        studioApplyAppearanceIcons(this);updateProjectCommandStyle();
         for(auto *action:findChildren<QAction*>()){
             if(action->objectName().startsWith("interfaceTheme_"))action->setChecked(action->data().toString()==preferences.interfaceTheme);
             else if(action->objectName().startsWith("theme_"))action->setChecked(action->data().toString()==preferences.accent);
@@ -535,8 +561,8 @@ private:
     void surfaceMenu(int index,const QPoint &pos){
         if(index<0||index>=scene.surfaces.size())return;scene.select(index);MaterialSurfaceMenu menu(this);
         auto *title=new QWidgetAction(&menu);title->setText(scene.current()->name);title->setObjectName("surfaceMenuTarget");
-        auto *targetLabel=new QLabel(scene.current()->name);targetLabel->setAccessibleName("Surface: "+scene.current()->name);
-        targetLabel->setContentsMargins(17,6,17,7);targetLabel->setStyleSheet("background:transparent;color:#e4e7ec;font:600 13px 'Segoe UI';");
+        auto *targetLabel=new QLabel(scene.current()->name);targetLabel->setObjectName("surfaceMenuTargetLabel");targetLabel->setAccessibleName("Surface: "+scene.current()->name);
+        targetLabel->setContentsMargins(17,6,17,7);targetLabel->setStyleSheet(studioClearGlass()?"background:transparent;color:#F7FAFF;font:600 13px 'Segoe UI';":"background:transparent;color:#e4e7ec;font:600 13px 'Segoe UI';");
         title->setDefaultWidget(targetLabel);title->setEnabled(false);menu.addAction(title);
         menu.addAction("Load media…",this,[this]{loadMedia();});
         menu.addAction("Choose animation…",this,[this]{showAnimationBrowser();});
@@ -545,7 +571,7 @@ private:
         auto *disconnect=menu.addAction("Disconnect",this,[this]{scene.disconnectSurface(scene.selected);});disconnect->setEnabled(scene.hasConnections(scene.selected));
         menu.addSeparator();menu.addAction("Rename surface…",this,[this]{renameSelected();});
         menu.addSeparator();auto *remove=menu.addAction("Delete surface",this,[this]{deleteSelectedSurface();});remove->setObjectName("deleteSurfaceAction");
-        menu.exec(pos);
+        studioApplyAppearanceIcons(&menu);menu.exec(pos);
     }
     bool prepareRestart(){
         if(output->isVisible()&&QMessageBox::question(this,"Stop projector output?","Stop projector output and continue with the update?",QMessageBox::Yes|QMessageBox::Cancel,QMessageBox::Cancel)!=QMessageBox::Yes)return false;
@@ -586,9 +612,9 @@ private:
     void updateOutputStatus(){
         if(!outputInfo)return;const bool live=output->isVisible();startOutputButton->setEnabled(!selectedDisplay.isEmpty());stopOutputButton->setEnabled(live);
         {QSignalBlocker block(blackoutButton);blackoutButton->setChecked(scene.blackout);}
-        if(live&&activeOutputScreen){outputInfo->setText(QString("%1 · %2 · %3 × %4 — Esc stops output. B toggles blackout.").arg(scene.blackout?"BLACKOUT":"LIVE").arg(activeOutputScreen->name()).arg(scene.outputSize.width()).arg(scene.outputSize.height()));outputInfo->setStyleSheet(QString("color:%1;font-size:12px;padding:2px;").arg(scene.blackout?"#ffce85":"#91efd1"));}
+        if(live&&activeOutputScreen){outputInfo->setText(QString("%1 · %2 · %3 × %4 — Esc stops output. B toggles blackout.").arg(scene.blackout?"BLACKOUT":"LIVE").arg(activeOutputScreen->name()).arg(scene.outputSize.width()).arg(scene.outputSize.height()));outputInfo->setStyleSheet(QString("color:%1;font-size:12px;padding:2px;").arg(studioClearGlass()?(scene.blackout?"#FFE1EB":"#BAFFF2"):(scene.blackout?"#ffce85":"#91efd1")));}
         else{
-            outputInfo->setStyleSheet(qApp->property("potatoInterfaceTheme").toString()=="liquidglass1"?"color:#C6D2C9;font-size:12px;padding:2px;":"color:#b5c6d1;font-size:12px;padding:2px;");
+            outputInfo->setStyleSheet(studioClearGlass()?"color:#E5EEFF;font-size:12px;padding:2px;":qApp->property("potatoInterfaceTheme").toString()=="liquidglass1"?"color:#C6D2C9;font-size:12px;padding:2px;":"color:#b5c6d1;font-size:12px;padding:2px;");
             if(QGuiApplication::screens().size()<2)outputInfo->setText("OUTPUT OFF · One display detected. Connect projector → Windows + P → Extend. Choose the projector above.");
             else outputInfo->setText("OUTPUT OFF · Select a projector and Start output. The canvas is an editor preview.");
         }
@@ -637,7 +663,9 @@ int main(int argc,char **argv){
     QSurfaceFormat format;format.setVersion(3,3);format.setProfile(QSurfaceFormat::CoreProfile);format.setSwapInterval(1);format.setDepthBufferSize(0);format.setStencilBufferSize(8);QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc,argv);app.setApplicationName("Potato Mapper");app.setOrganizationName("PotatoMapper");app.setApplicationVersion(POTATO_VERSION);app.setWindowIcon(QIcon(":/assets/potato-mapper.png"));
     qInstallMessageHandler(logMessage);app.setStyle("Fusion");
-    QSettings appearanceSettings;const auto appearance=PotatoAppearance::readPreferences(appearanceSettings);
+    QSettings appearanceSettings;auto appearance=PotatoAppearance::readPreferences(appearanceSettings);
+    const auto startupArgs=app.arguments();const int themeArgument=startupArgs.indexOf("--interface-theme");
+    if(themeArgument>=0&&themeArgument+1<startupArgs.size())appearance.interfaceTheme=PotatoAppearance::interfaceThemeId(startupArgs[themeArgument+1]);
     app.setProperty("potatoReducedMotion",appearanceSettings.value("ui/reducedMotion",false).toBool());
     app.setProperty("potatoReducedTransparency",appearanceSettings.value("ui/reducedTransparency",false).toBool());
     app.setProperty("potatoIncreasedContrast",appearanceSettings.value("ui/increasedContrast",false).toBool());

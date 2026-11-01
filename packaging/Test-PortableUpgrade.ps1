@@ -30,7 +30,17 @@ function Check-CombinedStorage([long]$reserve=0){
     Write-Host $message
     return [long]$Matches[1]
 }
-$beforeBytes=Check-CombinedStorage 220000000
+# During handoff, the retained old runtime, downloaded ZIP, extracted package
+# and pending runtime copy coexist. Reserve their measured sizes plus headroom
+# for launcher backups, logs and the small synthetic projects.
+$newRuntime=Join-Path $package "versions\$newVersion"
+$oldRuntimeBytes=[long](Get-ChildItem -LiteralPath $oldRuntime -Recurse -File | Measure-Object Length -Sum).Sum
+$newRuntimeBytes=[long](Get-ChildItem -LiteralPath $newRuntime -Recurse -File | Measure-Object Length -Sum).Sum
+$archiveBytes=(Get-Item -LiteralPath $archive).Length
+$archiveReader=[IO.Compression.ZipFile]::OpenRead($archive)
+try{$extractedBytes=[long]($archiveReader.Entries | Measure-Object Length -Sum).Sum}finally{$archiveReader.Dispose()}
+$reservedBytes=$oldRuntimeBytes+$newRuntimeBytes+$archiveBytes+$extractedBytes+8000000L
+$beforeBytes=Check-CombinedStorage $reservedBytes
 $root=Join-Path $repo ('out\verification\upgrade-fixture-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,8))
 $allowed=Join-Path $repo 'out\verification'
 $root=[IO.Path]::GetFullPath($root)
@@ -44,7 +54,7 @@ $priorPath=$env:PATH
 $priorSession=$env:POTATO_VERIFICATION_SESSION
 $env:PATH=(Join-Path $QtPath 'bin')+';'+$env:PATH
 $env:POTATO_VERIFICATION_SESSION='1'
-$report=[ordered]@{Status='running';FixtureRoot=$root;InstallRoot=$install;BaselineRoot=$oldPackage;OldVersion=$oldVersion;NewVersion=$newVersion;SourceArchive=$archive;ArchiveSha256=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash;StorageBeforeBytes=$beforeBytes;StorageScope='Repository plus external concept previews';ReservedBytes=220000000;Processes=@();Checks=@();ProjectorActivated=$false;Network='Deterministic mock HTTPS metadata/archive; actual ZIP extraction and portable launcher/editor used.'}
+$report=[ordered]@{Status='running';FixtureRoot=$root;InstallRoot=$install;BaselineRoot=$oldPackage;OldVersion=$oldVersion;NewVersion=$newVersion;SourceArchive=$archive;ArchiveSha256=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash;StorageBeforeBytes=$beforeBytes;StorageScope='Repository plus design workspace and external concept previews';ReservedBytes=$reservedBytes;Processes=@();Checks=@();ProjectorActivated=$false;Network='Deterministic mock HTTPS metadata/archive; actual ZIP extraction and portable launcher/editor used.'}
 function Assert-Fixture([bool]$condition,[string]$label){
     if(-not $condition){throw $label}
     $report.Checks+= $label

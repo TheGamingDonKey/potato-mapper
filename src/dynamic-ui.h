@@ -27,7 +27,7 @@ public:
         members=new QListWidget;members->setObjectName("dynamicMembers");members->setMaximumHeight(115);content->addWidget(members);
         auto *all=new QPushButton("Use all visible surfaces");content->addWidget(all);
         auto *buttons=new QHBoxLayout;auto *replay=new QPushButton("Replay intro");replay->setObjectName("dynamicReplay");auto *ambient=new QPushButton("Skip to ambient");ambient->setObjectName("dynamicAmbient");buttons->addWidget(replay);buttons->addWidget(ambient);content->addLayout(buttons);
-        stage=new QLabel;stage->setWordWrap(true);stage->setStyleSheet("color:#a4d6e9;font-size:11px;");content->addWidget(stage);
+        stage=new QLabel;stage->setObjectName("dynamicStage");stage->setWordWrap(true);stage->setStyleSheet("color:#a4d6e9;font-size:11px;");content->addWidget(stage);
         auto update=[this]{if(refreshing)return;auto settings=scene->dynamic;settings.effect=effect->currentIndex();settings.speed=speed->value();settings.density=density->value();settings.palette=palette->currentIndex();settings.glitch=glitch->value();settings.snakeWidth=snakeWidth->value();settings.cellSize=cellSize->value();settings.playing=!pause->isChecked();
             if(settings.effect&&settings.members.isEmpty()&&scene->dynamic.effect==0)for(const auto &surface:scene->surfaces)if(surface.visible)settings.members<<surface.id;
             scene->setDynamic(settings);

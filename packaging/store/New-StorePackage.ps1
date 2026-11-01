@@ -11,7 +11,7 @@ param(
     [string]$OutputDirectory,
     [string]$MakeAppxPath,
     [string]$DumpbinPath,
-    [long]$StorageLimitBytes = 1500000000,
+    [long]$StorageLimitBytes = 1800000000,
     [switch]$LocalValidationIdentity,
     [switch]$PrepareOnly
 )
@@ -31,7 +31,7 @@ if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repo ('out\store\' + 
 $output = [IO.Path]::GetFullPath($OutputDirectory).TrimEnd('\','/')
 if (-not $output.StartsWith($repo + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Store output must be inside this repository so the shared storage limit covers it.' }
 if (Test-Path -LiteralPath $output) { throw "Output already exists; use a new destination: $output" }
-if ($StorageLimitBytes -gt 1500000000 -or $StorageLimitBytes -le 0) { throw 'Storage limit must be positive and cannot exceed 1.5 GB.' }
+if ($StorageLimitBytes -gt 1800000000 -or $StorageLimitBytes -le 0) { throw 'Storage limit must be positive and cannot exceed 1.8 GB.' }
 if (-not $MakeAppxPath) {
     $sdk = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
     $MakeAppxPath = Get-ChildItem -LiteralPath $sdk -Directory | Where-Object { $_.Name -match '^10\.0\.\d+\.0$' } |
@@ -63,7 +63,7 @@ foreach ($module in 'qtbase','qtmultimedia','qtsvg') {
 }
 $payloadBytes = [long](($files | ForEach-Object { (Get-Item -LiteralPath $_.Source).Length } | Measure-Object -Sum).Sum)
 function Get-WorkspaceBytes {
-    [long]( (Get-ChildItem -LiteralPath $repo -Recurse -File -Force | Measure-Object -Property Length -Sum).Sum )
+    [long](& (Join-Path $PSScriptRoot '..\Check-Storage.ps1') -PassThru).Bytes
 }
 $before = Get-WorkspaceBytes
 # Reserve both a worst-case uncompressed package and SDK temporary headroom.

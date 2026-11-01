@@ -10,9 +10,10 @@ inline QString accentId(const QString &id){
 // Retain the original palette IDs for older runtimes and catalogue checks.
 inline QString themeId(const QString &id){return accentId(id);}
 inline QString interfaceThemeId(const QString &id){
-    if(id=="classic1"||id=="liquidglass1")return id;
+    if(id=="classic1"||id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1")return id;
     return QStringLiteral("material");
 }
+inline bool clearGlass(const QString &id){return id=="auroraclear1"||id=="transparentglass1";}
 struct Preferences {
     QString interfaceTheme=QStringLiteral("material");
     QString accent=QStringLiteral("classic1");

@@ -1,30 +1,40 @@
 # Development handoff
 
-## Current handoff — October 31 Windows Liquid Glass 1 installed as 0.9.4
+## Current handoff — November 1 AuroraClear installed locally as 0.9.5
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/aurora-clear-theme`. Normal `app/PotatoMapper.exe` selects 0.9.5 with 0.9.4 retained as previous. The approved Figma AuroraClear design and separate Transparent Glass option use the existing Qt material/widget system, retaining the familiar 0.8.8 layout and current features alongside Classic 1, Material and Windows Liquid Glass 1. Transparent chrome uses stationary app-owned artwork without desktop, canvas or projector capture. AuroraClear is selected with reduced transparency and increased contrast off. [Design, implementation, evidence and limits](docs/0.9.5-aurora-clear.md).
+
+The 0.9.5 ZIP/stage are under `out/aurora-clear/package`. All nine final deployed checks, including effective 2× theme switching, and four native geometry/project/scene/Dynamic checks passed. Real installed-launcher ZIP update, saved synthetic mapping/PNG reopen, rollback and return to 0.9.5 passed; separate interrupted/tampered/incomplete/cancelled-restart checks passed. The original mapping was reopened, all five protected project/index hashes remained exact, and installed/retained payloads were verified. `out/aurora-clear/installed-proof.json` and `deployed-checks.json` record evidence; `installed-aurora.png` shows the actual installed finish. The full portable-upgrade wrapper was not rerun because its extra baseline copy would exceed the cap.
+
+Combined source/app, chat/design and external concept storage is about **1.66 GB under the 1,800,000,000-byte cap**. Automatic review blocked deletion of 28,811,604 bytes of compiler intermediates; nothing was deleted. The actual launcher update fit without duplicating the prior installation. Reuse the intact `out/build-desktop` tree and cached Qt/CMake tools below. Next: Shane's native visual/workflow assessment; retain the other themes and familiar feature locations. Source is local and has not been pushed; public download remains v0.8.8. No public release, Store certification or physical-projector result is claimed.
+
+The entries below are historical snapshots. Their versions, storage limits and next steps describe their dated milestones; the current handoff above takes precedence.
+
+## Historical handoff — October 31 Windows Liquid Glass 1 installed as 0.9.4
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/liquid-glass-theme`. Normal `app/PotatoMapper.exe` selects 0.9.4; previous is 0.9.3; original 0.8.8 remains. [Research, implementation, exact evidence and limits](docs/0.9.4-windows-liquid-glass1.md). The third complete profile uses neutral optical glass, pearl and jade, preserving the other themes, familiar layout and all features. Cached procedural refraction, real opening-only menu lensing, local pointer light and explicit readability preferences use the existing Qt stack. No scene/output format changes or native DWM claim.
 
 Seven final staged native checks plus effective 2× theme checks passed without developer PATH. Native full app, Delete menu, animation browser/dialog movement and normal saved-project reopen were inspected. An initial 16 MiB optical cache churn defect was corrected without raising its budget or weakening the test. Five protected hashes, installed/retained payloads and launcher/profile verified. About 1.46 GB used under 1.5 GB. Cleanup was blocked by automatic review; a verified generated stage was reused instead, with no deletion or new ZIP. Existing build tree: `out/build-desktop`; Qt/CMake from the cached tools documented below. No public release/Store certification/physical projector claim. Next: Shane's visual review; refine this profile without moving tools or altering Classic/Material.
 
-## Current handoff — October 31 complete interface themes installed as 0.9.3
+## Historical handoff — October 31 complete interface themes installed as 0.9.3
 
 Shane clarified that themes are complete interface designs. Settings → Appearance → Interface theme now offers Classic 1 (tagged 0.8.8 QSS, Material paint/capture bypassed) and refined Material, with old colour choices correctly separated as Material accents. Both retain the current software and familiar layout. [Local handoff, preservation and checks](docs/0.9.3-interface-themes.md). Source branch: `codex/interface-themes`; current 0.9.3, previous 0.9.2, original 0.8.8 retained. No public release/Store certification.
 
 Seven fresh deployed native checks and source/visual review passed; nested live-menu switches and actual restart persistence were inspected. A queued restoration resize regression was corrected without weakening its test. Unsaved actual work was saved separately under `app/Projects/Recovered before interface themes/Unsaved 0.9.2 work.pmap` and reopened after update. Five protected hashes, 96 installed and 96 retained payload hashes passed. Storage about 1.46 GB: reuse the existing build tree and inventory bounded generated cleanup before another full package. Next: Shane's feedback on the full styles; retain current controls and locations.
 
-## Current handoff — October 31 whole-app material finish installed locally
+## Historical handoff — October 31 whole-app material finish installed locally
 
 Shane approved the visible component and explicitly authorized the wider implementation. Version 0.9.2 now applies shared painter material across the native app while restoring the 0.8.8 two-toolbar/left-sidebar/right-canvas layout. Later animations, themes, connections, actors and version 2/3 projects remain supported. See [changes, feature locations, evidence and limits](docs/0.9.2-material-finish.md). Source is on `codex/material-finish`; normal launcher selects 0.9.2, previous selects 0.8.8. No public release or new Store certification is claimed.
 
 Final extracted runtime passed twelve native checks and four model/storage/Dynamic suites; actual launcher update/reopen/rollback with synthetic saved work passed, along with corrected ZIP failure/cancellation checks. Installed payload, original project/index hashes and retained 0.8.8 inventory were checked. Actual installed windows were visually inspected. Total storage is about 1.39 GB under the 1.5 GB cap; reuse the existing build tree and inventory disposable outputs before another package. Next: Shane's visual/workflow feedback; preserve the familiar arrangement through any corrections.
 
-## Current handoff — October 31 single-component material proof
+## Historical handoff — October 31 single-component material proof
 
 Shane authorized one working visual piece, not the full redesign. Branch `codex/surface-material-proof` adds an isolated [surface-menu proof](proofs/surface-material/README.md). It generates the 0.8.8 shell from Git, preserves its arrangement and reuses the existing C++/Qt/OpenGL source without core edits. The menu uses app-rendered sampled frost; it is not verified Windows DWM Acrylic. No additional dependencies were installed. The normal launcher still selects 0.8.8, and personal projects/media are outside the proof session.
 
 Build/run and scoped check instructions are in the proof README. The actual popup was inspected, including its surface-name header, keyboard highlight and Escape dismissal. Focused checks cover pointer-target Delete/Undo/Redo, original temporary media bytes, clean cancellation and unchanged fixed output pixels. This is not a complete keyboard/accessibility or full-UI migration test. No package or public release was made. Next: Shane reviews the visible component and decides whether to authorize extending the material treatment while retaining familiar feature locations.
 
-## Current handoff — October 29 restoration and design review
+## Historical handoff — October 29 restoration and design review
 
 Shane rejected the actual 0.9.0/0.9.1 UI and requested the 0.8.8 foundation, a full Windows 11 style specification and an app-specific interaction specification before authorizing another build. The [visual draft](docs/superpowers/specs/2026-10-29-windows11-visual-style.md) and [interaction draft](docs/superpowers/specs/2026-10-29-mapper-interaction.md) are ready for his review. Right-click Delete is a mandatory proposed access fix; neither old nor current source implements it. No redesign code, new executable, package or public release was created for these drafts.
 
@@ -38,13 +48,13 @@ Next concrete step: Shane reviews both drafts and authorizes any implementation.
 
 Approved concept1 is implemented, packaged, tested and installed locally. Source and app remain in Downloads. See [current build, checks and limits](docs/0.9.1-local-studio.md) and [feature locations](docs/0.9.1-feature-access.md). Preserve saved projects/media and prior0.9.0 runtime. This supersedes the older design-only October entries below. Next: Shane's visual/physical projection review, then real Store identity/signing/WACK; local MSIX validation does not establish certification.
 
-## Current handoff — October 16 expanded Halloween Drop
+## Historical handoff — October 16 expanded Halloween Drop
 
 The [engineering design](docs/superpowers/specs/2026-10-16-halloween-drop-design.md) translates Shane's new request into event/theme preferences, stable content categories, saved surface topology, combined-contour walking, editable articulated actors and five atmospheric forest scenes. Build and publication after validation are authorized; the written architecture is pending review on `codex/halloween-drop-design`. Four specialists inspected actual code; no product implementation, package or release has been made for this expansion. Source/app remains in Downloads. Next: resolve design review, prepare/review the implementation plan, then build incremental runnable slices toward the complete drop.
 
 Key compatibility findings to carry forward: category filtering must use stable item data rather than combo indexes; bent edges require full boundary-mesh sampling; a glued boundary interval and an interior point navigation link have different topology; duplicate legacy surface IDs require separate unique route UIDs; new content/topology/actors need protected version2 project handling because old serializers clamp/drop unfamiliar data. The rolling `.bak` does not replace a permanent pre-conversion recovery copy. A local rig/runtime is needed for surface-reactive editability; complete-movie-only delivery does not fulfill it. Existing Dynamic FX and projector behavior remain baseline functionality.
 
-## Current handoff — October 15 Halloween research
+## Historical handoff — October 15 Halloween research
 
 Shane rejected the visual quality of the shipped 0.8.8 seasonal artwork. The [new research pack](docs/research/2026-10-15-hollow-wood/RESEARCH.md), on `codex/hollow-wood-research`, follows his selected dark enchanted forest / spectral creatures direction. Fifteen separately spawned specialist agents screened twenty current candidates and challenged source claims, art, choreography, projection and implementation routes. Provisional five: Hollow Crown, Lantern Procession, Mycelium Oracle, Weaver Above, Returning Roost. Final research grade is 8.3/10; the requested 9.5 is unmet. Generated art and editable static diagrams do not establish animation or projector quality.
 
