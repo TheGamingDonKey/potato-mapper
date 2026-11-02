@@ -1,4 +1,5 @@
 #pragma once
+#include "studio-themes.h"
 #include <QApplication>
 #include <QString>
 #include <QVariant>
@@ -250,6 +251,7 @@ QProgressBar { background:#14242D; border-color:#8AA9AE; }
 // transparent bases let Qt paint real text, icons, values and native interaction
 // states without concealing the app-rendered layers, light and rounded rims.
 inline QString potatoStyle(const QString &theme=QStringLiteral("classic1"),const QString &interfaceTheme=QStringLiteral("material")){
+    if(PotatoThemes::isTheme(interfaceTheme))return PotatoThemes::styleSheet();
     if(interfaceTheme==QStringLiteral("classic1"))return potatoClassicStyle();
     if(interfaceTheme==QStringLiteral("liquidglass1"))return potatoLiquidGlassStyle();
     if(interfaceTheme==QStringLiteral("ambientglass1"))return potatoAmbientStyle();

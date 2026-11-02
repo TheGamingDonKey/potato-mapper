@@ -1,6 +1,7 @@
 #include "updates.h"
 #include "distribution.h"
 #include "appearance.h"
+#include "studio-themes.h"
 #include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -94,7 +95,7 @@ UpdateDialog::UpdateDialog(QWidget *parent,std::function<bool()> prepare,std::fu
     auto &s=*state;s.root=potatoInstallRoot();s.prepareRestart=std::move(prepare);s.projectPath=std::move(project);
     auto *layout=new QVBoxLayout(this);layout->setContentsMargins(24,24,24,24);layout->setSpacing(16);
     const auto interfaceTheme=QCoreApplication::instance()->property("potatoInterfaceTheme").toString();
-    auto *title=new QLabel("Potato Mapper updates");title->setObjectName("updateDialogTitle");title->setStyleSheet(PotatoAppearance::clearGlass(interfaceTheme)?"font-size:20px;font-weight:700;color:#F7FAFF":interfaceTheme=="liquidglass1"?"font-size:20px;font-weight:700;color:#F2F3EF":"font-size:20px;font-weight:700;color:#f6d396");layout->addWidget(title);
+    auto *title=new QLabel("Potato Mapper updates");title->setObjectName("updateDialogTitle");title->setStyleSheet(PotatoThemes::active()?QString("font-size:20px;font-weight:700;color:%1").arg(PotatoThemes::current().ink.name()):PotatoAppearance::clearGlass(interfaceTheme)?"font-size:20px;font-weight:700;color:#F7FAFF":interfaceTheme=="liquidglass1"?"font-size:20px;font-weight:700;color:#F2F3EF":"font-size:20px;font-weight:700;color:#f6d396");layout->addWidget(title);
     layout->addWidget(new QLabel("Installed version: "+QCoreApplication::applicationVersion()));
     s.status=new QLabel("Checking GitHub for a new release…");s.status->setWordWrap(true);s.status->setTextFormat(Qt::PlainText);layout->addWidget(s.status);
     s.progress=new QProgressBar;s.progress->setRange(0,0);layout->addWidget(s.progress);

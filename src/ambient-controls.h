@@ -39,19 +39,21 @@ inline void syncDialog(QDialog *dialog){
     if(auto *label=dialog->findChild<QLabel*>("ambientSpeedValue"))label->setText(QString::number(value.speed/100.0,'f',1)+QString::fromUtf8("×"));
     if(auto *label=dialog->findChild<QLabel*>("ambientIntensityValue"))label->setText(QString::number(value.intensity)+"%");
 }
-inline QDialog *createDialog(QWidget *owner,const std::function<void(const Preferences&)> &apply){
-    auto *dialog=new QDialog(owner);dialog->setObjectName("ambientBackgroundDialog");
-    dialog->setWindowTitle("Ambient Glass background");dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->setMinimumWidth(420);
+inline QDialog *createDialog(QWidget *owner,const std::function<void(const Preferences&)> &apply,bool themeMotion=false){
+    auto *dialog=new QDialog(owner);dialog->setObjectName(themeMotion?"themeMotionDialog":"ambientBackgroundDialog");
+    dialog->setWindowTitle(themeMotion?"Theme motion":"Ambient Glass background");dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->setMinimumWidth(420);
     auto *layout=new QVBoxLayout(dialog);layout->setContentsMargins(22,22,22,18);layout->setSpacing(16);
-    auto *title=new QLabel("Ambient Glass 1",dialog);auto font=title->font();font.setPixelSize(20);font.setWeight(QFont::DemiBold);title->setFont(font);layout->addWidget(title);
+    auto *title=new QLabel(themeMotion?"Theme motion":"Ambient Glass 1",dialog);auto font=title->font();font.setPixelSize(20);font.setWeight(QFont::DemiBold);title->setFont(font);layout->addWidget(title);
     auto *description=new QLabel("Original moving light behind your workspace.\nYour mapping and projected content stay unchanged.",dialog);description->setWordWrap(true);layout->addWidget(description);
     auto *form=new QFormLayout;form->setSpacing(14);layout->addLayout(form);
+    if(!themeMotion){
     auto *glassRow=new QHBoxLayout;
     auto *clear=new QRadioButton("Clear",dialog);clear->setObjectName("ambientGlassClear");
     auto *smoked=new QRadioButton("Smoked",dialog);smoked->setObjectName("ambientGlassSmoked");
     glassRow->addWidget(clear);glassRow->addWidget(smoked);glassRow->addStretch();form->addRow("Glass",glassRow);
     QObject::connect(clear,&QRadioButton::toggled,dialog,[apply](bool checked){if(checked){auto value=current();value.glass="clear";apply(value);}});
     QObject::connect(smoked,&QRadioButton::toggled,dialog,[apply](bool checked){if(checked){auto value=current();value.glass="smoked";apply(value);}});
+    }
     for(const bool speed:{true,false}){
         auto *row=new QHBoxLayout;auto *slider=new QSlider(Qt::Horizontal,dialog);slider->setObjectName(speed?"ambientSpeed":"ambientIntensity");
         slider->setRange(20,speed?120:100);slider->setSingleStep(speed?10:5);slider->setPageStep(speed?10:5);
@@ -65,7 +67,7 @@ inline QDialog *createDialog(QWidget *owner,const std::function<void(const Prefe
     auto *note=new QLabel("Reduce interface motion also keeps this background still.\nHidden or minimized windows pause automatically.",dialog);note->setWordWrap(true);layout->addWidget(note);
     auto *buttons=new QDialogButtonBox(QDialogButtonBox::Close,dialog);
     auto *reset=buttons->addButton("Reset background",QDialogButtonBox::ResetRole);reset->setObjectName("ambientReset");
-    QObject::connect(reset,&QPushButton::clicked,dialog,[apply]{apply(Preferences{});});
+    QObject::connect(reset,&QPushButton::clicked,dialog,[apply,themeMotion]{auto defaults=Preferences{};if(themeMotion)defaults.glass=current().glass;apply(defaults);});
     QObject::connect(buttons,&QDialogButtonBox::rejected,dialog,&QDialog::close);layout->addWidget(buttons);
     syncDialog(dialog);return dialog;
 }

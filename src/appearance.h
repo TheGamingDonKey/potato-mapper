@@ -10,7 +10,9 @@ inline QString accentId(const QString &id){
 // Retain the original palette IDs for older runtimes and catalogue checks.
 inline QString themeId(const QString &id){return accentId(id);}
 inline QString interfaceThemeId(const QString &id){
-    if(id=="classic1"||id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1"||id=="ambientglass1")return id;
+    if(id=="transparentglass1")return QStringLiteral("lumenatelier1");
+    if(id=="liquidglass1")return QStringLiteral("nocturnecinema1");
+    if(id=="classic1"||id=="auroraclear1"||id=="ambientglass1"||id=="lumenatelier1"||id=="nocturnecinema1"||id=="siennastudio1"||id=="tidallens1")return id;
     return QStringLiteral("material");
 }
 inline bool clearGlass(const QString &id){return id=="auroraclear1"||id=="transparentglass1"||id=="ambientglass1";}

@@ -87,7 +87,7 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         preferences.setValue("ui/interfaceTheme","unknown");preferences.setValue("ui/accent","unknown");read=PotatoAppearance::readPreferences(preferences);
         require(read.interfaceTheme=="material"&&read.accent=="classic1","unknown preferences normalize safely");
         preferences.setValue("ui/reducedTransparency",true);preferences.setValue("ui/increasedContrast",true);
-        for(const auto &id:QStringList{"classic1","material","liquidglass1","auroraclear1","transparentglass1"}){
+        for(const auto &id:QStringList{"classic1","material","auroraclear1","ambientglass1","lumenatelier1","nocturnecinema1","siennastudio1","tidallens1"}){
             PotatoAppearance::writePreferences(preferences,{id,"christmas"});preferences.sync();QSettings reopened(preferencesPath,QSettings::IniFormat);read=PotatoAppearance::readPreferences(reopened);
             require(reopened.status()==QSettings::NoError&&read.interfaceTheme==id&&read.accent=="christmas"&&reopened.value("ui/theme").toString()=="christmas","new keys survive reopen and retain legacy accent: "+id);
             require(reopened.value("ui/reducedTransparency").toBool()&&reopened.value("ui/increasedContrast").toBool(),"saving interface does not discard independent glass accessibility preferences: "+id);
@@ -104,9 +104,9 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         auto *apply=window.template findChild<QPushButton*>("applyAnimation");
         auto *classic=window.template findChild<QAction*>("interfaceTheme_classic1");
         auto *material=window.template findChild<QAction*>("interfaceTheme_material");
-        auto *glass=window.template findChild<QAction*>("interfaceTheme_liquidglass1");
+        auto *ambient=window.template findChild<QAction*>("interfaceTheme_ambientglass1");
         auto *aurora=window.template findChild<QAction*>("interfaceTheme_auroraclear1");
-        auto *transparent=window.template findChild<QAction*>("interfaceTheme_transparentglass1");
+        const QStringList studioIds{"lumenatelier1","nocturnecinema1","siennastudio1","tidallens1"};
         auto *reduceTransparency=window.template findChild<QAction*>("reduceInterfaceTransparency");
         auto *increaseContrast=window.template findChild<QAction*>("increaseInterfaceContrast");
         auto *splitter=window.template findChild<QSplitter*>("editorSplitter");
@@ -114,9 +114,14 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         auto *outputBar=window.template findChild<QToolBar*>("outputToolbar");
         auto *chrome=window.template findChild<QObject*>("potatoChromeMaterial");
         QMenu *existingMenu=nullptr;for(auto *action:window.menuBar()->actions())if(action->text()=="Settings")existingMenu=action->menu();
-        require(browser&&browse&&closeButton&&connections&&picker&&category&&search&&library&&apply&&classic&&material&&glass&&aurora&&transparent&&reduceTransparency&&increaseContrast&&splitter&&projectBar&&outputBar&&chrome&&existingMenu,"native five-profile themes, accessibility, layout, browser and material controls exist");
+        require(browser&&browse&&closeButton&&connections&&picker&&category&&search&&library&&apply&&classic&&material&&ambient&&aurora&&reduceTransparency&&increaseContrast&&splitter&&projectBar&&outputBar&&chrome&&existingMenu,"retained native themes, accessibility, layout, browser and material controls exist");
         if(!failures.isEmpty()){finish();return;}
-        const QMap<QString,QAction*> themeActions{{"classic1",classic},{"material",material},{"liquidglass1",glass},{"auroraclear1",aurora},{"transparentglass1",transparent}};
+        QMap<QString,QAction*> themeActions{{"classic1",classic},{"material",material},{"ambientglass1",ambient},{"auroraclear1",aurora}};
+        for(const auto &id:studioIds){auto *action=window.template findChild<QAction*>("interfaceTheme_"+id);require(action,"new native theme action: "+id);if(action)themeActions.insert(id,action);}
+        require(!window.template findChild<QAction*>("interfaceTheme_liquidglass1")&&!window.template findChild<QAction*>("interfaceTheme_transparentglass1"),"retired interface actions are removed");
+        if(!failures.isEmpty()){finish();return;}
+        // Freeze the shared light for deterministic captures in this structural suite.
+        auto *pauseMotion=window.template findChild<QAction*>("ambientPause");require(pauseMotion,"shared ambient pause retained");if(pauseMotion)pauseMotion->setChecked(true);
         reduceTransparency->setChecked(false);increaseContrast->setChecked(false);
 
         // Both history directions are populated. Later real Undo/Redo catches
@@ -146,10 +151,10 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         // Keep the actual production context-menu class alive across switches
         // to catch private Material QSS or flags accidentally overriding Classic.
         MaterialSurfaceMenu surfaceMenu(&window);surfaceMenu.addAction("Keep mapped surface");surfaceMenu.addAction("Choose animation…");
-        const QList<QMenu*> menus{existingMenu,&surfaceMenu};QImage classicImage,materialImage,glassImage,auroraImage,transparentImage,materialBand,glassBand;
+        const QList<QMenu*> menus{existingMenu,&surfaceMenu};QImage classicImage,materialImage,auroraImage;QMap<QString,QImage> controlImages;
         QMap<QString,QString> originalStyles;
         search->setText("Ghost");
-        for(const auto &id:QStringList{"material","classic1","liquidglass1","auroraclear1","transparentglass1","classic1","auroraclear1","material","transparentglass1","liquidglass1"}){
+        for(const auto &id:QStringList{"material","classic1","auroraclear1","ambientglass1","lumenatelier1","nocturnecinema1","siennastudio1","tidallens1","classic1","auroraclear1","material"}){
             browser->raise();browser->activateWindow();settle(app,25);search->setFocus(Qt::OtherFocusReason);search->setSelection(1,3);settle(app,25);
             require(search->hasFocus(),"search focused before live profile switch: "+id);
             const int cursor=search->cursorPosition();
@@ -157,31 +162,30 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
             int checked=0;for(auto *choice:themeActions)checked+=int(choice->isChecked());
             require(app.property("potatoInterfaceTheme").toString()==id&&checked==1&&action->isChecked(),"live exclusive interface action: "+id);
             require(search->hasFocus()&&search->text()=="Ghost"&&search->selectedText()=="hos"&&search->selectionStart()==1&&search->cursorPosition()==cursor,"profile switch retains input, selection, cursor and keyboard focus: "+id);
-            if(id=="classic1"||id=="material"||id=="liquidglass1"){
+            if(id=="classic1"||id=="material"){
                 if(!originalStyles.contains(id))originalStyles.insert(id,app.styleSheet());
                 else require(app.styleSheet()==originalStyles.value(id),"original profile stylesheet restored after new glass profiles: "+id);
             }
             for(const auto &command:commands){
                 require(command.action->text()==command.text&&command.action->shortcuts()==command.shortcuts,"command label and shortcuts retained: "+command.text+" "+id);
-                if(id!="auroraclear1")require(command.action->icon().pixmap(20,20).toImage()==command.icon,"original command icon restored: "+command.text+" "+id);
+                if(id=="classic1"||id=="material")require(command.action->icon().pixmap(20,20).toImage()==command.icon,"original command icon restored: "+command.text+" "+id);
             }
             require(chrome->property("potatoMaterialEnabled").toBool()==useMaterial,"chrome renderer follows interface: "+id);
             const auto paints=chrome->property("potatoMaterialPaintCount").toULongLong();
             window.repaint();browser->repaint();const auto image=closeButton->grab().toImage().convertToFormat(QImage::Format_RGB32);settle(app);
             require(!image.isNull(),"actual fixed native button captured: "+id);
             require(useMaterial?chrome->property("potatoMaterialPaintCount").toULongLong()>paints:chrome->property("potatoMaterialPaintCount").toULongLong()==paints,"custom chrome paints only for optical interfaces: "+id);
-            if(id=="liquidglass1"){glassImage=image;glassBand=projectBar->grab().toImage();}
-            else if(id=="material"){materialImage=image;materialBand=projectBar->grab().toImage();}
-            else if(id=="auroraclear1")auroraImage=image;else if(id=="transparentglass1")transparentImage=image;else classicImage=image;
+            controlImages.insert(id,image);
+            if(id=="material")materialImage=image;else if(id=="auroraclear1")auroraImage=image;else if(id=="classic1")classicImage=image;
             for(auto *menu:menus){
                 auto *renderer=menu->template findChild<QObject*>("potatoMenuMaterial");require(renderer,"existing menu renderer retained: "+id);if(!renderer)continue;
                 const auto captures=renderer->property("potatoMaterialCaptureCount").toULongLong(),menuPaints=renderer->property("potatoMaterialPaintCount").toULongLong();
                 menu->popup(window.mapToGlobal(QPoint(400,160)));settle(app,45);require(menu->isVisible()&&!menu->grab().isNull(),"real popup opens after switch: "+id);
                 require(renderer->property("potatoMaterialEnabled").toBool()==useMaterial,"existing popup material state follows interface: "+id);
-                const bool samplesEditor=id=="material"||id=="liquidglass1";
+                const bool samplesEditor=id=="material";
                 require(samplesEditor?renderer->property("potatoMaterialCaptureCount").toULongLong()>captures:renderer->property("potatoMaterialCaptureCount").toULongLong()==captures,"menu samples editor only for legacy sampled profiles: "+id);
                 require(useMaterial?renderer->property("potatoMaterialPaintCount").toULongLong()>menuPaints:renderer->property("potatoMaterialPaintCount").toULongLong()==menuPaints,"menu paints glass only for optical interfaces: "+id);
-                if(id=="liquidglass1"||id=="auroraclear1"||id=="transparentglass1"){
+                if(id!="classic1"&&id!="material"){
                     const auto openingCaptures=renderer->property("potatoMaterialCaptureCount").toULongLong();
                     menu->repaint();settle(app,60);menu->repaint();settle(app,60);
                     require(renderer->property("potatoMaterialCaptureCount").toULongLong()==openingCaptures,"visible glass menu does not resample on repaint or idle: "+id);
@@ -199,11 +203,8 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         const double detail=PotatoThemeCheck::detailDifference(classicImage,materialImage),edges=PotatoThemeCheck::edgeDifference(classicImage,materialImage);
         qInfo()<<"THEME DESIGN fixed-button luminance detail"<<detail<<"border gradient difference"<<edges;
         require(classicImage.size()==materialImage.size()&&classicImage!=materialImage&&detail>.35&&edges>.5,"Classic and Material change real chrome detail and edges beyond a flat recolour");
-        const double glassDetail=PotatoThemeCheck::detailDifference(materialImage,glassImage),glassEdges=PotatoThemeCheck::edgeDifference(materialImage,glassImage),bandDetail=PotatoThemeCheck::detailDifference(materialBand,glassBand);
-        qInfo()<<"GLASS DESIGN button luminance detail"<<glassDetail<<"border gradient difference"<<glassEdges<<"command-band detail"<<bandDetail;
-        require(materialImage.size()==glassImage.size()&&glassDetail>.35&&glassEdges>.5&&bandDetail>.35,"Liquid Glass changes real control rims and persistent command-band structure beyond a Material recolour");
-        require(!auroraImage.isNull()&&auroraImage.size()==glassImage.size()&&auroraImage!=glassImage,"AuroraClear paints its own native control instead of aliasing Liquid Glass");
-        require(!transparentImage.isNull()&&transparentImage.size()==auroraImage.size()&&transparentImage!=auroraImage&&transparentImage!=glassImage,"Transparent Glass paints a distinct native control from both other glass profiles");
+        require(!auroraImage.isNull()&&auroraImage.size()==materialImage.size()&&auroraImage!=materialImage,"AuroraClear retains distinct native controls");
+        for(const auto &id:studioIds)require(!controlImages.value(id).isNull()&&controlImages.value(id)!=materialImage,"studio profile paints its own native control: "+id);
         // An already-open native popup must safely leave the custom paint path,
         // then restore its ordinary flags when hidden and reopen optically.
         auto *popupRenderer=surfaceMenu.template findChild<QObject*>("potatoMenuMaterial");
@@ -211,14 +212,14 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         classic->trigger();settle(app,45);require(popupRenderer&&!popupRenderer->property("potatoMaterialEnabled").toBool(),"visible popup immediately leaves glass rendering on Classic switch");
         surfaceMenu.close();settle(app,30);
         require(!surfaceMenu.isVisible()&&!surfaceMenu.testAttribute(Qt::WA_TranslucentBackground)&&!surfaceMenu.windowFlags().testFlag(Qt::FramelessWindowHint),"live-switched popup restores ordinary Classic native flags after hide");
-        glass->trigger();surfaceMenu.popup(window.mapToGlobal(QPoint(400,160)));settle(app,45);
+        aurora->trigger();surfaceMenu.popup(window.mapToGlobal(QPoint(400,160)));settle(app,45);
         require(surfaceMenu.isVisible()&&popupRenderer&&popupRenderer->property("potatoMaterialEnabled").toBool()&&!surfaceMenu.grab().isNull(),"live-switched popup reopens with actual glass content");surfaceMenu.close();settle(app,30);
         require(scene.json()==saved&&!scene.dirty&&window.output->grabFramebuffer()==outputBefore&&browser->geometry()==browserGeometry&&window.geometry()==windowGeometry,"visible popup switching preserves mapping, projector pixels and window geometry");
         // Observe a small warm batch, without a hardware-dependent FPS gate.
         // A capture-on-paint or continually rebuilt cache must still fail.
-        for(const auto &glassId:QStringList{"liquidglass1","auroraclear1","transparentglass1"}){
+        for(const auto &glassId:QStringList{"auroraclear1"}){
         themeActions.value(glassId)->trigger();settle(app,70);
-        const QByteArray metrics=glassId=="liquidglass1"?"potatoGlass":"potatoAurora";
+        const QByteArray metrics="potatoAurora";
         window.repaint();browser->repaint();settle(app,40);window.repaint();browser->repaint();
         const auto environmentBuilds=app.property((metrics+"EnvironmentBuilds").constData()).toULongLong(),plateBuilds=app.property((metrics+"PlateBuilds").constData()).toULongLong();
         QList<QPair<QObject*,qulonglong>> idleCaptures;for(auto *menu:menus)if(auto *renderer=menu->template findChild<QObject*>("potatoMenuMaterial"))idleCaptures.append({renderer,renderer->property("potatoMaterialCaptureCount").toULongLong()});
@@ -271,7 +272,7 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
         styles.removeDuplicates();require(styles.size()==4,"four distinct Material accent palettes");
         classic->trigger();const auto classicStyle=app.styleSheet();auto *autumn=window.template findChild<QAction*>("theme_autumn");if(autumn)autumn->trigger();require(app.styleSheet()==classicStyle&&app.property("potatoInterfaceTheme").toString()=="classic1"&&app.property("potatoTheme").toString()=="autumn","Classic stays original while retaining accent preference");material->trigger();
         auto *halloween=window.template findChild<QAction*>("theme_halloween");
-        for(const auto &id:QStringList{"liquidglass1","auroraclear1","transparentglass1"}){
+        for(const auto &id:QStringList{"auroraclear1","ambientglass1","lumenatelier1","nocturnecinema1","siennastudio1","tidallens1"}){
             if(autumn)autumn->trigger();themeActions.value(id)->trigger();const auto glassStyle=app.styleSheet();if(halloween)halloween->trigger();
             require(app.styleSheet()==glassStyle&&app.property("potatoInterfaceTheme").toString()==id&&app.property("potatoTheme").toString()=="halloween","glass profile keeps its own palette while remembering Material accent: "+id);
             require(scene.json()==saved&&!scene.dirty,"glass accent change preserves clean mapping: "+id);
@@ -338,7 +339,7 @@ template<class Window> void runAppearanceThemeChecks(Window &window,QApplication
                     require(scene.json()==captureScene&&scene.dirty==captureDirty,"native browser and dialog captures preserve scene");
                 }
             }else require(window.grab().save(path.absoluteFilePath()),"save actual task UI snapshot");
-            require(classicImage.save(evidencePath("-classic-control"))&&materialImage.save(evidencePath("-material-control"))&&glassImage.save(evidencePath("-liquidglass-control"))&&auroraImage.save(evidencePath("-auroraclear-control"))&&transparentImage.save(evidencePath("-transparentglass-control")),"save real five-profile control evidence");
+            for(auto it=controlImages.cbegin();it!=controlImages.cend();++it)require(it.value().save(evidencePath("-"+it.key()+"-control")),"save real native profile control: "+it.key());
         }
         else require(!args.contains("--capture-theme"),"capture theme requires an explicit --snapshot destination");
         finish();

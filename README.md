@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**Local desktop runtime: 0.9.6.** Choose **Settings → Appearance → Interface theme → Ambient Glass 1** for original moving light behind the interface. **Settings → Appearance → Ambient Glass** offers **Clear glass**, **Smoked glass**, **Pause background motion**, and **Adjust background…** for Speed and Light. The familiar 0.8.8 layout, current mapping features and all earlier themes remain available. Version 0.9.5 is retained for rollback. See the [local changes and verification](docs/0.9.6-ambient-glass.md). The public download linked below remains v0.8.8; this local update has not been publicly released. [DEVELOPMENT.md](DEVELOPMENT.md) records the current handoff.
+**Local desktop runtime: 0.9.7.** **Settings → Appearance → Interface theme** now offers **Lumen Atelier**, **Nocturne Cinema**, **Sienna Studio** and **Tidal Lens**, replacing Transparent Glass 1 and Windows Liquid Glass 1. **Theme motion** provides Pause, Speed and Light controls. Classic 1, Material, AuroraClear 1 and Ambient Glass 1 (with Clear/Smoked controls) remain available. The familiar 0.8.8 layout and mapping features stay in place; 0.9.6 is retained for rollback. See the [changes and verification](docs/0.9.7-studio-themes.md) and [current handoff](DEVELOPMENT.md). This local update has not been publicly released; the download linked below is v0.8.8.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 

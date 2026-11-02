@@ -145,7 +145,7 @@ template<class Window> void runAmbientGlassChecks(Window &window,QApplication &a
         window.showMinimized();settle(app,100);const auto minimizedSeconds=seconds();settle(app,180);
         require(!app.property("potatoAmbientRunning").toBool()&&seconds()==minimizedSeconds,"minimized editor stops background work");
         window.showNormal();settle(app,100);require(app.property("potatoAmbientRunning").toBool()&&seconds()>minimizedSeconds,"restoring editor resumes ambient motion");
-        for(const auto &id:QStringList{"classic1","material","liquidglass1","auroraclear1","transparentglass1"}){
+        for(const auto &id:QStringList{"classic1","material","auroraclear1"}){
             auto *action=window.template findChild<QAction*>("interfaceTheme_"+id);require(action,"retained profile action: "+id);if(!action)continue;
             action->trigger();settle(app,80);const auto frozen=seconds();settle(app,80);
             require(app.property("potatoInterfaceTheme").toString()==id&&!app.property("potatoAmbientRunning").toBool()&&seconds()==frozen,"old profile remains usable and stops ambient work: "+id);

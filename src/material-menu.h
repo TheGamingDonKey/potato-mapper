@@ -16,10 +16,12 @@
 #include "liquid-glass.h"
 #include "aurora-glass.h"
 #include "ambient-glass.h"
+#include "studio-themes.h"
 
 // These materials are painted by the app. They do not enable or claim a Windows
 // DWM backdrop. Legacy Material/Liquid menus sample the editor on opening;
-// AuroraClear/Transparent share static artwork; Ambient shares its live field.
+// AuroraClear/Transparent share static artwork; Ambient and Studio share their
+// original bounded live fields, with no editor or projection capture.
 namespace PotatoMaterial {
 inline bool enabled(){
     // An unset property also keeps the isolated material component proof useful.
@@ -27,6 +29,7 @@ inline bool enabled(){
 }
 
 inline QColor accent(){
+    if(PotatoThemes::active())return PotatoThemes::current().accent;
     if(PotatoAmbient::active())return PotatoAmbient::accent();
     if(PotatoAurora::active())return PotatoAurora::accent();
     if(PotatoGlass::active())return PotatoGlass::accent();
@@ -178,7 +181,8 @@ inline void paintClearGlassMenu(QMenu *menu,QPaintEvent *event,QWidget *editor){
     const QRectF rect(menu->rect());
     const QPointF origin=editor?QPointF(editor->mapFromGlobal(menu->pos())):QPointF();
     const QSizeF sceneSize=editor?QSizeF(editor->size()):QSizeF(menu->size());
-    if(PotatoAmbient::active())PotatoAmbient::paintSurface(painter,rect,PotatoAmbient::Role::Dialog,origin,sceneSize,menu->isEnabled()?0:8);
+    if(PotatoThemes::active())PotatoThemes::paintSurface(painter,rect,PotatoThemes::Role::Dialog,origin,sceneSize,menu->isEnabled()?0:8);
+    else if(PotatoAmbient::active())PotatoAmbient::paintSurface(painter,rect,PotatoAmbient::Role::Dialog,origin,sceneSize,menu->isEnabled()?0:8);
     else PotatoAurora::paintSurface(painter,rect,PotatoAurora::Role::Dialog,origin,sceneSize,menu->isEnabled()?0:8);
     // QMenu supplies its own real actions, checks, shortcuts and keyboard focus.
 }
@@ -198,11 +202,12 @@ public:
     void syncTheme(){
         if(!m_menu||m_configuring)return;
         const bool material=enabled();
-        const bool glass=PotatoGlass::active();const bool clearGlass=PotatoAurora::active()||PotatoAmbient::active();
+        const bool studio=PotatoThemes::active();
+        const bool glass=PotatoGlass::active();const bool clearGlass=PotatoAurora::active()||PotatoAmbient::active()||studio;
         setProperty("potatoMaterialEnabled",material);
         m_menu->setProperty("potatoMaterialMenu",material);
-        m_menu->setProperty("materialBackdrop",PotatoAmbient::active()?"app-owned-live-ambient-glass":(clearGlass?"app-owned-continuous-clear-glass":(glass?(glassMenuUsesSample()?"app-owned-editor-lensed-glass":"app-owned-opaque-glass"):
-            (material?"app-owned-sampled-frost":"opaque-classic"))));
+        m_menu->setProperty("materialBackdrop",studio?"app-owned-live-studio-theme":(PotatoAmbient::active()?"app-owned-live-ambient-glass":(clearGlass?"app-owned-continuous-clear-glass":(glass?(glassMenuUsesSample()?"app-owned-editor-lensed-glass":"app-owned-opaque-glass"):
+            (material?"app-owned-sampled-frost":"opaque-classic")))));
         if(!material||clearGlass||(m_prepared&&m_preparedGlass!=glass)||(glass&&!glassMenuUsesSample()))clearBackdrop();
         // A live action can change themes before its popup finishes closing.
         // Bypass painting immediately, and alter native popup flags only hidden.
@@ -223,7 +228,7 @@ public:
         m_sampling=true;m_position=position;m_size=m_menu->size();
         m_backdrop=QImage();m_noise=QImage();m_preparedGlass=PotatoGlass::active();
         setProperty("potatoGlassMenuLensedPixels",0);
-        if(PotatoAurora::active()||PotatoAmbient::active()||(m_preparedGlass&&!glassMenuUsesSample())){
+        if(PotatoThemes::active()||PotatoAurora::active()||PotatoAmbient::active()||(m_preparedGlass&&!glassMenuUsesSample())){
             m_sampling=false;m_prepared=true;return;
         }
         constexpr int pad=24;
@@ -285,7 +290,7 @@ protected:
             clearBackdrop();syncTheme();
         }else if(event->type()==QEvent::Paint&&enabled()){
             setProperty("potatoMaterialPaintCount",QVariant::fromValue(++m_paintCount));
-            if(PotatoAurora::active()||PotatoAmbient::active())paintClearGlassMenu(m_menu,static_cast<QPaintEvent*>(event),m_editor);
+            if(PotatoThemes::active()||PotatoAurora::active()||PotatoAmbient::active())paintClearGlassMenu(m_menu,static_cast<QPaintEvent*>(event),m_editor);
             else if(PotatoGlass::active())paintLiquidGlassMenu(m_menu,static_cast<QPaintEvent*>(event),m_backdrop,m_editor);
             else paintFrostedMenu(m_menu,static_cast<QPaintEvent*>(event),m_backdrop,m_noise);
         }
