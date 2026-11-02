@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
-project(PotatoMapper VERSION 0.9.7 LANGUAGES CXX)
+project(PotatoMapper VERSION 0.9.8 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS Widgets OpenGLWidgets Multimedia Network)
 qt_add_executable(PotatoMapper WIN32
     src/main.cpp src/model.h src/model.cpp src/canvas.h src/canvas.cpp src/branding.h src/updates.h src/updates.cpp src/ui.h src/style.h src/patterns.h
-    src/dynamic.h src/dynamic.cpp src/dynamic-metric.h src/projects.h src/projects.cpp src/projects-publish.h src/connections.cpp)
+    src/dynamic.h src/dynamic.cpp src/dynamic-metric.h src/projects.h src/projects.cpp src/projects-publish.h src/connections.cpp src/desktop-glass.h src/desktop-glass.cpp)
 option(POTATO_STORE_BUILD "Build the Microsoft Store distribution profile" OFF)
 if(POTATO_STORE_BUILD)
     target_compile_definitions(PotatoMapper PRIVATE POTATO_STORE_BUILD=1)
@@ -18,6 +18,7 @@ qt_add_resources(PotatoMapper branding PREFIX "/" FILES assets/potato-mapper.png
 file(GLOB STUDIO_ART RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS assets/icons/*.svg assets/thumbnails/*.png)
 qt_add_resources(PotatoMapper studio_art PREFIX "/" FILES ${STUDIO_ART})
 if(WIN32)
+    target_link_libraries(PotatoMapper PRIVATE dwmapi)
     target_sources(PotatoMapper PRIVATE assets/potato-mapper.rc)
     add_executable(PotatoLauncher WIN32 src/launcher.cpp assets/potato-mapper.rc)
     set_target_properties(PotatoLauncher PROPERTIES OUTPUT_NAME PotatoMapper MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

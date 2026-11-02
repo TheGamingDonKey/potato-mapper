@@ -13,7 +13,7 @@ struct Theme {
 };
 inline const std::array<Theme,4> &themes(){
     static const std::array<Theme,4> values{{
-        {"lumenatelier1","Lumen Atelier",QColor("#E9E8E1"),QColor("#182945"),QColor("#4F5D70"),QColor("#FFFFFF"),QColor("#244EE9"),QColor("#244EE9"),QColor("#FFFFFF"),QColor("#DDE6FF"),QColor("#142A55"),QColor("#FFFFFF"),QColor("#FFFFFF"),QColor("#80909F"),QColor("#BCD6F7"),QColor("#F4CBA9"),13,9},
+        {"lumenatelier1","Lumen Atelier",QColor("#E9E8E1"),QColor("#182945"),QColor("#304159"),QColor("#FFFFFF"),QColor("#244EE9"),QColor("#244EE9"),QColor("#FFFFFF"),QColor("#DDE6FF"),QColor("#142A55"),QColor("#FFFFFF"),QColor("#FFFFFF"),QColor("#80909F"),QColor("#BCD6F7"),QColor("#F4CBA9"),13,9},
         {"nocturnecinema1","Nocturne Cinema",QColor("#0D111A"),QColor("#F0F4FF"),QColor("#AFBBD0"),QColor("#172235"),QColor("#6DA6FF"),QColor("#BBD5FF"),QColor("#0B2141"),QColor("#2A4363"),QColor("#F6F9FF"),QColor("#25354D"),QColor("#24354A"),QColor("#1B2C44"),QColor("#347BDA"),QColor("#DA794F"),12,7},
         {"siennastudio1","Sienna Studio",QColor("#E5DCD0"),QColor("#332927"),QColor("#655954"),QColor("#FFF7E9"),QColor("#A54831"),QColor("#9D4230"),QColor("#FFFFFF"),QColor("#F6D8BF"),QColor("#562F24"),QColor("#FFF8ED"),QColor("#EEE0CE"),QColor("#AA8A70"),QColor("#D88F54"),QColor("#708EA9"),11,6},
         {"tidallens1","Tidal Lens",QColor("#B2CDCC"),QColor("#153B4C"),QColor("#3E6271"),QColor("#DFF8F1"),QColor("#167C92"),QColor("#133F59"),QColor("#F6FFFA"),QColor("#E1ECAF"),QColor("#244538"),QColor("#E2F7F1"),QColor("#B4D7D4"),QColor("#366A7A"),QColor("#438CAC"),QColor("#E6D789"),17,11}
@@ -128,7 +128,7 @@ inline void advance(double seconds){
     auto &s=Detail::store();s.seconds+=seconds;s.dirty=true;
     if(qApp)qApp->setProperty("potatoStudioThemeSeconds",s.seconds);
 }
-inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF &origin,const QSizeF &scene,int state,const QString &family=QString()){
+inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF &origin,const QSizeF &scene,int state,const QString &family=QString(),bool desktopGlass=false){
     if(rect.width()<1||rect.height()<1)return;
     const auto &t=current();const bool lumen=t.id=="lumenatelier1",night=t.id=="nocturnecinema1",sienna=t.id=="siennastudio1",tidal=t.id=="tidallens1";
     const bool solid=opaque(),disabled=state&8,pressed=(state&2)&&!disabled,hover=(state&1)&&!disabled,checked=(state&4)&&!disabled;
@@ -141,8 +141,24 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
     // them from the pale shared environment would turn a 7% white key overlay
     // into a pale face underneath the intentionally light toolbar text.
     const bool inkDeck=toolbar&&(role==Role::Shell||(role==Role::Button&&!primary));
-    p.fillRect(rect,inkDeck?QColor("#25323B"):t.bg);
-    if(!solid&&!inkDeck)Detail::sampleEnvironment(p,rect,origin,scene);
+    const bool seeThrough=desktopGlass&&lumen&&!solid;
+    if(seeThrough){
+        // The real desktop is composed by Windows, never copied into a bitmap.
+        // Paint only a translucent veil and a shared moving reflection here.
+        if(role==Role::Foundation){
+            p.fillRect(rect,QColor(246,250,255,164));
+            Detail::ensureEnvironment(scene);
+            const qreal sweep=.45+.38*std::sin(Detail::tau*Detail::store().seconds/16);
+            QLinearGradient gloss(-origin.x()+scene.width()*(sweep-.20),-origin.y(),
+                                  -origin.x()+scene.width()*(sweep+.20),-origin.y()+scene.height()*.32);
+            const int light=qRound(24*Detail::intensity());
+            gloss.setColorAt(0,Qt::transparent);gloss.setColorAt(.44,QColor(255,255,255,light));
+            gloss.setColorAt(.57,QColor(216,235,255,light/2));gloss.setColorAt(1,Qt::transparent);p.fillRect(rect,gloss);
+        }
+    }else{
+        p.fillRect(rect,inkDeck?QColor("#25323B"):t.bg);
+        if(!solid&&!inkDeck)Detail::sampleEnvironment(p,rect,origin,scene);
+    }
     if(role!=Role::Foundation){
         QColor face=t.panel; qreal a0=night?.78:(lumen?.72:.66),am=lumen?.30:.46,a1=.70;
         if(role==Role::Dialog){a0=.96;am=.92;a1=.96;}
@@ -151,6 +167,13 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         if(role==Role::Input){face=t.cap;a0=am=a1=night?.72:.70;}
         if(role==Role::Well){face=t.panel;a0=am=a1=night?.25:.28;}
         if(role==Role::Button){face=t.cap;a0=lumen?.92:.78;am=lumen?.66:(tidal?.45:.72);a1=lumen?.94:.80;}
+        if(seeThrough){
+            if(role==Role::Panel||role==Role::Shell||role==Role::Well){a0=.28;am=.16;a1=.25;}
+            if(role==Role::Section){a0=am=a1=.06;}
+            if(role==Role::Heading){a0=.64;am=.48;a1=.58;}
+            if(role==Role::Input){a0=am=a1=.90;}
+            if(role==Role::Button){a0=.88;am=.67;a1=.80;}
+        }
         if(toolbar&&role==Role::Shell){face=QColor("#25323B");a0=am=a1=1;}
         if(night&&role==Role::Button&&!primary){a0=am=a1=family=="toolbar"?.20:.55;}
         if(toolbar&&role==Role::Button&&!primary){face=Qt::white;a0=am=a1=.07;}

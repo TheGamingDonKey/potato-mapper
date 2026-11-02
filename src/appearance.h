@@ -24,7 +24,7 @@ struct AmbientPreferences {
 };
 inline AmbientPreferences normalizedAmbientPreferences(AmbientPreferences value){
     value.glass=value.glass=="clear"?QStringLiteral("clear"):QStringLiteral("smoked");
-    value.speed=qBound(20,value.speed,120);value.intensity=qBound(20,value.intensity,100);
+    value.speed=qBound(20,value.speed,240);value.intensity=qBound(20,value.intensity,100);
     return value;
 }
 inline AmbientPreferences readAmbientPreferences(QSettings &settings){

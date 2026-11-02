@@ -21,7 +21,11 @@ Canvas::Canvas(Scene *s,bool editing,QWidget *parent):QOpenGLWidget(parent),scen
 }
 Canvas::~Canvas(){cleanup();}
 void Canvas::cleanup(){
-    if(!context())return;makeCurrent();
+    if(!context())return;
+    // QOpenGLWidget's base destructor can destroy the context after Canvas's
+    // buffer/program members have gone. Never call back into those dead members.
+    disconnect(context(),&QOpenGLContext::aboutToBeDestroyed,this,&Canvas::cleanup);
+    makeCurrent();
     for(auto &t:textures){if(t.id)glDeleteTextures(1,&t.id);if(t.chroma)glDeleteTextures(1,&t.chroma);}
     if(profileQueries[0])glDeleteQueries(4,profileQueries);
     std::fill(std::begin(profileQueries),std::end(profileQueries),0u);std::fill(std::begin(profilePending),std::end(profilePending),false);activeProfileQuery=-1;

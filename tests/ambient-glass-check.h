@@ -69,7 +69,7 @@ template<class Window> void runAmbientGlassChecks(Window &window,QApplication &a
         require(reopened.status()==QSettings::NoError&&PotatoAppearance::readPreferences(reopened).interfaceTheme=="ambientglass1"&&settings.glass=="clear"&&settings.paused&&settings.speed==90&&settings.intensity==80,"ambient profile and all motion preferences survive reopen");
         preferences.setValue("ui/ambientGlass","unknown");preferences.setValue("ui/ambientSpeed",999);preferences.setValue("ui/ambientIntensity",-8);
         settings=PotatoAppearance::readAmbientPreferences(preferences);
-        require(settings.glass=="smoked"&&settings.speed==120&&settings.intensity==20,"invalid glass and out-of-range values normalize safely");
+        require(settings.glass=="smoked"&&settings.speed==240&&settings.intensity==20,"invalid glass and out-of-range values normalize safely");
 
         reduceMotion->setChecked(false);reduceTransparency->setChecked(false);increaseContrast->setChecked(false);
         ambient->trigger();pause->setChecked(true);smoked->trigger();window.resize(1280,800);settle(app,100);
@@ -118,7 +118,7 @@ template<class Window> void runAmbientGlassChecks(Window &window,QApplication &a
         auto *dialogPause=window.template findChild<QCheckBox*>("ambientPauseControl");
         require(dialog&&dialog->isVisible()&&speed&&intensity&&dialogPause,"real adjustment dialog exposes motion controls");
         if(!dialog||!speed||!intensity||!dialogPause){finish();return;}
-        require(speed->minimum()==20&&speed->maximum()==120&&intensity->minimum()==20&&intensity->maximum()==100,"speed and light controls have the approved bounds");
+        require(speed->minimum()==20&&speed->maximum()==240&&intensity->minimum()==20&&intensity->maximum()==100,"speed and light controls have the approved bounds");
         speed->setValue(70);intensity->setValue(85);settle(app,50);
         require(qAbs(app.property("potatoAmbientSpeed").toDouble()-.7)<.001&&qAbs(app.property("potatoAmbientIntensity").toDouble()-.85)<.001,"native sliders update live speed and intensity");
         intensity->setValue(20);settle(app,40);const auto dim=chromeImage();intensity->setValue(100);settle(app,40);const auto bright=chromeImage();

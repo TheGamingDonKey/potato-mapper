@@ -44,7 +44,8 @@ inline QDialog *createDialog(QWidget *owner,const std::function<void(const Prefe
     dialog->setWindowTitle(themeMotion?"Theme motion":"Ambient Glass background");dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->setMinimumWidth(420);
     auto *layout=new QVBoxLayout(dialog);layout->setContentsMargins(22,22,22,18);layout->setSpacing(16);
     auto *title=new QLabel(themeMotion?"Theme motion":"Ambient Glass 1",dialog);auto font=title->font();font.setPixelSize(20);font.setWeight(QFont::DemiBold);title->setFont(font);layout->addWidget(title);
-    auto *description=new QLabel("Original moving light behind your workspace.\nYour mapping and projected content stay unchanged.",dialog);description->setWordWrap(true);layout->addWidget(description);
+    const bool desktopGlass=qApp->property("potatoInterfaceTheme").toString()=="lumenatelier1";
+    auto *description=new QLabel(desktopGlass?"Adjust the reflections on Lumen's glass.\nWindows behind the app remain live when reflections are paused.":"Original moving light behind your workspace.\nYour mapping and projected content stay unchanged.",dialog);description->setWordWrap(true);layout->addWidget(description);
     auto *form=new QFormLayout;form->setSpacing(14);layout->addLayout(form);
     if(!themeMotion){
     auto *glassRow=new QHBoxLayout;
@@ -56,7 +57,7 @@ inline QDialog *createDialog(QWidget *owner,const std::function<void(const Prefe
     }
     for(const bool speed:{true,false}){
         auto *row=new QHBoxLayout;auto *slider=new QSlider(Qt::Horizontal,dialog);slider->setObjectName(speed?"ambientSpeed":"ambientIntensity");
-        slider->setRange(20,speed?120:100);slider->setSingleStep(speed?10:5);slider->setPageStep(speed?10:5);
+        slider->setRange(20,speed?240:100);slider->setSingleStep(speed?10:5);slider->setPageStep(speed?10:5);
         slider->setAccessibleName(speed?"Background speed":"Background light intensity");
         auto *valueLabel=new QLabel(dialog);valueLabel->setObjectName(speed?"ambientSpeedValue":"ambientIntensityValue");valueLabel->setMinimumWidth(42);valueLabel->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
         row->addWidget(slider,1);row->addWidget(valueLabel);form->addRow(speed?"Speed":"Light",row);

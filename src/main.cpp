@@ -67,6 +67,7 @@
 #include <QTemporaryDir>
 #include <QJsonDocument>
 #include <QSurfaceFormat>
+#include "desktop-glass.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDesktopServices>
@@ -86,9 +87,11 @@ public:
     Canvas *canvas,*output;
     bool smoke=false;
     explicit MainWindow(){
+        PotatoDesktopGlass::prepare(this);
         setWindowTitle("Potato Mapper");setMinimumSize(760,540);
         const auto desktop=screen()->availableGeometry().size();resize(qMin(1280,desktop.width()-48),qMin(800,desktop.height()-48));
         canvas=new Canvas(&scene,true);canvas->setObjectName("editorCanvas");output=new Canvas(&scene,false);
+        connect(qApp,&QCoreApplication::aboutToQuit,this,[this]{output->hide();hide();});
         output->setWindowTitle("Potato Mapper — Projector");output->setWindowFlag(Qt::FramelessWindowHint);
         output->installEventFilter(this);
         auto *bar=addToolBar("Project");bar->setObjectName("projectToolbar");bar->setMovable(false);bar->setFloatable(false);

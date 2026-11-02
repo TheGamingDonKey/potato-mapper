@@ -96,6 +96,7 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
         auto bytes=[&](const QString &path){QFile file(path);require(file.open(QIODevice::ReadOnly),"read disposable fixture");return file.readAll();};
         const auto mediaBytes=bytes(mediaPath),projectBytes=bytes(projectPath);const auto selected=scene.selected;const auto phase=scene.current()->patternPhase;
         const auto projectActions=projectBar->actions(),outputActions=outputBar->actions();const auto splitterSizes=splitter->sizes();const auto windowSize=window.size();
+        const auto nativeWindowId=window.winId();
         struct Identity {QString name;QPointer<QWidget> widget,parent;QLayout *layout;};QList<Identity> identities;
         for(const auto &name:QStringList{"surfaceSidebar","surfaceInspector","surfaceList","editorSplitter","projectToolbar","outputToolbar","animationBrowserDialog","animationPicker","connectionsSection"}){
             auto *widget=window.template findChild<QWidget*>(name);require(widget,"retained widget: "+name);if(widget)identities.append({name,widget,widget->parentWidget(),widget->layout()});
@@ -106,7 +107,13 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
         auto frames=[&]{return app.property("potatoStudioThemeFrames").toULongLong();};
         // Sienna intentionally has an opaque ink project deck; the output band
         // carries the environment in all four themes and excludes OpenGL content.
-        auto chrome=[&]{return outputBar->grab().toImage().convertToFormat(QImage::Format_RGB32);};
+        auto composedChrome=[&](QWidget *widget){
+            const auto frame=window.grab().toImage();const auto origin=widget->mapTo(&window,QPoint());const auto dpr=frame.devicePixelRatio();
+            return frame.copy(QRect(qRound(origin.x()*dpr),qRound(origin.y()*dpr),qRound(widget->width()*dpr),qRound(widget->height()*dpr)));
+        };
+        // Native glass inherits the editor's reflection. A child-only grab
+        // omits that backing, so inspect the actual composed window region.
+        auto chrome=[&]{return composedChrome(outputBar).convertToFormat(QImage::Format_RGB32);};
         auto unchanged=[&](const QString &label){
             require(scene.json()==saved&&!scene.dirty&&scene.selected==selected&&scene.current()->patternPhase==phase&&scene.projectPath==projectPath,label+" preserves clean scene, current project, selection and phase");
             require(window.output->grabFramebuffer()==outputBefore,label+" preserves exact projector pixels");
@@ -123,6 +130,31 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
         for(const auto &id:ids){
             actions.value(id)->trigger();settle(app,100);int checked=0;for(auto *action:window.template findChildren<QAction*>())if(action->objectName().startsWith("interfaceTheme_")&&action->isChecked())++checked;
             require(app.property("potatoInterfaceTheme").toString()==id&&PotatoThemes::isTheme(id)&&checked==1&&actions.value(id)->isChecked(),"exclusive live theme selection: "+id);
+            require(window.winId()==nativeWindowId&&!(window.windowFlags()&Qt::FramelessWindowHint),"theme switch retains native window and standard Windows frame: "+id);
+            if(id=="lumenatelier1"&&window.testAttribute(Qt::WA_TranslucentBackground)&&window.property("potatoDesktopGlassSystemAllowed").toBool()){
+                require(PotatoDesktopGlass::active(&window),"Lumen activates real desktop alpha composition on this host");
+                const auto nativeFrame=window.grab().toImage();int translucentPixels=0;
+                const auto band=QRect(projectBar->mapTo(&window,QPoint()),projectBar->size());
+                const auto scale=window.devicePixelRatioF();
+                for(int y=band.top()+4;y<band.bottom()-4;y+=3)for(int x=band.left()+4;x<band.right()-4;x+=3){
+                    const int a=nativeFrame.pixelColor(qRound(x*scale),qRound(y*scale)).alpha();if(a>0&&a<245)++translucentPixels;
+                }
+                require(translucentPixels>100,"Lumen chrome contains real translucent pixels, not an opaque painted background");
+                for(const auto &name:QStringList{"outputStatus","surfaceHeading"})if(auto *label=window.template findChild<QLabel*>(name)){
+                    const auto ink=label->palette().color(QPalette::WindowText);const auto style=label->styleSheet();
+                    label->setStyleSheet(style+";color:transparent;");const auto bed=composedChrome(label);label->setStyleSheet(style);
+                    double minimum=100;
+                    for(const QColor backdrop:{QColor(Qt::black),QColor(Qt::white)}){
+                        QImage composed(bed.size(),QImage::Format_RGB32);composed.setDevicePixelRatio(bed.devicePixelRatio());composed.fill(backdrop);{QPainter p(&composed);p.drawImage(0,0,bed);}
+                        const double text=PotatoThemeCheck::luminance(ink);
+                        for(int y=2;y<composed.height()-2;y+=3)for(int x=2;x<composed.width()-2;x+=3){
+                            const double background=PotatoThemeCheck::luminance(composed.pixelColor(x,y));
+                            minimum=qMin(minimum,(qMax(text,background)+.05)/(qMin(text,background)+.05));
+                        }
+                    }
+                    require(minimum>=4.5,"actual translucent label backing readable over black and white desktop: "+name+" "+QString::number(minimum));
+                }
+            }else require(!PotatoDesktopGlass::active(&window),"other studio materials retain opaque window composition: "+id);
             require(splitter->count()==2&&splitter->widget(0)==sidebar&&splitter->widget(1)==window.canvas&&bounds(sidebar,&window).right()<bounds(window.canvas,&window).left(),"original left sidebar/right canvas: "+id);
             require(window.size()==windowSize&&splitter->sizes()==splitterSizes&&projectBar->actions()==projectActions&&outputBar->actions()==outputActions,"same window, splitter and action order: "+id);
             for(const auto &entry:identities)require(entry.widget&&window.template findChild<QWidget*>(entry.name)==entry.widget&&entry.widget->parentWidget()==entry.parent&&entry.widget->layout()==entry.layout,"same native widget/parent/layout: "+entry.name+" "+id);
@@ -152,6 +184,7 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
             unchanged(id);
             for(auto *option:{reduceMotion,reduceTransparency,increaseContrast}){
                 pause->setChecked(false);option->setChecked(true);settle(app,100);const auto staticSeconds=seconds();const auto staticFrames=frames();const auto staticChrome=chrome();settle(app,130);
+                if(option==reduceTransparency||option==increaseContrast)require(!PotatoDesktopGlass::active(&window),"readability preference disables actual desktop translucency: "+id);
                 require(!app.property("potatoAmbientRunning").toBool()&&seconds()==staticSeconds&&frames()==staticFrames&&chrome()==staticChrome,"accessibility freezes real chrome: "+option->objectName()+" "+id);
                 require(!staticChrome.isNull()&&PotatoThemeCheck::textBedContrast(search)>=4.5,"static fallback has readable real search text: "+id);option->setChecked(false);pause->setChecked(true);settle(app,60);
             }
@@ -165,9 +198,13 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
         auto *dialog=window.template findChild<QDialog*>("themeMotionDialog");auto *speed=window.template findChild<QSlider*>("ambientSpeed");auto *intensity=window.template findChild<QSlider*>("ambientIntensity");auto *dialogPause=window.template findChild<QCheckBox*>("ambientPauseControl");
         require(dialog&&dialog->isVisible()&&speed&&intensity&&dialogPause,"Theme motion opens shared real controls");
         if(dialog&&speed&&intensity&&dialogPause){
-            require(speed->minimum()==20&&speed->maximum()==120&&intensity->minimum()==20&&intensity->maximum()==100,"shared control bounds retained");
+            require(speed->minimum()==20&&speed->maximum()==240&&intensity->minimum()==20&&intensity->maximum()==100,"shared control bounds retained");
             speed->setValue(70);intensity->setValue(85);settle(app,60);
             require(qAbs(app.property("potatoAmbientSpeed").toDouble()-.7)<.001&&qAbs(app.property("potatoAmbientIntensity").toDouble()-.85)<.001,"studio controls use persisted shared speed/light");
+            dialogPause->setChecked(false);speed->setValue(240);settle(app,70);const auto fastStart=seconds();QElapsedTimer fastTimer;fastTimer.start();settle(app,500);
+            const double fastRate=(seconds()-fastStart)/(fastTimer.elapsed()/1000.0);
+            require(fastRate>1.8&&fastRate<2.9,"expanded 2.4x control advances the real theme clock above the former 1.2x cap");
+            dialogPause->setChecked(true);settle(app,50);
             const auto frozen=seconds();intensity->setValue(20);settle(app,50);const auto dim=chrome();intensity->setValue(100);settle(app,50);
             require(PotatoStudioCheck::difference(dim,chrome())>.25&&seconds()==frozen,"studio Light changes actual paused chrome");
             auto *clear=window.template findChild<QAction*>("ambientGlass_clear");auto *reset=dialog->template findChild<QPushButton*>("ambientReset");

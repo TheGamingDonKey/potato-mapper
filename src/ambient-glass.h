@@ -13,7 +13,7 @@ inline QColor accent(){return QColor("#A9D2CA");}
 inline bool opaque(){return PotatoGlass::reducedTransparency()||PotatoGlass::increasedContrast();}
 inline qreal speed(){
     bool ok=false;const qreal value=qApp?qApp->property("potatoAmbientSpeed").toDouble(&ok):.5;
-    return ok&&std::isfinite(value)?qBound(.2,value,1.2):.5;
+    return ok&&std::isfinite(value)?qBound(.2,value,2.4):.5;
 }
 inline qreal intensity(){
     bool ok=false;const qreal value=qApp?qApp->property("potatoAmbientIntensity").toDouble(&ok):.65;

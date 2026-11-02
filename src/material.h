@@ -30,6 +30,7 @@
 #include "aurora-glass.h"
 #include "ambient-glass.h"
 #include "studio-themes.h"
+#include "desktop-glass.h"
 
 namespace PotatoMaterial {
 enum class Surface { None,Foundation,Shell,Panel,Section,Heading,Button,Input,Well,Dialog,FocusOnly };
@@ -53,11 +54,15 @@ public:
             else PotatoAmbient::advance(seconds);
             repaintAmbientChrome();
         });
+        connect(qApp,&QCoreApplication::aboutToQuit,this,[this]{
+            m_stopping=true;m_ambientTimer.stop();m_ambientClock.invalidate();qApp->removeEventFilter(this);
+        });
         syncAmbientClock();
     }
     ~ChromeMaterial()override{if(qApp)qApp->removeEventFilter(this);}
     void syncTheme(){
         if(m_refreshing||!m_editor)return;
+        PotatoDesktopGlass::sync(m_editor);
         m_refreshing=true;m_cache.clear();PotatoGlass::clearCaches();PotatoAurora::clearCaches();PotatoAmbient::clearCaches();PotatoThemes::clearCaches();setProperty("potatoMaterialEnabled",enabled());
         prepare(m_editor);m_editor->update();
         for(auto *widget:m_editor->findChildren<QWidget*>()){
@@ -130,7 +135,7 @@ protected:
 private:
     bool ambientShouldRun()const{
         const bool live=PotatoThemes::active()?!PotatoThemes::opaque():(PotatoAmbient::active()&&!PotatoAmbient::opaque());
-        return m_editor&&m_editor->isVisible()&&!m_editor->isMinimized()&&live&&
+        return !m_stopping&&m_editor&&m_editor->isVisible()&&!m_editor->isMinimized()&&live&&
             !qApp->property("potatoAmbientPaused").toBool()&&!PotatoGlass::reducedMotion();
     }
     void syncAmbientClock(){
@@ -398,7 +403,7 @@ private:
             QString family=widget->property("potatoIconFamily").toString();
             for(auto *parent=widget;parent&&parent!=m_editor;parent=parent->parentWidget())
                 if(parent->objectName()=="projectToolbar"){family=QStringLiteral("toolbar");break;}
-            PotatoThemes::paintSurface(p,rect,role,origin,m_editor->size(),state,family);
+            PotatoThemes::paintSurface(p,rect,role,origin,m_editor->size(),state,family,PotatoDesktopGlass::active(widget->window()));
         }
         else if(ambient)PotatoAmbient::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
         else if(clearGlass)PotatoAurora::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
@@ -446,7 +451,7 @@ private:
     }
     QPointer<QWidget> m_editor;QCache<QString,QPixmap> m_cache;
     QTimer m_ambientTimer;QElapsedTimer m_ambientClock;
-    bool m_refreshing=false;qulonglong m_paintCount=0;
+    bool m_refreshing=false,m_stopping=false;qulonglong m_paintCount=0;
 };
 }
 

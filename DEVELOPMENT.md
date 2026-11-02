@@ -1,6 +1,14 @@
 # Development handoff
 
-## Current handoff — November 1 four studio themes installed locally as 0.9.7
+## Current handoff — November 1 Lumen desktop glass and faster motion, local 0.9.8
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/desktop-glass-motion`. Normal launcher: `app/PotatoMapper.exe`; current 0.9.8, previous 0.9.7. Lumen Atelier uses actual Windows client-area translucency with glossy highlights and a readable native caption; other profiles, familiar 0.8.8 layout, feature locations, mapping data and opaque projector output remain intact. This is clear semi-gloss, **not native Acrylic blur or desktop refraction**. Theme motion now supports 0.2–2.4×. Lumen and 1.8×/100% Light/playing are persisted. [Implementation and evidence](docs/0.9.8-desktop-glass-motion.md).
+
+Reuse cached Qt 6.10.3/CMake and `out/build-desktop`; build with `cmake --build out/build-desktop --config Release --parallel 4`. Package into a fresh `app/.updates/<session>/payload` using `package.ps1 -SkipZip`, verify that payload, then use the root launcher update path. No new framework, wallpaper asset, capture pipeline, scene format or dependencies beyond Windows DWM were introduced. OpenGL cleanup now disconnects its destruction callback before releasing Canvas members; native/theme timers stop safely at quit. Full-app inspection caught and fixed the DWM caption problem before the final handoff.
+
+Final evidence is in `out/desktop-glass-motion`: eight packaged suites, 249 studio assertions at normal and scaled display sizes, actual launcher 0.9.8 → 0.9.7 → 0.9.8 reopen, protected-file/runtime hashes, and installed native screenshots. The original mapping remains `app/Projects/Recovered before four themes/Unsaved before 0.9.7.pmap`. Combined storage is approximately 1.08 GB under the 1.9 GB cap. Automatic approval review rejected removal of the 66 MB superseded `initial-runtime-098` with only “blocked by policy”; it was retained and no alternate deletion was attempted. Earlier blocked cleanup remains untouched. No public release, push, Store submission or physical-projector acceptance is claimed. Next: Shane's assessment of the actual transparency and motion; frosted desktop blur remains unimplemented, and Tidal's art refinement remains deferred.
+
+## Historical handoff — November 1 four studio themes installed locally as 0.9.7
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/four-studio-themes`. The normal launcher `app/PotatoMapper.exe` selects 0.9.7 with 0.9.6 retained. The four approved native profiles are Lumen Atelier, Nocturne Cinema, Sienna Studio and Tidal Lens. Transparent Glass 1 and Windows Liquid Glass 1 are removed from the menu; their saved IDs migrate to Lumen and Nocturne respectively. All other themes and the familiar 0.8.8 feature layout remain. [Details and controls](docs/0.9.7-studio-themes.md).
 
