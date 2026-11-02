@@ -1,6 +1,14 @@
 # Development handoff
 
-## Current handoff — November 1 Lumen desktop glass and faster motion, local 0.9.8
+## Current handoff — November 2 Lumen soft dark glass, local 0.9.9
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-soft-glass`. Normal launcher: `app/PotatoMapper.exe`; current 0.9.9, previous 0.9.8. Lumen's white/petrol treatment is replaced by a soft charcoal foundation, subtle cool accents, recessed inputs, quieter reflections and pale semantic icons. The 0.8.8 layout, features, projects/media, other themes and 1.8x motion preference are retained. [Research, implementation and evidence](docs/0.9.9-lumen-soft-glass.md).
+
+Reuse Qt 6.10.3, cached CMake and `out/build-desktop`; no new dependencies. Three relevant packaged suites pass (249 studio assertions at both sizes plus all-theme checks). Actual launcher 0.9.9 -> 0.9.8 -> 0.9.9 saved-fixture reopen passes. Native Close releases the process and lock, followed by normal launcher reopen. All 17 protected file hashes and 95 entries in each installed/rollback manifest match. Original mapping: `app/Projects/Recovered before four themes/Unsaved before 0.9.7.pmap`. Evidence: `out/lumen-petrol`; total about 1.15 GB under 1.9 GB. An old hidden process/stale lock initially blocked installation; its clean work was checked, the dead-owner lock retained as evidence, and the unchanged candidate was restaged successfully.
+
+Next: Shane's visual assessment of the running app. **Native frosted blur/refraction remains unimplemented**: isolated documented Acrylic configurations yielded opaque grey/black in Qt/OpenGL; only the proven clear alpha path ships. Do not claim full Windows/Apple Liquid Glass. No public release, push, Store submission or physical-projector acceptance. Tidal refinement remains deferred. Preserve the pre-existing unrelated edit in `proofs/surface-material/frost-menu.h`.
+
+## Historical handoff — November 1 Lumen desktop glass and faster motion, local 0.9.8
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/desktop-glass-motion`. Normal launcher: `app/PotatoMapper.exe`; current 0.9.8, previous 0.9.7. Lumen Atelier uses actual Windows client-area translucency with glossy highlights and a readable native caption; other profiles, familiar 0.8.8 layout, feature locations, mapping data and opaque projector output remain intact. This is clear semi-gloss, **not native Acrylic blur or desktop refraction**. Theme motion now supports 0.2–2.4×. Lumen and 1.8×/100% Light/playing are persisted. [Implementation and evidence](docs/0.9.8-desktop-glass-motion.md).
 

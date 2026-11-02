@@ -74,11 +74,11 @@ public:
             const DWM_SYSTEMBACKDROP_TYPE resetType=DWMSBT_AUTO;DwmSetWindowAttribute(hwnd,DWMWA_SYSTEMBACKDROP_TYPE,&resetType,sizeof(resetType));
             if(QOperatingSystemVersion::current().microVersion()>=26100){const BOOL alpha=FALSE;DwmSetWindowAttribute(hwnd,DWMWA_REDIRECTIONBITMAP_ALPHA,&alpha,sizeof(alpha));}
         }
-        const COLORREF caption=enabled?RGB(237,242,247):DWMWA_COLOR_DEFAULT;
-        const COLORREF text=enabled?RGB(24,41,69):DWMWA_COLOR_DEFAULT;
+        const COLORREF caption=enabled?RGB(36,41,48):DWMWA_COLOR_DEFAULT;
+        const COLORREF text=enabled?RGB(238,241,245):DWMWA_COLOR_DEFAULT;
         if(enabled){
             if(!m_captionOverridden){DwmGetWindowAttribute(hwnd,DWMWA_USE_IMMERSIVE_DARK_MODE,&m_previousDark,sizeof(m_previousDark));m_captionOverridden=true;}
-            const BOOL light=FALSE;DwmSetWindowAttribute(hwnd,DWMWA_USE_IMMERSIVE_DARK_MODE,&light,sizeof(light));
+            const BOOL dark=TRUE;DwmSetWindowAttribute(hwnd,DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof(dark));
         }else if(m_captionOverridden){DwmSetWindowAttribute(hwnd,DWMWA_USE_IMMERSIVE_DARK_MODE,&m_previousDark,sizeof(m_previousDark));m_captionOverridden=false;}
         DwmSetWindowAttribute(hwnd,DWMWA_CAPTION_COLOR,&caption,sizeof(caption));
         DwmSetWindowAttribute(hwnd,DWMWA_TEXT_COLOR,&text,sizeof(text));
