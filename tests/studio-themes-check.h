@@ -131,6 +131,25 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
             actions.value(id)->trigger();settle(app,100);int checked=0;for(auto *action:window.template findChildren<QAction*>())if(action->objectName().startsWith("interfaceTheme_")&&action->isChecked())++checked;
             require(app.property("potatoInterfaceTheme").toString()==id&&PotatoThemes::isTheme(id)&&checked==1&&actions.value(id)->isChecked(),"exclusive live theme selection: "+id);
             require(window.winId()==nativeWindowId&&!(window.windowFlags()&Qt::FramelessWindowHint),"theme switch retains native window and standard Windows frame: "+id);
+            if(id=="lumenatelier1"){
+                auto *primary=window.template findChild<QPushButton*>("outputStart");
+                require(primary,"actual primary output control available for contrast check");
+                if(primary)for(const bool hover:{false,true}){
+                    // Render the production material without text, then inspect
+                    // the full font-height bed; hover must retain normal-text contrast.
+                    QImage bed(primary->size(),QImage::Format_RGB32);bed.fill(Qt::black);
+                    {QPainter painter(&bed);PotatoThemes::paintSurface(painter,QRectF(bed.rect()),PotatoThemes::Role::Button,
+                        primary->mapTo(&window,QPoint()),window.size(),32|(hover?1:0),QString(),PotatoDesktopGlass::active(&window));}
+                    const int top=qMax(2,(bed.height()-primary->fontMetrics().height())/2);
+                    const QRect textBed(bed.width()/4,top,qMax(1,bed.width()/2),qMin(primary->fontMetrics().height(),bed.height()-top-2));
+                    const double text=PotatoThemeCheck::luminance(primary->palette().color(QPalette::ButtonText));double minimum=100;
+                    for(int y=textBed.top();y<=textBed.bottom();++y)for(int x=textBed.left();x<=textBed.right();++x){
+                        const double background=PotatoThemeCheck::luminance(bed.pixelColor(x,y));
+                        minimum=qMin(minimum,(qMax(text,background)+.05)/(qMin(text,background)+.05));
+                    }
+                    require(!textBed.isEmpty()&&minimum>=4.5,QString("Lumen primary %1 painted label bed has normal-text contrast: %2").arg(hover?"hover":"normal").arg(minimum));
+                }
+            }
             if(id=="lumenatelier1"&&window.testAttribute(Qt::WA_TranslucentBackground)&&window.property("potatoDesktopGlassSystemAllowed").toBool()){
                 require(PotatoDesktopGlass::active(&window),"Lumen activates real desktop alpha composition on this host");
                 const auto nativeFrame=window.grab().toImage();int translucentPixels=0;

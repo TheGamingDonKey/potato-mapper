@@ -13,7 +13,7 @@ struct Theme {
 };
 inline const std::array<Theme,4> &themes(){
     static const std::array<Theme,4> values{{
-        {"lumenatelier1","Lumen Atelier",QColor("#242930"),QColor("#EEF1F5"),QColor("#D0D6DF"),QColor("#2E343D"),QColor("#93B5D5"),QColor("#A7C4DD"),QColor("#19252F"),QColor("#45556A"),QColor("#F3F6FA"),QColor("#3C4551"),QColor("#303741"),QColor("#758394"),QColor("#647F9A"),QColor("#646775"),13,7},
+        {"lumenatelier1","Lumen Atelier",QColor("#9FB3C1"),QColor("#183449"),QColor("#294053"),QColor("#C3D2DB"),QColor("#456EB5"),QColor("#345C9B"),QColor("#FFFFFF"),QColor("#CCD9E4"),QColor("#183449"),QColor("#DFE5E4"),QColor("#C0CDD4"),QColor("#486B83"),QColor("#ADC1D0"),QColor("#D7B899"),13,7},
         {"nocturnecinema1","Nocturne Cinema",QColor("#0D111A"),QColor("#F0F4FF"),QColor("#AFBBD0"),QColor("#172235"),QColor("#6DA6FF"),QColor("#BBD5FF"),QColor("#0B2141"),QColor("#2A4363"),QColor("#F6F9FF"),QColor("#25354D"),QColor("#24354A"),QColor("#1B2C44"),QColor("#347BDA"),QColor("#DA794F"),12,7},
         {"siennastudio1","Sienna Studio",QColor("#E5DCD0"),QColor("#332927"),QColor("#655954"),QColor("#FFF7E9"),QColor("#A54831"),QColor("#9D4230"),QColor("#FFFFFF"),QColor("#F6D8BF"),QColor("#562F24"),QColor("#FFF8ED"),QColor("#EEE0CE"),QColor("#AA8A70"),QColor("#D88F54"),QColor("#708EA9"),11,6},
         {"tidallens1","Tidal Lens",QColor("#B2CDCC"),QColor("#153B4C"),QColor("#3E6271"),QColor("#DFF8F1"),QColor("#167C92"),QColor("#133F59"),QColor("#F6FFFA"),QColor("#E1ECAF"),QColor("#244538"),QColor("#E2F7F1"),QColor("#B4D7D4"),QColor("#366A7A"),QColor("#438CAC"),QColor("#E6D789"),17,11}
@@ -65,10 +65,10 @@ inline void ensureEnvironment(const QSizeF &requested){
     const qreal period=lumen?24:(night?26:(sienna?32:22));
     const qreal phase=tau*s.seconds/period;
     if(lumen){
-        // A cool neutral foundation, with broad low-chroma light rather than
-        // a saturated blue wash. Popovers use this bounded internal fallback.
-        QLinearGradient under(0,0,1,1);under.setColorAt(0,alpha(t.light1,.25));
-        under.setColorAt(.48,alpha(t.bg,.10));under.setColorAt(1,alpha(t.light2,.16));p.fillRect(area,under);
+        // Match the approved blue-grey frost even where Windows composition
+        // is unavailable. This bounded fallback is also used by popovers.
+        QLinearGradient under(0,0,1,1);under.setColorAt(0,alpha(t.light1,.38));
+        under.setColorAt(.48,alpha(t.bg,.08));under.setColorAt(1,alpha(t.light2,.30));p.fillRect(area,under);
     }
     // The studies use broad rotated light planes, not repeated per-key glows.
     const auto plane=[&](const QColor &colour,qreal x,qreal y,qreal width,qreal angle,qreal strength){
@@ -78,7 +78,10 @@ inline void ensureEnvironment(const QSizeF &requested){
         band.setColorAt(.57,alpha(colour,.72*strength*light));band.setColorAt(.74,alpha(colour,.12*strength*light));band.setColorAt(1,alpha(colour,0));
         p.fillRect(QRectF(-width*.5,-2,width,4),band);p.restore();
     };
-    if(!lumen){
+    if(lumen){
+        plane(t.light1,.08+.14*std::sin(phase),.3,1.30,-22,.25);
+        plane(t.light2,.88+.10*std::cos(phase*.8),.6,1.12,24,.23);
+    }else{
         plane(t.light1,.12+.12*std::sin(phase),.3,1.02,-25,night?.68:.50);
         plane(t.light2,.39+.11*std::cos(phase/1.3),.5,.80,28,night?.54:(sienna?.33:.45));
     }
@@ -89,7 +92,7 @@ inline void ensureEnvironment(const QSizeF &requested){
         glint.setColorAt(.53,alpha(Qt::white,strength*.12*light));glint.setColorAt(1,Qt::transparent);
         p.fillRect(QRectF(-width*.5,-2,width,4),glint);p.restore();
     };
-    if(lumen)reflection(.31+.23*std::sin(phase),.48,20,.075);
+    if(lumen)reflection(.31+.23*std::sin(phase),.70,20,.10);
     else if(night)reflection(.76+.09*std::sin(phase/1.2),.075,30,.10);
     else if(sienna)reflection(.42+.17*std::sin(phase),.48,24,.18);
     else for(int i=0;i<4;++i)reflection(.04+i*.23+.07*std::sin(phase*(i%2?-.84:.84)+i),.085,24,.33);
@@ -145,18 +148,27 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
     const bool seeThrough=desktopGlass&&lumen&&!solid;
     if(seeThrough){
         // The real desktop is composed by Windows, never copied into a bitmap.
-        // Paint only a translucent veil and a shared moving reflection here.
+        // Paint a blue-grey luminosity veil and broad shared light above the
+        // native backdrop. Density keeps dark labels legible on any desktop.
         if(role==Role::Foundation){
-            // Enough neutral density to hold text over a bright desktop;
-            // the background still supplies its own colour and actual detail.
-            p.fillRect(rect,QColor(36,41,48,196));
+            QLinearGradient veil(rect.topLeft(),rect.bottomRight());
+            veil.setColorAt(0,QColor(167,186,196,209));
+            veil.setColorAt(.48,QColor(159,180,194,209));
+            veil.setColorAt(1,QColor(201,187,173,199));p.fillRect(rect,veil);
             Detail::ensureEnvironment(scene);
-            const qreal sweep=.45+.38*std::sin(Detail::tau*Detail::store().seconds/16);
-            QLinearGradient gloss(-origin.x()+scene.width()*(sweep-.20),-origin.y(),
-                                  -origin.x()+scene.width()*(sweep+.20),-origin.y()+scene.height()*.32);
-            const int light=qRound(15*Detail::intensity());
-            gloss.setColorAt(0,Qt::transparent);gloss.setColorAt(.44,QColor(186,207,229,light));
-            gloss.setColorAt(.57,QColor(223,227,233,light/2));gloss.setColorAt(1,Qt::transparent);p.fillRect(rect,gloss);
+            const qreal phase=Detail::tau*Detail::store().seconds/24;
+            const auto glow=[&](const QColor &colour,qreal x,qreal y,qreal radius,qreal strength){
+                QRadialGradient light(QPointF(-origin.x()+scene.width()*x,-origin.y()+scene.height()*y),scene.width()*radius);
+                light.setColorAt(0,Detail::alpha(colour,strength*Detail::intensity()));light.setColorAt(1,Qt::transparent);p.fillRect(rect,light);
+            };
+            glow(t.light1,.12+.13*std::sin(phase),.22,.72,.17);
+            glow(t.light2,.90+.11*std::cos(phase*.8),.75,.64,.12);
+            const qreal sweep=.45+.32*std::sin(phase);
+            QLinearGradient gloss(-origin.x()+scene.width()*(sweep-.32),-origin.y(),
+                                  -origin.x()+scene.width()*(sweep+.32),-origin.y()+scene.height()*.32);
+            const int light=qRound(22*Detail::intensity());
+            gloss.setColorAt(0,Qt::transparent);gloss.setColorAt(.46,QColor(237,243,245,light));
+            gloss.setColorAt(.68,QColor(237,243,245,light/3));gloss.setColorAt(1,Qt::transparent);p.fillRect(rect,gloss);
         }
     }else{
         p.fillRect(rect,inkDeck?QColor("#25323B"):t.bg);
@@ -171,14 +183,12 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         if(role==Role::Well){face=t.panel;a0=am=a1=night?.25:.28;}
         if(role==Role::Button){face=t.cap;a0=lumen?.92:.78;am=lumen?.66:(tidal?.45:.72);a1=lumen?.94:.80;}
         if(lumen){
-            if(role==Role::Input){face=QColor("#1C222A");a0=am=a1=.94;}
-            if(role==Role::Heading){a0=.72;am=.62;a1=.68;}
-            if(role==Role::Button){a0=.88;am=.79;a1=.84;}
-        }
-        if(seeThrough){
-            if(role==Role::Panel||role==Role::Shell||role==Role::Well){a0=.20;am=.10;a1=.18;}
-            if(role==Role::Section){a0=am=a1=.06;}
-            if(role==Role::Heading){a0=.72;am=.62;a1=.68;}
+            if(role==Role::Panel){a0=.72;am=.60;a1=.55;}
+            if(role==Role::Shell){a0=.50;am=.52;a1=.50;}
+            if(role==Role::Input){face=QColor("#D3E0E6");a0=am=a1=.64;}
+            if(role==Role::Heading){a0=am=a1=.42;}
+            if(role==Role::Well){face=QColor("#8FA8BC");a0=am=a1=.28;}
+            if(role==Role::Button){a0=.85;am=.76;a1=.70;}
         }
         if(toolbar&&role==Role::Shell){face=QColor("#25323B");a0=am=a1=1;}
         if(night&&role==Role::Button&&!primary){a0=am=a1=family=="toolbar"?.20:.55;}
@@ -196,18 +206,30 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
             p.fillRect(rect,face);
         }else{
             QLinearGradient tint(rect.topLeft(),rect.bottomLeft());
-            tint.setColorAt(0,Detail::alpha(face,a0));tint.setColorAt(lumen?.6:.65,Detail::alpha(face,am));tint.setColorAt(1,Detail::alpha(face,a1));p.fillRect(rect,tint);
+            QColor top=face,middle=face,bottom=face;
+            if(lumen&&!disabled){
+                if(role==Role::Panel){top=QColor("#C3D2DB");middle=QColor("#B0C1CB");bottom=QColor("#D7C7B5");}
+                if(role==Role::Shell){top=QColor("#DAE2E6");middle=QColor("#B3C5CE");bottom=QColor("#D2C7B9");}
+                if(role==Role::Button&&!primary){
+                    top=QColor(hover?"#EDF1ED":"#E0E6E4");bottom=QColor(hover?"#D3E0E5":"#C5D1D5");middle=Detail::mix(top,bottom,.6);
+                    if(hover)a0=am=a1=.96;
+                    if(checked||pressed){top=middle=bottom=QColor("#B6C9D6");a0=am=a1=.94;}
+                }
+            }
+            tint.setColorAt(0,Detail::alpha(top,a0));tint.setColorAt(lumen?.6:.65,Detail::alpha(middle,am));tint.setColorAt(1,Detail::alpha(bottom,a1));p.fillRect(rect,tint);
         }
         if(primary&&!disabled&&!solid){
-            const QColor top=night?QColor("#BBD5FF"):(sienna?QColor("#BA6244"):(tidal?QColor("#216583"):t.primary));
+            // Lumen's white label needs a darker cobalt even when hover lifts the face.
+            const QColor top=night?QColor("#BBD5FF"):(sienna?QColor("#BA6244"):(tidal?QColor("#216583"):QColor("#436BAA")));
             QLinearGradient action(rect.topLeft(),rect.bottomLeft());action.setColorAt(0,hover?top.lighter(108):top);action.setColorAt(1,t.primary);p.fillRect(rect,action);
         }
         if(pressed)p.fillRect(rect,Detail::alpha(night?Qt::white:Qt::black,night?.06:.065));
-        if(lumen&&role==Role::Button&&!primary&&!disabled&&!solid){
-            // A shallow light falloff across the face, not a thick bevel.
-            QLinearGradient light(rect.topLeft(),rect.bottomLeft());
-            light.setColorAt(0,QColor(255,255,255,9));light.setColorAt(.45,Qt::transparent);
-            light.setColorAt(1,QColor(0,0,0,9));p.fillRect(rect,light);
+        if(lumen&&control&&!disabled&&!solid){
+            // Silver keys catch a quiet top light; fields turn that contour
+            // inward. All strokes remain inside the existing control bounds.
+            const bool inset=role==Role::Input||pressed;
+            QLinearGradient depth(rect.topLeft(),QPointF(rect.left(),rect.top()+qMin(5.0,rect.height()*.2)));
+            depth.setColorAt(0,inset?QColor(40,71,94,23):QColor(255,255,255,28));depth.setColorAt(1,Qt::transparent);p.fillRect(rect,depth);
         }
         if(tidal&&control&&!primary&&!disabled&&!solid){
             QLinearGradient lens(rect.topLeft(),QPointF(rect.left(),rect.top()+qMin(10.0,rect.height()*.4)));
@@ -227,12 +249,13 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         if((state&16)&&!disabled)rim=t.accent;
         p.setPen(QPen(rim,(state&16)&&!disabled?2:1));
         if(lumen&&!solid&&!hover&&!(state&16)){
-            // One contour: a restrained reflected top, quiet sides and a
-            // darker lower edge. Inputs are recessed, not glossy raised keys.
+            // Frost panes and silver caps have a soft reflected upper edge.
+            // Inputs reverse the light to read as shallow inset fields.
             QLinearGradient contour(edge.topLeft(),edge.bottomLeft());
-            contour.setColorAt(0,QColor(255,255,255,disabled?12:(role==Role::Input?15:36)));
-            contour.setColorAt(.32,QColor(255,255,255,14));
-            contour.setColorAt(1,QColor(0,0,0,48));p.setPen(QPen(QBrush(contour),1));
+            const bool inset=role==Role::Input||pressed;
+            contour.setColorAt(0,inset?QColor(72,107,131,43):QColor(255,255,255,disabled?30:100));
+            contour.setColorAt(.40,inset?QColor(72,107,131,30):QColor(243,244,235,disabled?20:70));
+            contour.setColorAt(1,inset?QColor(255,255,255,54):QColor(36,69,92,disabled?14:31));p.setPen(QPen(QBrush(contour),1));
         }
         if(role==Role::Shell)p.drawLine(edge.bottomLeft(),edge.bottomRight());else p.drawRoundedRect(edge,r,r);
     }
@@ -249,7 +272,7 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
 // Same compact 0.8.8 metrics as style.h. This is a complete native control
 // sheet, with foregrounds written explicitly for light and dark profiles.
 inline QString styleSheet(){
-    const auto &t=current();const bool night=t.id=="nocturnecinema1"||t.id=="lumenatelier1",sienna=t.id=="siennastudio1";
+    const auto &t=current();const bool night=t.id=="nocturnecinema1",sienna=t.id=="siennastudio1";
     QString style=QStringLiteral(R"QSS(
 QWidget { background:transparent; color:@INK@; font-family:'Segoe UI Variable','Segoe UI'; font-size:12px; }
 QLabel { background:transparent; border:0; }
@@ -373,9 +396,9 @@ QGroupBox { background:transparent; color:@INK@; border:1px solid @LINE@; border
 QGroupBox::title { subcontrol-origin:margin; left:8px; padding:0 3px; color:@INK@; }
 QDialogButtonBox { background:transparent; }
 )QSS");
-    // A pale focus accent is unsuitable beneath the progress percentage.
+    // The cobalt focus accent is too dark beneath a dark progress percentage.
     // Keep both the filled and empty portions readable with the same ink.
-    if(t.id=="lumenatelier1")style+=QStringLiteral("QProgressBar::chunk { background:#45627F; }");
+    if(t.id=="lumenatelier1")style+=QStringLiteral("QProgressBar::chunk { background:#94AEC9; }");
     if(sienna)style+=QStringLiteral(R"QSS(
 QToolBar#projectToolbar,QToolBar#projectToolbar QLabel,QToolBar#projectToolbar QLabel#brandName { color:#FAF3EA; }
 QToolBar#projectToolbar QToolButton,QToolBar#projectToolbar QPushButton { color:#F7F1E8; }

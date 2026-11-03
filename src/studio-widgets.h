@@ -84,7 +84,7 @@ inline QColor studioIconColour(const QString &name,const QString &family,bool to
     const bool violet=family=="iris";
     const bool green=family=="lagoon";
     const bool blue=(name=="add"&&family=="peach")||name=="save"||name=="fit";
-    if(theme.id=="lumenatelier1")return QColor(blue?"#A6C6E2":warm?"#E7BD9F":violet?"#C6B9DE":green?"#A8CDC9":"#CDD6E1");
+    if(theme.id=="lumenatelier1")return QColor(blue?"#5773B8":warm?"#B76B49":violet?"#7858A9":green?"#34806F":"#4D647B");
     if(sienna&&toolbar)return QColor(blue?"#9EBBFF":warm?"#EEAA79":violet?"#D2BDF0":green?"#B9D5BA":"#C3CCCE");
     if(nocturne)return QColor(blue?"#80ADFF":warm?"#FFAD7D":violet?"#C7B6FF":green?"#7EDCC6":"#B4C1D4");
     if(sienna)return QColor(blue?"#315AA1":warm?"#A54A2F":violet?"#77629D":green?"#567D60":"#576470");
@@ -115,14 +115,14 @@ inline QIcon studioThemeIcon(const QString &name,const QString &family,bool tool
     for(int size:{20,24,32,40,48,64})for(auto state:{QIcon::Off,QIcon::On}){
         QPixmap tile(size,size);tile.fill(Qt::transparent);QPainter painter(&tile);painter.setRenderHint(QPainter::Antialiasing);
         const qreal unit=size/22.0;
-        QColor wash=colour;wash.setAlpha(primary?45:tidal?33:sienna?30:lumen?20:46);
+        QColor wash=colour;wash.setAlpha(primary?45:tidal?33:sienna?30:lumen?26:46);
         if(!nocturne){
             painter.setPen(Qt::NoPen);painter.setBrush(wash);
             const QRectF lens(1.5*unit,1.5*unit,size-3*unit,size-3*unit);
             if(tidal)painter.drawEllipse(lens);
             else painter.drawRoundedRect(lens,(sienna?5:5.5)*unit,(sienna?5:5.5)*unit);
             if(!sienna){
-                painter.setBrush(Qt::NoBrush);painter.setPen(QPen(QColor(255,255,255,tidal?185:lumen?50:195),.8*unit));
+                painter.setBrush(Qt::NoBrush);painter.setPen(QPen(QColor(255,255,255,tidal?185:lumen?90:195),.8*unit));
                 if(tidal)painter.drawArc(lens.adjusted(1.5*unit,1.5*unit,-1.5*unit,-1.5*unit),42*16,96*16);
                 else painter.drawLine(QPointF(5*unit,2.5*unit),QPointF(17*unit,2.5*unit));
             }

@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**Local desktop runtime: 0.9.9.** **Lumen Atelier** now uses soft charcoal glass, restrained steel-blue accents, pale semantic icons and recessed input fields. Actual clear desktop translucency remains available on supported Windows 11 systems; native frosted blur is not implemented. **Settings → Appearance → Theme motion** provides Pause, Light and Speed from **0.2× to 2.4×**; this installation is set to **1.8×**. Other themes, the familiar 0.8.8 layout and mapping features remain; 0.9.8 is retained for rollback. See the [changes, research and verification](docs/0.9.9-lumen-soft-glass.md) and [current handoff](DEVELOPMENT.md). This local update has not been publicly released; the download linked below is v0.8.8.
+**Local desktop runtime: 0.9.10.** **Lumen Atelier** now carries the approved study's medium blue-grey glass, silver raised controls, inset fields, cobalt actions and warm/iris icon accents. Actual clear desktop translucency remains available on supported Windows 11 systems; **native frosted blur is still unresolved**. **Settings → Appearance → Theme motion** provides Pause, Light and Speed from **0.2× to 2.4×**; this installation is set to **1.8×**. Other themes, the familiar 0.8.8 layout and mapping features remain; 0.9.9 is retained for rollback. See the [changes and limitations](docs/0.9.10-lumen-finish.md) and [current handoff](DEVELOPMENT.md). This local update has not been publicly released; the download linked below is v0.8.8.
 
 **[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
 

@@ -1,6 +1,20 @@
 # Development handoff
 
-## Current handoff — November 2 Lumen soft dark glass, local 0.9.9
+## Current handoff — November 2 approved Lumen finish, local 0.9.10
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-frost`. Normal launcher: `app/PotatoMapper.exe`; 0.9.10 installed, 0.9.9 retained. The approved browser material is ported to the native Qt painter: medium blue-grey glass, silver raised controls, inset fields, cobalt actions, warmer semantic icons and broad moving highlights. The 0.8.8 layout, all features, other profiles, data format and existing motion preferences remain. [Details and native-blur boundary](docs/0.9.10-lumen-finish.md).
+
+Reuse cached Qt/CMake and `out/build-desktop`; no dependencies added. Final packaged studio checks pass 252 assertions at normal and effective 2× display scale, including new primary-button normal/hover paint contrast, plus the all-theme suite. Actual launcher 0.9.10 → 0.9.9 → 0.9.10 saved-fixture reopen passed. Native Close releases the process/lock; the original recovered mapping is reopened visibly. Right-click Delete/Connect/Disconnect remain present. All 20 protected hashes and 95 entries in each current/rollback runtime match. Combined storage is about 1.30 GB under 1.9 GB. Evidence and actual installed screenshot: `out/lumen-frost`. Automatic approval review blocked removal of the superseded `app/.updates/lumen-finish-0910` stage with only “blocked by policy”; it is retained and counted. Preserve the unrelated `proofs/surface-material/frost-menu.h` edit.
+
+Native frosting is **not completed**. Isolated Win32/controller and raw host-backdrop probes still return solid fills; their runtime dependency is not shipped. Only proven clear desktop alpha remains enabled. Do not confuse the browser's backdrop blur with Windows desktop blur. Next technical milestone is a reproducible native blur conformance proof before integration. No push, public release, Store submission or physical-projector acceptance.
+
+## Historical review — November 2 frosted Lumen study, no app update
+
+Shane rejected the heavy black 0.9.9 treatment and requested actual frosted backdrop blur. Revisited the saved design brief, Riff review, Windows guide, Microsoft Acrylic guidance and current Figma Riffs. A live browser material study preserves the 8.8 geometry while demonstrating medium blue-grey frost, silver controls and localized warm accents: `http://127.0.0.1:8794/lumen-frost-study.html`. Generator, screenshot and detailed findings are in the design workspace's `design/riff-four-2026-11-01/FROST-REVIEW.txt`. The 42 canvas elements remain unchanged; frost on/off and slider, motion pause, seven surface actions and Escape were checked with no browser errors.
+
+Production remains **0.9.9 / rollback 0.9.8**, unchanged by this review. In the ignored `out/native-backdrop` Qt/OpenGL proof, legacy accent states 4 and 3 returned API success but produced opaque fills; state 0 restored clear alpha. Do not ship this experiment or claim native Acrylic works. Next technical investigation is an isolated documented `DesktopAcrylicController` composition-target proof, with Qt/OpenGL compatibility and storage cost established before app integration. No new dependencies, package or installation in this review. Preserve the unrelated `proofs/surface-material/frost-menu.h` edit.
+
+## Historical handoff — November 2 Lumen soft dark glass, local 0.9.9
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-soft-glass`. Normal launcher: `app/PotatoMapper.exe`; current 0.9.9, previous 0.9.8. Lumen's white/petrol treatment is replaced by a soft charcoal foundation, subtle cool accents, recessed inputs, quieter reflections and pale semantic icons. The 0.8.8 layout, features, projects/media, other themes and 1.8x motion preference are retained. [Research, implementation and evidence](docs/0.9.9-lumen-soft-glass.md).
 
