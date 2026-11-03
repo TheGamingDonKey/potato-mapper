@@ -13,7 +13,7 @@ struct Theme {
 };
 inline const std::array<Theme,4> &themes(){
     static const std::array<Theme,4> values{{
-        {"lumenatelier1","Lumen Atelier",QColor("#9FB3C1"),QColor("#183449"),QColor("#294053"),QColor("#C3D2DB"),QColor("#456EB5"),QColor("#345C9B"),QColor("#FFFFFF"),QColor("#CCD9E4"),QColor("#183449"),QColor("#DFE5E4"),QColor("#C0CDD4"),QColor("#486B83"),QColor("#ADC1D0"),QColor("#D7B899"),13,7},
+        {"lumenatelier1","Lumen Atelier",QColor("#9FB3C1"),QColor("#152D3F"),QColor("#183044"),QColor("#C3D2DB"),QColor("#456EB5"),QColor("#345C9B"),QColor("#FFFFFF"),QColor("#CCD9E4"),QColor("#183449"),QColor("#DFE5E4"),QColor("#C0CDD4"),QColor("#486B83"),QColor("#ADC1D0"),QColor("#D7B899"),13,7},
         {"nocturnecinema1","Nocturne Cinema",QColor("#0D111A"),QColor("#F0F4FF"),QColor("#AFBBD0"),QColor("#172235"),QColor("#6DA6FF"),QColor("#BBD5FF"),QColor("#0B2141"),QColor("#2A4363"),QColor("#F6F9FF"),QColor("#25354D"),QColor("#24354A"),QColor("#1B2C44"),QColor("#347BDA"),QColor("#DA794F"),12,7},
         {"siennastudio1","Sienna Studio",QColor("#E5DCD0"),QColor("#332927"),QColor("#655954"),QColor("#FFF7E9"),QColor("#A54831"),QColor("#9D4230"),QColor("#FFFFFF"),QColor("#F6D8BF"),QColor("#562F24"),QColor("#FFF8ED"),QColor("#EEE0CE"),QColor("#AA8A70"),QColor("#D88F54"),QColor("#708EA9"),11,6},
         {"tidallens1","Tidal Lens",QColor("#B2CDCC"),QColor("#153B4C"),QColor("#3E6271"),QColor("#DFF8F1"),QColor("#167C92"),QColor("#133F59"),QColor("#F6FFFA"),QColor("#E1ECAF"),QColor("#244538"),QColor("#E2F7F1"),QColor("#B4D7D4"),QColor("#366A7A"),QColor("#438CAC"),QColor("#E6D789"),17,11}
@@ -136,6 +136,7 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
     if(rect.width()<1||rect.height()<1)return;
     const auto &t=current();const bool lumen=t.id=="lumenatelier1",night=t.id=="nocturnecinema1",sienna=t.id=="siennastudio1",tidal=t.id=="tidallens1";
     const bool solid=opaque(),disabled=state&8,pressed=(state&2)&&!disabled,hover=(state&1)&&!disabled,checked=(state&4)&&!disabled;
+    if(lumen&&role==Role::Section&&!solid)return;
     const bool control=role==Role::Button||role==Role::Heading||role==Role::Input;
     const bool primary=(state&32)&&role==Role::Button,toolbar=sienna&&family=="toolbar";
     const qreal r=qMin(Detail::radius(role,t),qMin(rect.width(),rect.height())*.5);
@@ -151,10 +152,14 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         // Paint a blue-grey luminosity veil and broad shared light above the
         // native backdrop. Density keeps dark labels legible on any desktop.
         if(role==Role::Foundation){
-            QLinearGradient veil(rect.topLeft(),rect.bottomRight());
-            veil.setColorAt(0,QColor(167,186,196,209));
-            veil.setColorAt(.48,QColor(159,180,194,209));
-            veil.setColorAt(1,QColor(201,187,173,199));p.fillRect(rect,veil);
+            // The reference has cool light at the left and warm light at the
+            // right, continuous across the window rather than restarting per
+            // toolbar. Keep enough coverage for clear-alpha fallback: copying
+            // CSS's 24% veil without desktop diffusion would expose sharp text.
+            QLinearGradient veil(QPointF(-origin.x(),-origin.y()),QPointF(scene.width()-origin.x(),scene.height()*.30-origin.y()));
+            veil.setColorAt(0,QColor(132,160,181,209));
+            veil.setColorAt(.48,QColor(139,161,174,209));
+            veil.setColorAt(1,QColor(185,158,134,209));p.fillRect(rect,veil);
             Detail::ensureEnvironment(scene);
             const qreal phase=Detail::tau*Detail::store().seconds/24;
             const auto glow=[&](const QColor &colour,qreal x,qreal y,qreal radius,qreal strength){
@@ -182,10 +187,12 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         if(role==Role::Input){face=t.cap;a0=am=a1=night?.72:.70;}
         if(role==Role::Well){face=t.panel;a0=am=a1=night?.25:.28;}
         if(role==Role::Button){face=t.cap;a0=lumen?.92:.78;am=lumen?.66:(tidal?.45:.72);a1=lumen?.94:.80;}
+        const bool lumenPane=lumen&&(role==Role::Shell||(role==Role::Panel&&family=="output"));
         if(lumen){
-            if(role==Role::Panel){a0=.72;am=.60;a1=.55;}
-            if(role==Role::Shell){a0=.50;am=.52;a1=.50;}
-            if(role==Role::Input){face=QColor("#D3E0E6");a0=am=a1=.64;}
+            if(role==Role::Panel){a0=.72;am=.60;a1=.48;}
+            if(lumenPane){a0=.50;am=.30;a1=.25;}
+            if(role==Role::Section)a0=am=a1=0; // Study has headings, no second milky section body.
+            if(role==Role::Input){face=QColor("#D3E0E6");a0=am=a1=.50;}
             if(role==Role::Heading){a0=am=a1=.42;}
             if(role==Role::Well){face=QColor("#8FA8BC");a0=am=a1=.28;}
             if(role==Role::Button){a0=.85;am=.76;a1=.70;}
@@ -205,11 +212,11 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
             if(toolbar&&!primary)face=role==Role::Button?QColor("#35414A"):QColor("#25323B");
             p.fillRect(rect,face);
         }else{
-            QLinearGradient tint(rect.topLeft(),rect.bottomLeft());
+            QLinearGradient tint(rect.topLeft(),lumen&&(role==Role::Panel||role==Role::Shell)?rect.bottomRight():rect.bottomLeft());
             QColor top=face,middle=face,bottom=face;
             if(lumen&&!disabled){
                 if(role==Role::Panel){top=QColor("#C3D2DB");middle=QColor("#B0C1CB");bottom=QColor("#D7C7B5");}
-                if(role==Role::Shell){top=QColor("#DAE2E6");middle=QColor("#B3C5CE");bottom=QColor("#D2C7B9");}
+                if(lumenPane){top=QColor("#DAE2E6");middle=QColor("#B3C5CE");bottom=QColor("#D2C7B9");}
                 if(role==Role::Button&&!primary){
                     top=QColor(hover?"#EDF1ED":"#E0E6E4");bottom=QColor(hover?"#D3E0E5":"#C5D1D5");middle=Detail::mix(top,bottom,.6);
                     if(hover)a0=am=a1=.96;
@@ -224,7 +231,7 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
             QLinearGradient action(rect.topLeft(),rect.bottomLeft());action.setColorAt(0,hover?top.lighter(108):top);action.setColorAt(1,t.primary);p.fillRect(rect,action);
         }
         if(pressed)p.fillRect(rect,Detail::alpha(night?Qt::white:Qt::black,night?.06:.065));
-        if(lumen&&control&&!disabled&&!solid){
+        if(lumen&&control&&role!=Role::Heading&&!disabled&&!solid){
             // Silver keys catch a quiet top light; fields turn that contour
             // inward. All strokes remain inside the existing control bounds.
             const bool inset=role==Role::Input||pressed;
@@ -237,7 +244,7 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
         }
     }
     p.restore();
-    if(role==Role::Foundation||role==Role::Section)return;
+    if(role==Role::Foundation||role==Role::Section||(lumen&&role==Role::Heading&&!solid&&!hover&&!(state&16)))return;
     p.save();p.setRenderHint(QPainter::Antialiasing);p.setBrush(Qt::NoBrush);
     const QRectF edge=rect.adjusted(.5,.5,-.5,-.5);
     // Nocturne instrument keys are flat. Ceramic keys have a fine copper seam;
@@ -398,7 +405,7 @@ QDialogButtonBox { background:transparent; }
 )QSS");
     // The cobalt focus accent is too dark beneath a dark progress percentage.
     // Keep both the filled and empty portions readable with the same ink.
-    if(t.id=="lumenatelier1")style+=QStringLiteral("QProgressBar::chunk { background:#94AEC9; }");
+    if(t.id=="lumenatelier1")style+=QStringLiteral("QProgressBar::chunk { background:#94AEC9; } QListWidget::item:selected:!active,QAbstractItemView::item:selected:!active { border-left-color:@ACCENT@; }");
     if(sienna)style+=QStringLiteral(R"QSS(
 QToolBar#projectToolbar,QToolBar#projectToolbar QLabel,QToolBar#projectToolbar QLabel#brandName { color:#FAF3EA; }
 QToolBar#projectToolbar QToolButton,QToolBar#projectToolbar QPushButton { color:#F7F1E8; }

@@ -1,6 +1,16 @@
 # Development handoff
 
-## Current handoff — November 2 approved Lumen finish, local 0.9.10
+## Current handoff — November 2 Lumen material correction, local 0.9.11
+
+Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-material-match`. Normal launcher: `app/PotatoMapper.exe`; 0.9.11 installed, 0.9.10 retained. Removed excess pale panel/section layering, aligned the header and output-pane gradient with the approved frost study, kept quiet section headings and a cobalt inactive-selection marker, and corrected live/stopped status text contrast. Existing 0.8.8 geometry, features, other themes, data and motion preferences remain. [Implementation and evidence](docs/0.9.11-lumen-material-match.md).
+
+Native evidence correction: Shane confirmed visible desktop blur in the standalone Win32 controller proof. Earlier claims of native failure based solely on window captures were too strong; that capture method can omit external backdrop effects. The production adapter now requests documented DWM Acrylic without taking over Qt's composition target or adding dependencies. DWM acceptance/readback, clickable controls and opaque OpenGL are verified; integrated Qt blur appearance still awaits Shane's live-screen observation. Do not describe that visual gate as complete or confuse it with the browser's CSS blur.
+
+Reuse cached Qt/CMake and `out/build-desktop`. Final packaged studio checks pass **254 assertions** at normal and effective 2× scaling, plus the all-theme suite. Actual launcher **0.9.11 → 0.9.10 → 0.9.11** saved-fixture reopen passes. The disposable preview closed normally; the normal launcher reopened the original recovered mapping. All **22 protected hashes** and **95 entries in each current/rollback runtime** match. The test-only collected project was moved into `out/lumen-match` and the original recent-project index restored exactly. Storage is about **1.37 GB** of the **1.9 GB** cap; no new dependencies or duplicate package ZIP. Evidence: `out/lumen-match`, including `05-installed.png`, `verification-release.log`, `installed-rollback.json` and `final-integrity.json`.
+
+Next: live integrated blur and visual-match feedback; the small documented Qt Acrylic proof remains available for that pending check. No push, public release, Store submission or physical-projector claim. Preserve the unrelated `proofs/surface-material/frost-menu.h` edit and retained older blocked-cleanup stage.
+
+## Historical handoff — November 2 approved Lumen finish, local 0.9.10
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-frost`. Normal launcher: `app/PotatoMapper.exe`; 0.9.10 installed, 0.9.9 retained. The approved browser material is ported to the native Qt painter: medium blue-grey glass, silver raised controls, inset fields, cobalt actions, warmer semantic icons and broad moving highlights. The 0.8.8 layout, all features, other profiles, data format and existing motion preferences remain. [Details and native-blur boundary](docs/0.9.10-lumen-finish.md).
 

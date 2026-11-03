@@ -53,10 +53,12 @@ public:
         // whole frame makes the caption inherit the window underneath it.
         const MARGINS margins{0,0,0,0};
         const HRESULT frame=DwmExtendFrameIntoClientArea(hwnd,&margins);
-        const DWM_SYSTEMBACKDROP_TYPE type=requested?DWMSBT_NONE:DWMSBT_AUTO;
+        // DWM supplies the desktop material below Qt's existing surface. Do
+        // not attach another composition target to the Qt-owned HWND.
+        const DWM_SYSTEMBACKDROP_TYPE type=requested?DWMSBT_TRANSIENTWINDOW:DWMSBT_AUTO;
         const HRESULT backdrop=DwmSetWindowAttribute(hwnd,DWMWA_SYSTEMBACKDROP_TYPE,&type,sizeof(type));
-        // On modern Windows this documented API enables client alpha, but
-        // does not provide the old Aero blur. No blur claim is made here.
+        // This enables client alpha; the system backdrop selected above,
+        // rather than this legacy API, is responsible for the Acrylic material.
         DWM_BLURBEHIND client{};client.dwFlags=DWM_BB_ENABLE;client.fEnable=requested;
         if(requested){client.dwFlags|=DWM_BB_BLURREGION;client.hRgnBlur=CreateRectRgn(0,0,-1,-1);}
         const HRESULT composition=requested&&!client.hRgnBlur?E_OUTOFMEMORY:DwmEnableBlurBehindWindow(hwnd,&client);
@@ -68,10 +70,11 @@ public:
             alphaResult=DwmSetWindowAttribute(hwnd,DWMWA_REDIRECTIONBITMAP_ALPHA,&alpha,sizeof(alpha));
         }
         const bool enabled=requested&&SUCCEEDED(frame)&&SUCCEEDED(backdrop)&&SUCCEEDED(composition)&&SUCCEEDED(alphaResult);
+        HRESULT fallbackResult=S_OK;
         if(requested&&!enabled){
             DWM_BLURBEHIND resetClient{};resetClient.dwFlags=DWM_BB_ENABLE;resetClient.fEnable=FALSE;DwmEnableBlurBehindWindow(hwnd,&resetClient);
             const MARGINS reset{0,0,0,0};DwmExtendFrameIntoClientArea(hwnd,&reset);
-            const DWM_SYSTEMBACKDROP_TYPE resetType=DWMSBT_AUTO;DwmSetWindowAttribute(hwnd,DWMWA_SYSTEMBACKDROP_TYPE,&resetType,sizeof(resetType));
+            const DWM_SYSTEMBACKDROP_TYPE resetType=DWMSBT_NONE;fallbackResult=DwmSetWindowAttribute(hwnd,DWMWA_SYSTEMBACKDROP_TYPE,&resetType,sizeof(resetType));
             if(QOperatingSystemVersion::current().microVersion()>=26100){const BOOL alpha=FALSE;DwmSetWindowAttribute(hwnd,DWMWA_REDIRECTIONBITMAP_ALPHA,&alpha,sizeof(alpha));}
         }
         const COLORREF caption=enabled?RGB(159,179,193):DWMWA_COLOR_DEFAULT;
@@ -82,6 +85,16 @@ public:
         }else if(m_captionOverridden){DwmSetWindowAttribute(hwnd,DWMWA_USE_IMMERSIVE_DARK_MODE,&m_previousDark,sizeof(m_previousDark));m_captionOverridden=false;}
         DwmSetWindowAttribute(hwnd,DWMWA_CAPTION_COLOR,&caption,sizeof(caption));
         DwmSetWindowAttribute(hwnd,DWMWA_TEXT_COLOR,&text,sizeof(text));
+        // Request acceptance/readback are API evidence, not visual proof of
+        // desktop blur (window capture can omit the external backdrop).
+        DWM_SYSTEMBACKDROP_TYPE readback=DWMSBT_AUTO;
+        const HRESULT readbackResult=DwmGetWindowAttribute(hwnd,DWMWA_SYSTEMBACKDROP_TYPE,&readback,sizeof(readback));
+        m_editor->setProperty("potatoDesktopGlassBackdropRequested",requested);
+        m_editor->setProperty("potatoDesktopGlassBackdropAccepted",requested&&SUCCEEDED(backdrop));
+        m_editor->setProperty("potatoDesktopGlassBackdropReadback",SUCCEEDED(readbackResult)?int(readback):-1);
+        m_editor->setProperty("potatoDesktopGlassBackdropReadbackHresult",qint64(readbackResult));
+        m_editor->setProperty("potatoDesktopGlassFallbackUsed",requested&&!enabled);
+        m_editor->setProperty("potatoDesktopGlassFallbackHresult",qint64(fallbackResult));
         m_editor->setProperty("potatoDesktopGlassActive",enabled);
         m_editor->setProperty("potatoDesktopGlassHresult",qint64(FAILED(frame)?frame:(FAILED(backdrop)?backdrop:(FAILED(composition)?composition:alphaResult))));
         m_editor->update();for(auto *child:m_editor->findChildren<QWidget*>())if(!child->inherits("QOpenGLWidget"))child->update();

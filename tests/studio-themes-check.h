@@ -152,6 +152,8 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
             }
             if(id=="lumenatelier1"&&window.testAttribute(Qt::WA_TranslucentBackground)&&window.property("potatoDesktopGlassSystemAllowed").toBool()){
                 require(PotatoDesktopGlass::active(&window),"Lumen activates real desktop alpha composition on this host");
+                require(window.property("potatoDesktopGlassBackdropRequested").toBool()&&window.property("potatoDesktopGlassBackdropAccepted").toBool()&&
+                    window.property("potatoDesktopGlassBackdropReadback").toInt()==3,"Windows accepted and reports the requested Acrylic material (not a visual blur assertion)");
                 const auto nativeFrame=window.grab().toImage();int translucentPixels=0;
                 const auto band=QRect(projectBar->mapTo(&window,QPoint()),projectBar->size());
                 const auto scale=window.devicePixelRatioF();
@@ -159,20 +161,28 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
                     const int a=nativeFrame.pixelColor(qRound(x*scale),qRound(y*scale)).alpha();if(a>0&&a<245)++translucentPixels;
                 }
                 require(translucentPixels>100,"Lumen chrome contains real translucent pixels, not an opaque painted background");
-                for(const auto &name:QStringList{"outputStatus","surfaceHeading"})if(auto *label=window.template findChild<QLabel*>(name)){
+                auto checkLabelContrast=[&](QLabel *label,const QString &name){
                     const auto ink=label->palette().color(QPalette::WindowText);const auto style=label->styleSheet();
                     label->setStyleSheet(style+";color:transparent;");const auto bed=composedChrome(label);label->setStyleSheet(style);
-                    double minimum=100;
+                    double minimum=100;QPoint weakestPoint;QColor weakestBackground;
                     for(const QColor backdrop:{QColor(Qt::black),QColor(Qt::white)}){
                         QImage composed(bed.size(),QImage::Format_RGB32);composed.setDevicePixelRatio(bed.devicePixelRatio());composed.fill(backdrop);{QPainter p(&composed);p.drawImage(0,0,bed);}
                         const double text=PotatoThemeCheck::luminance(ink);
                         for(int y=2;y<composed.height()-2;y+=3)for(int x=2;x<composed.width()-2;x+=3){
                             const double background=PotatoThemeCheck::luminance(composed.pixelColor(x,y));
-                            minimum=qMin(minimum,(qMax(text,background)+.05)/(qMin(text,background)+.05));
+                            const double contrast=(qMax(text,background)+.05)/(qMin(text,background)+.05);
+                            if(contrast<minimum){minimum=contrast;weakestPoint=QPoint(x,y);weakestBackground=composed.pixelColor(x,y);}
                         }
                     }
+                    qInfo()<<"LUMEN LABEL CONTRAST"<<name<<ink.name()<<minimum<<weakestPoint<<weakestBackground.name()<<label->size();
                     require(minimum>=4.5,"actual translucent label backing readable over black and white desktop: "+name+" "+QString::number(minimum));
-                }
+                };
+                for(const auto &name:QStringList{"outputStatus","surfaceHeading"})if(auto *label=window.template findChild<QLabel*>(name))checkLabelContrast(label,name);
+                // The output status uses primary ink while live and secondary
+                // ink while stopped; both must survive the same desktop bed.
+                window.output->hide();settle(app,40);
+                if(auto *label=window.template findChild<QLabel*>("outputStatus"))checkLabelContrast(label,"outputStatus stopped");
+                window.output->show();settle(app,40);
             }else require(!PotatoDesktopGlass::active(&window),"other studio materials retain opaque window composition: "+id);
             require(splitter->count()==2&&splitter->widget(0)==sidebar&&splitter->widget(1)==window.canvas&&bounds(sidebar,&window).right()<bounds(window.canvas,&window).left(),"original left sidebar/right canvas: "+id);
             require(window.size()==windowSize&&splitter->sizes()==splitterSizes&&projectBar->actions()==projectActions&&outputBar->actions()==outputActions,"same window, splitter and action order: "+id);

@@ -403,6 +403,9 @@ private:
             QString family=widget->property("potatoIconFamily").toString();
             for(auto *parent=widget;parent&&parent!=m_editor;parent=parent->parentWidget())
                 if(parent->objectName()=="projectToolbar"){family=QStringLiteral("toolbar");break;}
+            // The study's wide output pane is a lighter glass layer than its
+            // dense inspector. Keep its existing widget/Panel geometry.
+            if(widget->objectName()=="outputToolbar")family=QStringLiteral("output");
             PotatoThemes::paintSurface(p,rect,role,origin,m_editor->size(),state,family,PotatoDesktopGlass::active(widget->window()));
         }
         else if(ambient)PotatoAmbient::paintSurface(p,rect,role,origin,m_editor->size(),state,widget->property("potatoIconFamily").toString());
