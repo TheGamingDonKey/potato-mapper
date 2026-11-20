@@ -84,7 +84,7 @@ inline QColor studioIconColour(const QString &name,const QString &family,bool to
     const bool violet=family=="iris";
     const bool green=family=="lagoon";
     const bool blue=(name=="add"&&family=="peach")||name=="save"||name=="fit";
-    if(theme.id=="lumenatelier1")return QColor(blue?"#5773B8":warm?"#B76B49":violet?"#7858A9":green?"#34806F":"#4D647B");
+    if(theme.id=="lumenatelier1")return QColor(blue?"#9FC9FF":warm?"#EBB18B":violet?"#BEAAEF":green?"#8DD2C2":"#BDCDDE");
     if(sienna&&toolbar)return QColor(blue?"#9EBBFF":warm?"#EEAA79":violet?"#D2BDF0":green?"#B9D5BA":"#C3CCCE");
     if(nocturne)return QColor(blue?"#80ADFF":warm?"#FFAD7D":violet?"#C7B6FF":green?"#7EDCC6":"#B4C1D4");
     if(sienna)return QColor(blue?"#315AA1":warm?"#A54A2F":violet?"#77629D":green?"#567D60":"#576470");

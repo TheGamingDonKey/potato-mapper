@@ -86,13 +86,56 @@ template<class Window> void runAmbientGlassChecks(Window &window,QApplication &a
         require(found==commandOrder,"original project toolbar command order retained");
         window.output->resize(480,270);window.output->show();settle(app,100);
         const auto outputBefore=window.output->grabFramebuffer(),canvasBefore=window.canvas->grabFramebuffer();
+        const auto outputGeometryBefore=window.output->geometry(),canvasGeometryBefore=window.canvas->geometry();
+        const auto outputRectBefore=window.output->canvasRect(),canvasRectBefore=window.canvas->canvasRect();
         require(!outputBefore.isNull()&&!canvasBefore.isNull(),"real editor and output framebuffer samples available");
         auto seconds=[&]{return app.property("potatoAmbientSeconds").toDouble();};
         auto frames=[&]{return app.property("potatoAmbientFrames").toULongLong();};
         auto chromeImage=[&]{return projectBar->grab().toImage().convertToFormat(QImage::Format_RGB32);};
+        auto inspectFrames=[&](const QString &label,bool saveFailure=false){
+            auto inspect=[&](const char *name,auto *view,const QImage &before,const QRect &geometryBefore,const QRectF &rectBefore){
+                const auto after=view->grabFramebuffer();const bool equal=after==before;
+                qInfo().noquote()<<"AMBIENT FRAME"<<label<<name<<"equal"<<equal
+                    <<"size"<<before.size()<<after.size()<<"DPR"<<before.devicePixelRatio()<<after.devicePixelRatio()
+                    <<"format"<<before.format()<<after.format()<<"geometry"<<geometryBefore<<view->geometry()
+                    <<"viewRect"<<rectBefore<<view->canvasRect();
+                if(!equal){
+                    qint64 changedPixels=-1;QRect changedBounds;
+                    if(!before.isNull()&&before.size()==after.size()){
+                        changedPixels=0;
+                        for(int y=0;y<before.height();++y)for(int x=0;x<before.width();++x)
+                            if(before.pixel(x,y)!=after.pixel(x,y)){++changedPixels;changedBounds|=QRect(x,y,1,1);}
+                    }
+                    qInfo().noquote()<<"AMBIENT FRAME DIFFERENCE"<<label<<name<<"pixels"<<changedPixels<<"bounds"<<changedBounds;
+                    const int snapshot=args.indexOf("--snapshot");
+                    if(saveFailure&&snapshot>=0&&snapshot+1<args.size()){
+                        const QFileInfo target(args[snapshot+1]);
+                        const auto prefix=QDir(target.absolutePath()).filePath(target.completeBaseName()+"-ambient-"+name);
+                        const bool savedFrames=QDir().mkpath(target.absolutePath())&&before.save(prefix+"-before.png")&&after.save(prefix+"-after.png");
+                        qInfo().noquote()<<"AMBIENT FRAME EVIDENCE"<<prefix<<"saved"<<savedFrames;
+                    }
+                }
+                return equal;
+            };
+            const bool outputEqual=inspect("output",window.output,outputBefore,outputGeometryBefore,outputRectBefore);
+            const bool canvasEqual=inspect("editor",window.canvas,canvasBefore,canvasGeometryBefore,canvasRectBefore);
+            if(label=="Initial"||label.contains("reduceInterfaceTransparency")){
+                auto row=[&](const char *name,QWidget *widget){
+                    if(widget)qInfo().noquote()<<"AMBIENT LAYOUT"<<label<<name<<"geometry"<<widget->geometry()
+                        <<"hint"<<widget->sizeHint()<<"minimumHint"<<widget->minimumSizeHint()<<"fontHeight"<<widget->fontMetrics().height();
+                };
+                row("menu",window.menuBar());row("status",window.statusBar());
+                for(const auto &name:QStringList{"projectToolbar","outputToolbar","outputPanel","outputDisplays","outputStart","outputStatus","entrancePlay","entranceInfo","brandName"})
+                    row(qPrintable(name),window.template findChild<QWidget*>(name));
+            }
+            return qMakePair(outputEqual,canvasEqual);
+        };
+        inspectFrames("Initial");
         auto unchangedScene=[&](const QString &label){
             require(scene.json()==saved&&!scene.dirty&&scene.selected==selected&&scene.current()->patternPhase==phase,label+" retains clean selected scene");
-            require(window.output->grabFramebuffer()==outputBefore&&window.canvas->grabFramebuffer()==canvasBefore,label+" retains exact editor/output pixels");
+            const auto unchanged=inspectFrames(label,true);
+            require(unchanged.first,label+" retains exact output pixels");
+            require(unchanged.second,label+" retains exact editor pixels");
         };
 
         const auto smokedFrame=chromeImage();clear->trigger();settle(app,50);const auto clearFrame=chromeImage();
@@ -136,23 +179,29 @@ template<class Window> void runAmbientGlassChecks(Window &window,QApplication &a
         for(auto *option:{reduceMotion,reduceTransparency,increaseContrast}){
             option->setChecked(true);settle(app,100);const auto frozen=seconds();const auto count=frames();settle(app,160);
             require(!app.property("potatoAmbientRunning").toBool()&&seconds()==frozen&&frames()==count,"accessibility option freezes ambient renderer: "+option->objectName());
+            inspectFrames("While accessibility override: "+option->objectName());
             option->setChecked(false);settle(app,110);
             require(app.property("potatoAmbientRunning").toBool()&&seconds()>frozen,"motion resumes after accessibility override: "+option->objectName());
+            inspectFrames("After accessibility override: "+option->objectName());
         }
         window.hide();settle(app,80);const auto hiddenSeconds=seconds();settle(app,220);
         require(!app.property("potatoAmbientRunning").toBool()&&seconds()==hiddenSeconds,"hidden editor stops background work");
         window.show();settle(app,100);require(app.property("potatoAmbientRunning").toBool()&&seconds()>hiddenSeconds&&seconds()-hiddenSeconds<.15,"show resumes from frozen time without a hidden-time jump");
+        inspectFrames("After hide/show");
         window.showMinimized();settle(app,100);const auto minimizedSeconds=seconds();settle(app,180);
         require(!app.property("potatoAmbientRunning").toBool()&&seconds()==minimizedSeconds,"minimized editor stops background work");
         window.showNormal();settle(app,100);require(app.property("potatoAmbientRunning").toBool()&&seconds()>minimizedSeconds,"restoring editor resumes ambient motion");
+        inspectFrames("After minimize/restore");
         for(const auto &id:QStringList{"classic1","material","auroraclear1"}){
             auto *action=window.template findChild<QAction*>("interfaceTheme_"+id);require(action,"retained profile action: "+id);if(!action)continue;
             action->trigger();settle(app,80);const auto frozen=seconds();settle(app,80);
             require(app.property("potatoInterfaceTheme").toString()==id&&!app.property("potatoAmbientRunning").toBool()&&seconds()==frozen,"old profile remains usable and stops ambient work: "+id);
+            inspectFrames("After profile: "+id);
         }
         ambient->trigger();settle(app,100);
         require(app.property("potatoAmbientRunning").toBool()&&ambient->isChecked(),"returning to Ambient restores live rendering");
         require(window.size()==windowSize&&splitter->sizes()==splitterSizes&&projectBar->actions()==projectActions&&outputBar->actions()==outputActions,"controls, window size and splitter retained through settings and themes");
+        require(window.canvas->geometry()==canvasGeometryBefore&&window.canvas->canvasRect()==canvasRectBefore,"returning to Ambient restores identical editor geometry");
         unchangedScene("All ambient and profile operations");
         scene.undo();require(scene.json()==undoState,"ambient changes did not insert an Undo checkpoint");
         scene.redo();require(scene.json()==saved,"Redo restores selected content");scene.redo();require(scene.json()==redoState,"future Redo checkpoint survived");scene.undo();scene.dirty=false;

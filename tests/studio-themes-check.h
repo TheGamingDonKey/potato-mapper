@@ -133,7 +133,15 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
             require(window.winId()==nativeWindowId&&!(window.windowFlags()&Qt::FramelessWindowHint),"theme switch retains native window and standard Windows frame: "+id);
             if(id=="lumenatelier1"){
                 auto *primary=window.template findChild<QPushButton*>("outputStart");
+                auto *displayPicker=window.template findChild<QComboBox*>("outputDisplays");
+                const int previousDisplay=displayPicker?displayPicker->currentIndex():-1;
+                // With no saved display, the real Start button is disabled.
+                // Select a display without starting output so the palette and
+                // painted material both describe the enabled state under test.
+                if(displayPicker&&displayPicker->count()>1)displayPicker->setCurrentIndex(1);
+                settle(app,30);
                 require(primary,"actual primary output control available for contrast check");
+                require(primary&&primary->isEnabled(),"real display selection enables primary output control");
                 if(primary)for(const bool hover:{false,true}){
                     // Render the production material without text, then inspect
                     // the full font-height bed; hover must retain normal-text contrast.
@@ -148,19 +156,26 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
                         minimum=qMin(minimum,(qMax(text,background)+.05)/(qMin(text,background)+.05));
                     }
                     require(!textBed.isEmpty()&&minimum>=4.5,QString("Lumen primary %1 painted label bed has normal-text contrast: %2").arg(hover?"hover":"normal").arg(minimum));
+                    qInfo()<<"LUMEN PRIMARY CONTRAST"<<(hover?"hover":"normal")<<primary->palette().color(QPalette::ButtonText).name()<<minimum;
                 }
+                if(displayPicker)displayPicker->setCurrentIndex(previousDisplay);
+                settle(app,30);
             }
             if(id=="lumenatelier1"&&window.testAttribute(Qt::WA_TranslucentBackground)&&window.property("potatoDesktopGlassSystemAllowed").toBool()){
                 require(PotatoDesktopGlass::active(&window),"Lumen activates real desktop alpha composition on this host");
                 require(window.property("potatoDesktopGlassBackdropRequested").toBool()&&window.property("potatoDesktopGlassBackdropAccepted").toBool()&&
-                    window.property("potatoDesktopGlassBackdropReadback").toInt()==3,"Windows accepted and reports the requested Acrylic material (not a visual blur assertion)");
-                const auto nativeFrame=window.grab().toImage();int translucentPixels=0;
+                    window.property("potatoDesktopGlassBackdropReadback").toInt()==1&&window.property("potatoDesktopGlassAccentState").toInt()==4,
+                    "Windows accepted low-tint desktop Acrylic with the opaque system material disabled (not a visual blur assertion)");
+                const auto nativeFrame=window.grab().toImage();int translucentPixels=0,transmittingPixels=0,sampledPixels=0;
                 const auto band=QRect(projectBar->mapTo(&window,QPoint()),projectBar->size());
                 const auto scale=window.devicePixelRatioF();
                 for(int y=band.top()+4;y<band.bottom()-4;y+=3)for(int x=band.left()+4;x<band.right()-4;x+=3){
                     const int a=nativeFrame.pixelColor(qRound(x*scale),qRound(y*scale)).alpha();if(a>0&&a<245)++translucentPixels;
+                    ++sampledPixels;if(a>0&&a<=210)++transmittingPixels;
                 }
                 require(translucentPixels>100,"Lumen chrome contains real translucent pixels, not an opaque painted background");
+                require(sampledPixels>0&&transmittingPixels>sampledPixels*.40,"Lumen broad chrome leaves meaningful desktop transmission instead of stacking opaque veils");
+                qInfo()<<"DESKTOP GLASS"<<window.property("potatoDesktopGlassMode")<<"tint"<<window.property("potatoDesktopGlassTintAlpha")<<"transmitting samples"<<transmittingPixels<<"of"<<sampledPixels;
                 auto checkLabelContrast=[&](QLabel *label,const QString &name){
                     const auto ink=label->palette().color(QPalette::WindowText);const auto style=label->styleSheet();
                     label->setStyleSheet(style+";color:transparent;");const auto bed=composedChrome(label);label->setStyleSheet(style);

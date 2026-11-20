@@ -56,6 +56,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStatusBar>
+#include <QStyle>
 #include <QScreen>
 #include <QWindow>
 #include <QCloseEvent>
@@ -352,6 +353,11 @@ public:
         installPotatoMaterial(this);
         updateAppearanceLabels();
         studioApplyAppearanceIcons(this);updateProjectCommandStyle();
+        // QToolBar caches generic margins in its constructor, before it can
+        // have an objectName. Resolve #projectToolbar and its layout together
+        // now, so the first theme refresh cannot shift the editor by two pixels.
+        bar->style()->unpolish(bar);bar->style()->polish(bar);
+        QEvent toolbarStyleChange(QEvent::StyleChange);QCoreApplication::sendEvent(bar,&toolbarStyleChange);
         statusBar()->showMessage("Add a surface, then drop an image or video onto it.");
     }
     ~MainWindow()override{delete output;}
