@@ -14,8 +14,19 @@
 
 namespace potatoLauncher {
 namespace fs = std::filesystem;
+// Use extended DOS/UNC names only for filesystem I/O. In that namespace
+// Windows requires absolute names, backslashes and normalized dot components.
+inline fs::path filePath(const fs::path &path) {
+    auto absolute=path.is_absolute()?path:fs::absolute(path);
+    absolute.make_preferred();
+    if(absolute.native().compare(0,4,LR"(\\?\)")==0)return absolute;
+    absolute=absolute.lexically_normal();
+    const auto &name=absolute.native();
+    if(name.compare(0,2,LR"(\\)")==0)return LR"(\\?\UNC\)"+name.substr(2);
+    return LR"(\\?\)"+name;
+}
 inline std::string read(const fs::path &path) {
-    std::ifstream in(path, std::ios::binary);
+    std::ifstream in(filePath(path), std::ios::binary);
     return {std::istreambuf_iterator<char>(in), {}};
 }
 inline bool versionValid(const std::string &version) {
@@ -25,10 +36,11 @@ inline bool plainPath(const fs::path &path) {
     // A synced Downloads folder may contain Windows Cloud Files placeholders.
     // They hydrate in place. Junctions, symlinks and unknown tags are rejected.
     for (auto p=fs::absolute(path); !p.empty(); p=p.parent_path()) {
-        const auto attributes=GetFileAttributesW(p.c_str());
+        const auto native=filePath(p);
+        const auto attributes=GetFileAttributesW(native.c_str());
         if(attributes!=INVALID_FILE_ATTRIBUTES && (attributes&FILE_ATTRIBUTE_REPARSE_POINT)){
             WIN32_FIND_DATAW data{};
-            const auto find=FindFirstFileW(p.c_str(),&data);
+            const auto find=FindFirstFileW(native.c_str(),&data);
             if(find==INVALID_HANDLE_VALUE)return false;
             FindClose(find);
             if((data.dwReserved0 & ~IO_REPARSE_TAG_CLOUD_MASK)!=IO_REPARSE_TAG_CLOUD)return false;
@@ -38,7 +50,7 @@ inline bool plainPath(const fs::path &path) {
     return true;
 }
 inline std::string sha256(const fs::path &path) {
-    std::ifstream in(path,std::ios::binary);
+    std::ifstream in(filePath(path),std::ios::binary);
     if(!in)throw std::runtime_error("Could not read a managed program file for verification.");
     BCRYPT_ALG_HANDLE algorithm=nullptr; BCRYPT_HASH_HANDLE hash=nullptr;
     if(BCryptOpenAlgorithmProvider(&algorithm,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0)
@@ -56,7 +68,8 @@ inline std::string sha256(const fs::path &path) {
     cleanup();std::string result;constexpr char hex[]="0123456789abcdef";
     for(const auto b:digest){result+=hex[b>>4];result+=hex[b&15];}return result;
 }
-inline bool completeRuntime(const fs::path &runtime,const std::string &version) {
+inline bool completeRuntime(const fs::path &location,const std::string &version) {
+    const auto runtime=filePath(location);
     if(!versionValid(version)||!plainPath(runtime)||!fs::is_regular_file(runtime/L"PotatoMapperApp.exe")
         ||read(runtime/L"runtime-version.txt")!=version+"\n")return false;
     const auto manifest=runtime/L"runtime-files.sha256";
@@ -71,10 +84,10 @@ inline bool completeRuntime(const fs::path &runtime,const std::string &version) 
         while(std::getline(lines,line)) {
             if(!line.empty()&&line.back()=='\r')line.pop_back();
             if(line.size()<67||line[64]!='\t'||!std::regex_match(line.substr(0,64),std::regex("[a-f0-9]{64}")))return false;
-            const auto name=line.substr(65);const auto relative=fs::u8path(name);
+            const auto name=line.substr(65);auto relative=fs::u8path(name);
             if(name.empty()||name.find('\\')!=std::string::npos||name.find(':')!=std::string::npos||relative.is_absolute())return false;
             for(const auto &part:relative)if(part==L".."||part==L".")return false;
-            const auto file=runtime/relative;
+            const auto file=runtime/relative.make_preferred();
             if(!plainPath(file)||!fs::is_regular_file(file)||sha256(file)!=line.substr(0,64))return false;
             editor=editor||name=="PotatoMapperApp.exe";marker=marker||name=="runtime-version.txt";
             if(++count>20000)return false;

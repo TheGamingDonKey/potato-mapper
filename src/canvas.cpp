@@ -49,7 +49,9 @@ void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2
     if(!shaderFile.open(QIODevice::ReadOnly)){graphicsError="The built-in pattern shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
     QFile christmasFile(":/assets/christmas.glsl");
     if(!christmasFile.open(QIODevice::ReadOnly)){graphicsError="The Christmas scene shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
-    const auto fragment=shaderFile.readAll()+'\n'+christmasFile.readAll();
+    QFile sleighFile(":/assets/sleigh-flight.glsl");
+    if(!sleighFile.open(QIODevice::ReadOnly)){graphicsError="The sleigh animation shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
+    const auto fragment=shaderFile.readAll()+'\n'+christmasFile.readAll()+'\n'+sleighFile.readAll();
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment.constData())||!program.link()){
         graphicsError=program.log();emit graphicsInitialized(graphicsError);return;
     }
@@ -227,10 +229,22 @@ void Canvas::paintGL(){
         world(1,0)=float(surfaceTransform.m12());world(1,1)=float(surfaceTransform.m22());world(1,2)=float(surfaceTransform.m32());
         world(2,0)=float(surfaceTransform.m13());world(2,1)=float(surfaceTransform.m23());world(2,2)=float(surfaceTransform.m33());
         program.setUniformValue("surfaceMapping",world);program.setUniformValue("outputAspect",float(scene->outputSize.width())/scene->outputSize.height());
+        program.setUniformValue("subjectOnly",s.subjectOnly);
+        float patternAngle=s.fx.angle*float(3.141592653589793/180.0);
+        if(s.pattern==sleighFlightPattern){
+            const auto &route=scene->worldGeometry().sleighRoute;
+            const auto &bounds=route.bounds;
+            program.setUniformValue("flightBounds",QVector4D(bounds.x(),bounds.y(),bounds.width(),bounds.height()));
+            program.setUniformValue("flightArtSize",float(route.artSize));
+            const double time=s.patternPhase/potatoPatternPeriod(sleighFlightPattern);
+            const auto point=route.position(time-std::floor(time));
+            program.setUniformValue("flightPosition",QVector2D(point));
+            program.setUniformValue("flightTravelAngle",float(route.angle));
+        }
         QVector2D uvScale(1,1),uvOffset(0,0);
         const double phasePeriod=potatoPatternPeriod(s.pattern);
         program.setUniformValue("pattern",s.pattern);program.setUniformValue("phase",float(std::fmod(s.patternPhase,phasePeriod)));program.setUniformValue("dotRadius",s.patternSize/100.0f);
-        program.setUniformValue("density",float(s.fx.density));program.setUniformValue("flow",s.fx.flow/100.0f);program.setUniformValue("angle",s.fx.angle*float(3.141592653589793/180.0));program.setUniformValue("palette",s.fx.palette);program.setUniformValue("edgeFade",s.fx.edge/100.0f);
+        program.setUniformValue("density",float(s.fx.density));program.setUniformValue("flow",s.fx.flow/100.0f);program.setUniformValue("angle",patternAngle);program.setUniformValue("palette",s.fx.palette);program.setUniformValue("edgeFade",s.fx.edge/100.0f);
         program.setUniformValue("brightness",s.brightness/100.0f*float(scene->entranceActive?PotatoEntrance::reveal(scene->entranceElapsed):1.0));program.setUniformValue("opacity",s.opacity/100.0f);
         {
             const auto pixel=[this](QPointF p){return QPointF(p.x()*scene->outputSize.width(),p.y()*scene->outputSize.height());};

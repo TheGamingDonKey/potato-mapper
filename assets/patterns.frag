@@ -14,6 +14,11 @@ uniform float phase;
 uniform float dotRadius;
 uniform float surfaceAspect;
 uniform float outputAspect;
+uniform bool subjectOnly;
+uniform vec4 flightBounds;
+uniform float flightArtSize;
+uniform float flightTravelAngle;
+uniform vec2 flightPosition;
 uniform float brightness;
 uniform float opacity;
 uniform float density;
@@ -53,7 +58,7 @@ void finishColor(){
     if(pattern>0){
         // Seasonal illustrations keep their shadows, ribs and facial detail
         // when a colour preset is selected. Older effects retain their tint.
-        if(pattern>=14&&pattern<=26&&palette!=0)
+        if(pattern>=14&&pattern<=27&&palette!=0)
             color.rgb=selectedTint(vec3(1.0))*dot(color.rgb,vec3(.25,.60,.15));
         else color.rgb=selectedTint(color.rgb);
         if(edgeFade>0.0){float edge=min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y));color.a*=smoothstep(0.0,edgeFade,edge);}
@@ -584,13 +589,23 @@ void seasonWorkshop(inout vec3 ink,vec2 p,vec2 extent,float seconds,float cycle)
     ink=mix(ink,vec3(.31,.18,.075),shapeMask(leg));
 }
 vec3 christmasScene(vec2 p,vec2 extent,float turn);
+vec4 christmasCutout(vec2 p,vec2 extent,float turn);
+vec4 sleighFlight(vec2 routeUv,vec2 routeExtent,float turn);
 void main(){
     vec2 metric=rotatePoint((uv-.5)*vec2(1.0,1.0/surfaceAspect),angle);
     vec2 patternUv=metric*vec2(1.0,surfaceAspect)+.5;
+    if(pattern==27){
+        if(flightArtSize<=0.0){color=vec4(0.0);return;}
+        vec2 size=max(flightBounds.zw,vec2(.000001));
+        vec2 extent=size*vec2(outputAspect,1.0);
+        color=sleighFlight((mappedOutputUv-flightBounds.xy)/size,extent/min(extent.x,extent.y),fract(phase/24.0));
+        finishColor();return;
+    }
     if(pattern>=23&&pattern<=26){
         float shortAxis=min(1.0,1.0/surfaceAspect);
         vec2 extent=vec2(1.0,1.0/surfaceAspect)/shortAxis;
-        color=vec4(clamp(christmasScene(metric/shortAxis,extent,fract(phase/24.0)),0.0,1.0),1.0);
+        if(subjectOnly)color=christmasCutout(metric/shortAxis,extent,fract(phase/24.0));
+        else color=vec4(clamp(christmasScene(metric/shortAxis,extent,fract(phase/24.0)),0.0,1.0),1.0);
         finishColor();return;
     }
     if(pattern>=19&&pattern<=22){

@@ -29,6 +29,23 @@ void cutDisc(inout vec3 ink,vec2 p,float radius,vec3 pigment){paper(ink,length(p
 void cutLine(inout vec3 ink,vec2 p,vec2 a,vec2 b,float width,vec3 pigment){paper(ink,harvestSegment(p,a,b)-width,pigment);}
 float lightPool(vec2 p,vec2 radii){vec2 q=p/radii;return exp(-dot(q,q));}
 
+// Foreground paint stores premultiplied colour and independent geometric coverage.
+// A black boot covers the wall just as fully as a white plume.
+void paper(inout vec4 ink,float distance,vec3 pigment){ink=mix(ink,vec4(pigment,1.0),shapeMask(distance));}
+void cutBox(inout vec4 ink,vec2 p,vec2 halfSize,float radius,vec3 pigment){paper(ink,christmasBox(p,halfSize,radius),pigment);}
+void cutDisc(inout vec4 ink,vec2 p,float radius,vec3 pigment){paper(ink,length(p)-radius,pigment);}
+void cutLine(inout vec4 ink,vec2 p,vec2 a,vec2 b,float width,vec3 pigment){paper(ink,harvestSegment(p,a,b)-width,pigment);}
+void subjectGlow(inout vec4 ink,vec3 emission,float strength,bool cutout){
+    if(cutout){
+        // Give an individual lamp a finite, feathered halo. Outside it coverage is exactly zero.
+        float fade=smoothstep(.008,.035,strength);
+        ink.rgb+=emission*fade;
+        ink.a=mix(ink.a,1.0,clamp(strength,0.0,1.0)*fade);
+    }else{
+        ink.rgb+=emission;
+    }
+}
+
 // Each star stays within its cell. All twinkles use integer harmonics of the same loop.
 void winterStars(inout vec3 ink,vec2 p,float cycle,float amount,vec3 pigment){
     vec2 grid=p*12.0,cell=floor(grid);
@@ -51,7 +68,7 @@ void pineWood(inout vec3 ink,vec2 p,float spacing,float baseline,float height,ve
     paper(ink,tree,pigment);
 }
 
-void expressWheel(inout vec3 ink,vec2 q,float radius,float spin){
+void expressWheel(inout vec4 ink,vec2 q,float radius,float spin){
     cutDisc(ink,q,radius,nightInk);
     cutDisc(ink,q,radius*.86,brass);
     cutDisc(ink,q,radius*.72,vec3(.22,.09,.13));
@@ -60,7 +77,7 @@ void expressWheel(inout vec3 ink,vec2 q,float radius,float spin){
     paper(ink,max(spokes-radius*.060,length(q)-radius*.72),goldLeaf);
     cutDisc(ink,q,radius*.20,brass);
 }
-void expressCoach(inout vec3 ink,vec2 q,float spin){
+void expressCoach(inout vec4 ink,vec2 q,float spin){
     if(abs(q.x)>.24||abs(q.y)>.16)return;
     expressWheel(ink,q-vec2(-.126,.100),.043,spin);
     expressWheel(ink,q-vec2(.126,.100),.043,spin);
@@ -75,36 +92,45 @@ void expressCoach(inout vec3 ink,vec2 q,float spin){
     paper(ink,max(christmasBox(pane,vec2(.023,.029),.004),.010-abs(pane.x)-pane.y*.22),cranberry);
     cutBox(ink,pane-vec2(0,-.024),vec2(.024,.004),.002,brass);
 }
-vec3 northPoleExpress(vec2 p,vec2 extent,float turn,float cycle){
-    vec2 panel=p/extent;
-    vec3 ink=mix(vec3(.055,.075,.166),vec3(.52,.46,.57),smoothstep(-.46,.27,panel.y));
-    vec2 moon=p-vec2(.30*extent.x,-.24*extent.y);
-    ink+=vec3(.16,.12,.046)*lightPool(moon,vec2(.24));
-    cutDisc(ink,moon,.102,vec3(.95,.78,.53));
-    cutDisc(ink,moon-vec2(-.020,.004),.075,vec3(.96,.82,.60));
-    winterStars(ink,p+vec2(0,2),cycle,.34*(1.0-smoothstep(-.35,-.05,panel.y)),ivory);
-    // The camera rides with the train. Mountain silhouettes, pines and viaduct
-    // piers pass at different rates; each translation closes on a whole repeat.
-    float farX=p.x+turn*1.12;
-    float ridge=.005*extent.y-.13*cos(farX*christmasTau/1.12)-.043*cos(farX*christmasTau*3.0/1.12);
-    paper(ink,ridge-p.y,vec3(.53,.56,.64));
-    paper(ink,ridge+.014+.020*abs(sin(farX*christmasTau*4.0/1.12))-p.y,vec3(.32,.38,.50));
-    float nearRidge=.115*extent.y-.050*cos(p.x*7.7+cycle)-.026*sin(p.x*13.0+cycle*2.0);
-    paper(ink,nearRidge-p.y,vec3(.22,.35,.42));
-    // Periodic pine heights keep the distant forest continuous at the cycle seam.
-    pineWood(ink,vec2(mod(p.x+turn*.96+.48,.96)-.48,p.y),.12,.215*extent.y,.17,vec3(.12,.24,.29));
+vec4 northPoleExpress(vec2 p,vec2 extent,float turn,float cycle,bool cutout){
+    vec4 ink=vec4(0.0);
     float rail=.26;
-    float bridgeY=p.y-rail,span=.31;
-    vec2 arch=vec2(mod(p.x+turn*span*9.0+span*.5,span)-span*.5,bridgeY);
-    float opening=harvestEllipse(arch-vec2(0,.174),vec2(.106,.123));
-    float insideArch=min(opening,max(abs(arch.x)-.106,.174-arch.y));
-    paper(ink,max(-bridgeY,-insideArch),vec3(.29,.25,.31));
-    paper(ink,max(max(-bridgeY,-insideArch),insideArch-.014),vec3(.59,.46,.40));
-    cutBox(ink,vec2(0,bridgeY-.018),vec2(1.0,.013),.002,vec3(.64,.55,.51));
-    cutBox(ink,vec2(0,bridgeY+.002),vec2(1.0,.010),.002,vec3(.16,.18,.24));
-    cutBox(ink,vec2(0,bridgeY+.012),vec2(1.0,.004),.001,vec3(.88,.81,.67));
+    if(!cutout){
+        vec2 panel=p/extent;
+        vec3 backdrop=mix(vec3(.055,.075,.166),vec3(.52,.46,.57),smoothstep(-.46,.27,panel.y));
+        vec2 moon=p-vec2(.30*extent.x,-.24*extent.y);
+        backdrop+=vec3(.16,.12,.046)*lightPool(moon,vec2(.24));
+        cutDisc(backdrop,moon,.102,vec3(.95,.78,.53));
+        cutDisc(backdrop,moon-vec2(-.020,.004),.075,vec3(.96,.82,.60));
+        winterStars(backdrop,p+vec2(0,2),cycle,.34*(1.0-smoothstep(-.35,-.05,panel.y)),ivory);
+        // The camera rides with the train. Mountain silhouettes, pines and viaduct
+        // piers pass at different rates; each translation closes on a whole repeat.
+        float farX=p.x+turn*1.12;
+        float ridge=.005*extent.y-.13*cos(farX*christmasTau/1.12)-.043*cos(farX*christmasTau*3.0/1.12);
+        paper(backdrop,ridge-p.y,vec3(.53,.56,.64));
+        paper(backdrop,ridge+.014+.020*abs(sin(farX*christmasTau*4.0/1.12))-p.y,vec3(.32,.38,.50));
+        float nearRidge=.115*extent.y-.050*cos(p.x*7.7+cycle)-.026*sin(p.x*13.0+cycle*2.0);
+        paper(backdrop,nearRidge-p.y,vec3(.22,.35,.42));
+        // Periodic pine heights keep the distant forest continuous at the cycle seam.
+        pineWood(backdrop,vec2(mod(p.x+turn*.96+.48,.96)-.48,p.y),.12,.215*extent.y,.17,vec3(.12,.24,.29));
+        float bridgeY=p.y-rail,span=.31;
+        vec2 arch=vec2(mod(p.x+turn*span*9.0+span*.5,span)-span*.5,bridgeY);
+        float opening=harvestEllipse(arch-vec2(0,.174),vec2(.106,.123));
+        float insideArch=min(opening,max(abs(arch.x)-.106,.174-arch.y));
+        paper(backdrop,max(-bridgeY,-insideArch),vec3(.29,.25,.31));
+        paper(backdrop,max(max(-bridgeY,-insideArch),insideArch-.014),vec3(.59,.46,.40));
+        cutBox(backdrop,vec2(0,bridgeY-.018),vec2(1.0,.013),.002,vec3(.64,.55,.51));
+        cutBox(backdrop,vec2(0,bridgeY+.002),vec2(1.0,.010),.002,vec3(.16,.18,.24));
+        cutBox(backdrop,vec2(0,bridgeY+.012),vec2(1.0,.004),.001,vec3(.88,.81,.67));
+        ink=vec4(backdrop,1.0);
+    }
     float size=(.73+.93*dotRadius)*min(1.0,extent.x*.89);
     vec2 origin=vec2(.18*extent.x+.12*sin(cycle),rail-.016);
+    if(cutout){
+        // Leave both coaches and the engine visible on a narrow or square mapping.
+        size=(.73+.93*dotRadius)*min(1.0,extent.x*.53);
+        origin=vec2(.42*size+.045*extent.x*sin(cycle),.20*size);
+    }
     vec2 q=(p-origin)/size;
     float spin=cycle*12.0;
     // Steam curls expand and dissolve before an individual puff wraps.
@@ -116,7 +142,7 @@ vec3 northPoleExpress(vec2 p,vec2 extent,float turn,float cycle){
         vec2 puff=vec2(.179-age*(.32+.46*flow),-.268-age*(.12+.13*flow)-.024*sin(age*5.8+n));
         vec2 vapour=q-puff;float r=.014+.041*age;
         float cloud=min(length(vapour)-r,length(vapour-vec2(-r*.73,r*.20))-r*.68);
-        ink=mix(ink,vec3(.91,.84,.75),shapeMask(cloud)*alive*smoothstep(.0,.10,age)*(1.0-smoothstep(.62,1.0,age))*.73);
+        ink=mix(ink,vec4(.91,.84,.75,1.0),shapeMask(cloud)*alive*smoothstep(.0,.10,age)*(1.0-smoothstep(.62,1.0,age))*.73);
     }
     cutLine(ink,q,vec2(-1.14,-.05),vec2(-.10,-.05),.012,nightInk);
     expressCoach(ink,q-vec2(-.898,-.142),spin);
@@ -145,7 +171,9 @@ vec3 northPoleExpress(vec2 p,vec2 extent,float turn,float cycle){
         cutLine(ink,q,vec2(-.152,-.051)+crank,vec2(.116,-.051)+crank,.007,brass);
     }
     vec2 headlight=q-vec2(.245,-.178);
-    ink+=vec3(.28,.19,.055)*lightPool(headlight-vec2(.07,0),vec2(.14,.027))*smoothstep(-.015,.025,headlight.x);
+    float lamp=lightPool(headlight-vec2(.07,0),vec2(.14,.027));
+    float beam=smoothstep(-.015,.025,headlight.x);
+    subjectGlow(ink,vec3(.28,.19,.055)*lamp*beam,.28*lamp*beam,cutout);
     return ink;
 }
 
@@ -161,25 +189,30 @@ void wrappedPresent(inout vec3 ink,vec2 p,vec2 halfSize,vec3 wrap,vec3 ribbon){
     }
     cutDisc(ink,knot,halfSize.y*.13,ribbon);
 }
-vec3 evergreenOverture(vec2 p,vec2 extent,float turn,float cycle){
-    vec2 panel=p/extent;
-    vec3 ink=mix(vec3(.048,.14,.17),vec3(.08,.35,.36),smoothstep(-.42,.32,panel.y));
-    float curtain=.085*sin(panel.x*5.0+cycle)+.038*cos(panel.x*14.0-cycle*2.0);
-    ink+=vec3(.035,.13,.09)*lightPool(vec2(panel.x*.55,panel.y+.24-curtain),vec2(.75,.12));
-    winterStars(ink,p+vec2(2.5,4),cycle,.52,vec3(.85,.97,.83));
-    pineWood(ink,p+vec2(.086,0),.148,.27*extent.y,.29,vec3(.07,.25,.28));
-    float bank=.236*extent.y+.044*cos(p.x*3.7)-.017*sin(p.x*8.0);
-    paper(ink,bank-p.y,vec3(.32,.53,.52));
-    pineWood(ink,p+vec2(.35,0),.29,.34*extent.y,.23,vec3(.09,.32,.32));
-    float snow=.331*extent.y+.022*cos(p.x*4.0);
-    paper(ink,snow-p.y,vec3(.52,.71,.65));
-    paper(ink,snow+.018+.011*sin(p.x*10.0)-p.y,vec3(.36,.57,.55));
+vec4 evergreenOverture(vec2 p,vec2 extent,float turn,float cycle,bool cutout){
+    vec4 ink=vec4(0.0);
     float size=.79+.88*dotRadius;
     vec2 q=p/size;
+    if(cutout)q.y-=.06;
     float seconds=turn*24.0;
     float crown=seasonBeat(seconds,7.0,12.0,18.8,23.5);
-    ink+=vec3(.13,.13,.045)*lightPool(q-vec2(0,-.10),vec2(.34,.38))*(.4+.6*crown);
-    ink=mix(ink,vec3(.16,.33,.30),lightPool(q-vec2(.024,.345),vec2(.36,.032))*.8);
+    if(!cutout){
+        vec2 panel=p/extent;
+        vec3 backdrop=mix(vec3(.048,.14,.17),vec3(.08,.35,.36),smoothstep(-.42,.32,panel.y));
+        float curtain=.085*sin(panel.x*5.0+cycle)+.038*cos(panel.x*14.0-cycle*2.0);
+        backdrop+=vec3(.035,.13,.09)*lightPool(vec2(panel.x*.55,panel.y+.24-curtain),vec2(.75,.12));
+        winterStars(backdrop,p+vec2(2.5,4),cycle,.52,vec3(.85,.97,.83));
+        pineWood(backdrop,p+vec2(.086,0),.148,.27*extent.y,.29,vec3(.07,.25,.28));
+        float bank=.236*extent.y+.044*cos(p.x*3.7)-.017*sin(p.x*8.0);
+        paper(backdrop,bank-p.y,vec3(.32,.53,.52));
+        pineWood(backdrop,p+vec2(.35,0),.29,.34*extent.y,.23,vec3(.09,.32,.32));
+        float snow=.331*extent.y+.022*cos(p.x*4.0);
+        paper(backdrop,snow-p.y,vec3(.52,.71,.65));
+        paper(backdrop,snow+.018+.011*sin(p.x*10.0)-p.y,vec3(.36,.57,.55));
+        backdrop+=vec3(.13,.13,.045)*lightPool(q-vec2(0,-.10),vec2(.34,.38))*(.4+.6*crown);
+        backdrop=mix(backdrop,vec3(.16,.33,.30),lightPool(q-vec2(.024,.345),vec2(.36,.032))*.8);
+        ink=vec4(backdrop,1.0);
+    }
     cutBox(ink,q-vec2(0,.273),vec2(.042,.069),.012,vec3(.30,.19,.12));
     // From the lowest bough upwards, each tier hides the join of the one below.
     for(int i=0;i<5;++i){
@@ -212,23 +245,28 @@ vec3 evergreenOverture(vec2 p,vec2 extent,float turn,float cycle){
         float colorIndex=mod(bulb+n,3.0);
         vec3 glass=colorIndex<1.0?vec3(.96,.23,.22):colorIndex<2.0?goldLeaf:vec3(.54,.86,.85);
         float r=.011+.004*mod(bulb+n,2.0);
-        ink+=glass*(.16+.49*flow)*bright*lightPool(q-bead,vec2(r*2.9));
+        float halo=lightPool(q-bead,vec2(r*2.9));
+        subjectGlow(ink,glass*(.16+.49*flow)*bright*halo,(.16+.49*flow)*bright*halo,cutout);
         cutDisc(ink,q-bead,r,mix(glass*.60,glass,bright));
         cutDisc(ink,q-bead+vec2(r*.26,r*.25),r*.27,mix(glass,ivory,.72));
     }
     vec2 star=q-vec2(.008*sin(cycle+2.8)*flow,-.373);
-    ink+=goldLeaf*lightPool(star,vec2(.080))*(.16+(.45+.26*flow)*crown);
+    float halo=lightPool(star,vec2(.080));
+    float swell=.16+(.45+.26*flow)*crown;
+    subjectGlow(ink,goldLeaf*halo*swell,halo*swell,cutout);
     paper(ink,christmasStar(star,.058),goldLeaf);
     paper(ink,max(christmasStar(star,.054),star.x),ivory);
     if(crown>.0){
         vec2 ray=abs(star);
         float rays=max(min(ray.x,ray.y)*.90+max(ray.x,ray.y)*.025-.0022,max(ray.x,ray.y)-.092);
-        ink=mix(ink,ivory,shapeMask(rays)*crown*(.5+.4*flow));
+        ink=mix(ink,vec4(ivory,1.0),shapeMask(rays)*crown*(.5+.4*flow));
     }
-    wrappedPresent(ink,q-vec2(-.164,.292),vec2(.061,.039),cranberry,goldLeaf);
-    wrappedPresent(ink,q-vec2(.124,.300),vec2(.063,.047),vec3(.19,.39,.53),ivory);
-    wrappedPresent(ink,q-vec2(.208,.319),vec2(.046,.029),brass,cranberry);
-    wrappedPresent(ink,q-vec2(-.075,.320),vec2(.040,.027),vec3(.39,.57,.39),ivory);
+    if(!cutout){
+        wrappedPresent(ink.rgb,q-vec2(-.164,.292),vec2(.061,.039),cranberry,goldLeaf);
+        wrappedPresent(ink.rgb,q-vec2(.124,.300),vec2(.063,.047),vec3(.19,.39,.53),ivory);
+        wrappedPresent(ink.rgb,q-vec2(.208,.319),vec2(.046,.029),brass,cranberry);
+        wrappedPresent(ink.rgb,q-vec2(-.075,.320),vec2(.040,.027),vec3(.39,.57,.39),ivory);
+    }
     return ink;
 }
 
@@ -257,27 +295,32 @@ void carolHouse(inout vec3 ink,vec2 p,float variant,float cycle,float lanternX,f
         ink+=vec3(.12,.074,.020)*glow*lightPool(wq,vec2(.043));
     }
 }
-vec3 clocktowerCarols(vec2 p,vec2 extent,float turn,float cycle){
-    vec2 panel=p/extent;
-    vec3 ink=mix(vec3(.19,.17,.34),vec3(.83,.51,.43),smoothstep(-.4,.32,panel.y));
-    vec2 sunset=p-vec2(-extent.x*.29,-.16*extent.y);
-    ink+=vec3(.12,.065,.010)*lightPool(sunset,vec2(.35));
-    cutDisc(ink,sunset,.072,vec3(.94,.74,.53));
-    winterStars(ink,p+vec2(2,9),cycle,.27*(1.0-smoothstep(-.30,.04,panel.y)),ivory);
-    float distantRoof=-.014+.046*abs(mod(p.x+.06,.12)-.06)/.06+.016*cos(p.x*8.0);
-    paper(ink,distantRoof-p.y,vec3(.445,.35,.43));
+vec4 clocktowerCarols(vec2 p,vec2 extent,float turn,float cycle,bool cutout){
+    vec4 ink=vec4(0.0);
     float walker=mix(-extent.x*.55-.10,extent.x*.55+.10,fract(turn+.15));
-    float row=.252,spacing=.267;
-    float houseId=floor((p.x+.50*spacing)/spacing);
-    float worldX=houseId*spacing;
-    carolHouse(ink,p-vec2(worldX,row),cellSeed(vec2(houseId,4.0)),cycle,walker,worldX);
-    float road=.246+.018*cos(p.x*4.0);
-    paper(ink,road-p.y,vec3(.73,.65,.64));
-    paper(ink,road+.024+.007*sin(p.x*12.0)-p.y,vec3(.53,.49,.56));
-    vec2 cobble=vec2(mod(p.x+.085*floor(p.y/.043),.17)-.085,mod(p.y,.043)-.0215);
-    if(p.y>road+.033)paper(ink,harvestEllipse(cobble,vec2(.056,.0035)),vec3(.63,.57,.61));
+    if(!cutout){
+        vec2 panel=p/extent;
+        vec3 backdrop=mix(vec3(.19,.17,.34),vec3(.83,.51,.43),smoothstep(-.4,.32,panel.y));
+        vec2 sunset=p-vec2(-extent.x*.29,-.16*extent.y);
+        backdrop+=vec3(.12,.065,.010)*lightPool(sunset,vec2(.35));
+        cutDisc(backdrop,sunset,.072,vec3(.94,.74,.53));
+        winterStars(backdrop,p+vec2(2,9),cycle,.27*(1.0-smoothstep(-.30,.04,panel.y)),ivory);
+        float distantRoof=-.014+.046*abs(mod(p.x+.06,.12)-.06)/.06+.016*cos(p.x*8.0);
+        paper(backdrop,distantRoof-p.y,vec3(.445,.35,.43));
+        float row=.252,spacing=.267;
+        float houseId=floor((p.x+.50*spacing)/spacing);
+        float worldX=houseId*spacing;
+        carolHouse(backdrop,p-vec2(worldX,row),cellSeed(vec2(houseId,4.0)),cycle,walker,worldX);
+        float road=.246+.018*cos(p.x*4.0);
+        paper(backdrop,road-p.y,vec3(.73,.65,.64));
+        paper(backdrop,road+.024+.007*sin(p.x*12.0)-p.y,vec3(.53,.49,.56));
+        vec2 cobble=vec2(mod(p.x+.085*floor(p.y/.043),.17)-.085,mod(p.y,.043)-.0215);
+        if(p.y>road+.033)paper(backdrop,harvestEllipse(cobble,vec2(.056,.0035)),vec3(.63,.57,.61));
+        ink=vec4(backdrop,1.0);
+    }
     float size=.77+.96*dotRadius;
-    vec2 q=(p-vec2(-.082*extent.x,.251))/size;
+    vec2 towerBase=cutout?vec2(0,.35*size):vec2(-.082*extent.x,.251);
+    vec2 q=(p-towerBase)/size;
     cutBox(ink,q-vec2(0,-.203),vec2(.116,.203),.004,vec3(.65,.40,.31));
     cutBox(ink,q-vec2(.083,-.20),vec2(.031,.20),.002,vec3(.48,.29,.29));
     float course=mod(q.y,.052)-.026;
@@ -288,7 +331,7 @@ vec3 clocktowerCarols(vec2 p,vec2 extent,float turn,float cycle){
     cutBox(ink,q-vec2(0,-.015),vec2(.138,.015),.003,vec3(.42,.29,.31));
     cutBox(ink,q-vec2(0,-.381),vec2(.130,.013),.004,vec3(.92,.74,.60));
     // Belfry columns, swinging bell and separate clapper under the copper roof.
-    cutBox(ink,q-vec2(0,-.435),vec2(.091,.048),.005,vec3(.155,.17,.24));
+    if(!cutout)cutBox(ink,q-vec2(0,-.435),vec2(.091,.048),.005,vec3(.155,.17,.24));
     for(int i=0;i<2;++i)cutBox(ink,q-vec2(i==0?-.088:.088,-.439),vec2(.012,.054),.003,vec3(.81,.58,.41));
     float swing=(.12+.47*flow)*sin(4.0*cycle);
     vec2 bell=rotatePoint(q-vec2(0,-.485),swing);
@@ -316,28 +359,37 @@ vec3 clocktowerCarols(vec2 p,vec2 extent,float turn,float cycle){
     cutBox(ink,q-vec2(0,-.089),vec2(.038,.067),.026,vec3(.32,.245,.28));
     cutBox(ink,q-vec2(0,-.056),vec2(.037,.036),.002,vec3(.32,.245,.28));
     cutBox(ink,q-vec2(0,-.090),vec2(.003,.06),.001,brass);
+    if(cutout){
+        // With the village removed, the Lit windows control lights the tower's own four windows.
+        vec2 window=q-vec2(q.x<0.0?-.076:.076,q.y<-.115?-.169:-.066);
+        float number=(q.x<0.0?0.0:1.0)+(q.y<-.115?2.0:0.0);
+        float lit=smoothstep(4.0+number*18.0,20.0+number*18.0,density);
+        cutBox(ink,window,vec2(.014,.021),.009,vec3(.34,.24,.25));
+        cutBox(ink,window,vec2(.009,.016),.006,mix(vec3(.27,.25,.30),goldLeaf,lit));
+        return ink;
+    }
     // The lamplighter carries a physical lantern; its warm pool travels with it.
     float stepAngle=cycle*8.0;
     vec2 figure=(p-vec2(walker,.353-.006*cos(stepAngle*2.0)))/size;
     float stride=.024*sin(stepAngle);
-    cutLine(ink,figure,vec2(-.007,-.035),vec2(-.012+stride,.0),.006,nightInk);
-    cutLine(ink,figure,vec2(.008,-.035),vec2(.013-stride,.0),.006,nightInk);
-    paper(ink,christmasTriangle(figure,vec2(0,-.119),vec2(-.034,-.031),vec2(.032,-.031)),vec3(.14,.28,.29));
-    cutDisc(ink,figure-vec2(.003,-.123),.020,vec3(.91,.65,.44));
-    cutBox(ink,figure-vec2(.0,-.144),vec2(.019,.012),.008,nightInk);
-    cutBox(ink,figure-vec2(.004,-.136),vec2(.026,.004),.002,nightInk);
-    cutBox(ink,figure-vec2(0,-.102),vec2(.018,.006),.004,cranberry);
-    cutLine(ink,figure,vec2(-.01,-.102),vec2(-.050,-.086+.007*sin(stepAngle)),.005,cranberry);
+    cutLine(ink.rgb,figure,vec2(-.007,-.035),vec2(-.012+stride,.0),.006,nightInk);
+    cutLine(ink.rgb,figure,vec2(.008,-.035),vec2(.013-stride,.0),.006,nightInk);
+    paper(ink.rgb,christmasTriangle(figure,vec2(0,-.119),vec2(-.034,-.031),vec2(.032,-.031)),vec3(.14,.28,.29));
+    cutDisc(ink.rgb,figure-vec2(.003,-.123),.020,vec3(.91,.65,.44));
+    cutBox(ink.rgb,figure-vec2(.0,-.144),vec2(.019,.012),.008,nightInk);
+    cutBox(ink.rgb,figure-vec2(.004,-.136),vec2(.026,.004),.002,nightInk);
+    cutBox(ink.rgb,figure-vec2(0,-.102),vec2(.018,.006),.004,cranberry);
+    cutLine(ink.rgb,figure,vec2(-.01,-.102),vec2(-.050,-.086+.007*sin(stepAngle)),.005,cranberry);
     vec2 hand=vec2(.044,-.085+.007*sin(stepAngle));
-    cutLine(ink,figure,vec2(.010,-.094),hand,.006,nightInk);
+    cutLine(ink.rgb,figure,vec2(.010,-.094),hand,.006,nightInk);
     vec2 lamp=figure-hand-vec2(.005,.019);
-    ink+=vec3(.34,.19,.045)*lightPool(lamp,vec2(.070,.066));
-    cutBox(ink,lamp,vec2(.011,.017),.003,brass);
-    cutBox(ink,lamp,vec2(.007,.011),.002,ivory);
+    ink.rgb+=vec3(.34,.19,.045)*lightPool(lamp,vec2(.070,.066));
+    cutBox(ink.rgb,lamp,vec2(.011,.017),.003,brass);
+    cutBox(ink.rgb,lamp,vec2(.007,.011),.002,ivory);
     return ink;
 }
 
-void nutcrackerLeg(inout vec3 ink,vec2 q,float side,float angle){
+void nutcrackerLeg(inout vec4 ink,vec2 q,float side,float angle){
     vec2 leg=rotatePoint(q-vec2(side*.042,.091),angle);
     cutBox(ink,leg-vec2(0,.057),vec2(.022,.061),.011,vec3(.86,.76,.59));
     cutBox(ink,leg-vec2(-.010,.055),vec2(.003,.053),.002,ivory);
@@ -346,7 +398,7 @@ void nutcrackerLeg(inout vec3 ink,vec2 q,float side,float angle){
     cutBox(ink,leg-vec2(side*.010,.197),vec2(.038,.013),.010,nightInk);
     cutBox(ink,leg-vec2(side*.010,.208),vec2(.038,.003),.002,brass);
 }
-void nutcrackerArm(inout vec3 ink,vec2 q,float side,float angle,float cycle){
+void nutcrackerArm(inout vec4 ink,vec2 q,float side,float angle,float cycle,bool cutout){
     vec2 arm=rotatePoint(q-vec2(side*.089,-.079),angle);
     cutBox(ink,arm-vec2(0,.052),vec2(.022,.056),.013,cranberry);
     cutBox(ink,arm-vec2(0,.105),vec2(.024,.016),.004,vec3(.15,.27,.31));
@@ -360,64 +412,76 @@ void nutcrackerArm(inout vec3 ink,vec2 q,float side,float angle,float cycle){
     if(side>0.0){
         vec2 baton=rotatePoint(arm-vec2(.004,.129),-.58-.16*sin(cycle*2.0));
         cutLine(ink,baton,vec2(.003,.009),vec2(.091,-.101),.0042,brass);
-        paper(ink,christmasStar(baton-vec2(.091,-.101),.017),ivory);
+        vec2 tip=baton-vec2(.091,-.101);
+        if(cutout){
+            // Detached from the stage, the sparkle follows the conductor's moving baton.
+            float shine=(density/80.0)*(.62+.38*cos(4.0*cycle));
+            vec2 ray=abs(rotatePoint(tip,.28));
+            float glint=max(min(ray.x,ray.y)*.84+max(ray.x,ray.y)*.05-.0025,max(ray.x,ray.y)-.052);
+            ink=mix(ink,vec4(goldLeaf,1.0),shapeMask(glint)*clamp(shine,0.0,1.0));
+        }
+        paper(ink,christmasStar(tip,.017),ivory);
     }
 }
-vec3 nutcrackerWaltz(vec2 p,vec2 extent,float turn,float cycle){
-    vec2 panel=p/extent;
-    vec3 ink=vec3(.118,.066,.14)+vec3(.25,.105,.104)*lightPool(panel-vec2(0,-.17),vec2(.53,.49));
-    float beamCentre=.10*sin(cycle);
-    ink+=vec3(.15,.11,.066)*lightPool(vec2(panel.x-beamCentre,panel.y+.08),vec2(.27,.50));
-    for(int i=0;i<2;++i){
-        float side=i==0?-1.0:1.0;
-        float spotlightX=side*(.36-(panel.y+.5)*.36)+.026*sin(cycle);
-        ink+=vec3(.050,.036,.020)*lightPool(vec2(panel.x-spotlightX,panel.y+.15),vec2(.06+(panel.y+.5)*.09,.58));
+vec4 nutcrackerWaltz(vec2 p,vec2 extent,float turn,float cycle,bool cutout){
+    vec4 ink=vec4(0.0);
+    if(!cutout){
+        vec2 panel=p/extent;
+        vec3 backdrop=vec3(.118,.066,.14)+vec3(.25,.105,.104)*lightPool(panel-vec2(0,-.17),vec2(.53,.49));
+        float beamCentre=.10*sin(cycle);
+        backdrop+=vec3(.15,.11,.066)*lightPool(vec2(panel.x-beamCentre,panel.y+.08),vec2(.27,.50));
+        for(int i=0;i<2;++i){
+            float side=i==0?-1.0:1.0;
+            float spotlightX=side*(.36-(panel.y+.5)*.36)+.026*sin(cycle);
+            backdrop+=vec3(.050,.036,.020)*lightPool(vec2(panel.x-spotlightX,panel.y+.15),vec2(.06+(panel.y+.5)*.09,.58));
+        }
+        winterStars(backdrop,p+vec2(3.0,3.4),cycle,.05+density*.0105,vec3(.99,.76,.43));
+        float stageLevel=.366;
+        paper(backdrop,stageLevel-p.y,vec3(.37,.19,.22));
+        float plank=mod(p.x+.09*p.y,.174)-.087;
+        if(p.y>stageLevel)paper(backdrop,abs(plank)-.0018,vec3(.48,.28,.23));
+        float tilt=.035*sin(cycle*2.0);
+        float curtainEdge=.38+.022*cos(panel.y*6.0+tilt)-.23*pow(max(.23-panel.y,0.0),1.6);
+        float wings=curtainEdge-abs(panel.x);
+        if(wings<.012){
+            float folds=.5+.5*cos(abs(panel.x)*90.0+3.2*panel.y);
+            vec3 velvet=mix(vec3(.25,.065,.115),vec3(.56,.135,.19),folds);
+            paper(backdrop,wings,velvet);
+            paper(backdrop,max(wings,abs(wings)-.005),brass);
+            float tie=.051+.28*(abs(panel.x)-.39);
+            paper(backdrop,max(wings,abs(panel.y-tie)-.009),goldLeaf);
+        }
+        float scallop=-.463+.052*(.5+.5*cos(panel.x*16.0));
+        paper(backdrop,panel.y-scallop,vec3(.36,.075,.14));
+        paper(backdrop,max(panel.y-scallop,scallop-.006-panel.y),brass);
+        // A bevelled octagonal music box, winding key and repeating inlaid diamonds.
+        float boxWidth=.307,boxY=.343;
+        vec2 base=p-vec2(0,boxY);
+        float plinth=max(christmasBox(base,vec2(boxWidth,.045),.008),abs(base.x)+abs(base.y)*.46-boxWidth);
+        vec2 key=p-vec2(.346,.340);
+        cutLine(backdrop,key,vec2(-.052,0),vec2(.025,0),.007,brass);
+        float keyHeight=.010+.016*(.5+.5*cos(4.0*cycle));
+        for(int i=0;i<2;++i){
+            vec2 loop=key-vec2(.028,i==0?-keyHeight:keyHeight);
+            paper(backdrop,abs(harvestEllipse(loop,vec2(.020,keyHeight)))-.0038,goldLeaf);
+        }
+        paper(backdrop,plinth,vec3(.12,.26,.28));
+        paper(backdrop,max(plinth,abs(base.y)-.036),vec3(.17,.35,.34));
+        float diamond=abs(mod(base.x+.032,.064)-.032)+abs(base.y)*1.15;
+        paper(backdrop,max(plinth,abs(diamond-.018)-.0028),brass);
+        cutBox(backdrop,base-vec2(0,-.046),vec2(.302,.008),.005,goldLeaf);
+        cutBox(backdrop,base-vec2(0,.046),vec2(.290,.006),.004,brass);
+        ink=vec4(backdrop,1.0);
     }
-    winterStars(ink,p+vec2(3.0,3.4),cycle,.05+density*.0105,vec3(.99,.76,.43));
-    float stageLevel=.366;
-    paper(ink,stageLevel-p.y,vec3(.37,.19,.22));
-    float plank=mod(p.x+.09*p.y,.174)-.087;
-    if(p.y>stageLevel)paper(ink,abs(plank)-.0018,vec3(.48,.28,.23));
-    float tilt=.035*sin(cycle*2.0);
-    float curtainEdge=.38+.022*cos(panel.y*6.0+tilt)-.23*pow(max(.23-panel.y,0.0),1.6);
-    float wings=curtainEdge-abs(panel.x);
-    if(wings<.012){
-        float folds=.5+.5*cos(abs(panel.x)*90.0+3.2*panel.y);
-        vec3 velvet=mix(vec3(.25,.065,.115),vec3(.56,.135,.19),folds);
-        paper(ink,wings,velvet);
-        paper(ink,max(wings,abs(wings)-.005),brass);
-        float tie=.051+.28*(abs(panel.x)-.39);
-        paper(ink,max(wings,abs(panel.y-tie)-.009),goldLeaf);
-    }
-    float scallop=-.463+.052*(.5+.5*cos(panel.x*16.0));
-    paper(ink,panel.y-scallop,vec3(.36,.075,.14));
-    paper(ink,max(panel.y-scallop,scallop-.006-panel.y),brass);
-    // A bevelled octagonal music box, winding key and repeating inlaid diamonds.
-    float boxWidth=.307,boxY=.343;
-    vec2 base=p-vec2(0,boxY);
-    float plinth=max(christmasBox(base,vec2(boxWidth,.045),.008),abs(base.x)+abs(base.y)*.46-boxWidth);
-    vec2 key=p-vec2(.346,.340);
-    cutLine(ink,key,vec2(-.052,0),vec2(.025,0),.007,brass);
-    float keyHeight=.010+.016*(.5+.5*cos(4.0*cycle));
-    for(int i=0;i<2;++i){
-        vec2 loop=key-vec2(.028,i==0?-keyHeight:keyHeight);
-        paper(ink,abs(harvestEllipse(loop,vec2(.020,keyHeight)))-.0038,goldLeaf);
-    }
-    paper(ink,plinth,vec3(.12,.26,.28));
-    paper(ink,max(plinth,abs(base.y)-.036),vec3(.17,.35,.34));
-    float diamond=abs(mod(base.x+.032,.064)-.032)+abs(base.y)*1.15;
-    paper(ink,max(plinth,abs(diamond-.018)-.0028),brass);
-    cutBox(ink,base-vec2(0,-.046),vec2(.302,.008),.005,goldLeaf);
-    cutBox(ink,base-vec2(0,.046),vec2(.290,.006),.004,brass);
     float size=.76+dotRadius*.91;
     float rhythm=sin(cycle*4.0),bow=seasonBeat(turn*24.0,7.5,10.0,11.6,14.0);
-    vec2 pivot=vec2(.078*sin(cycle),.292);
+    vec2 pivot=vec2(.078*sin(cycle),cutout?.34*size:.292);
     vec2 q=(p-pivot)/size+vec2(0,.299-.010*rhythm*rhythm);
     q=rotatePoint(q,(.018+.045*flow)*sin(cycle*2.0)+.075*bow*flow);
     nutcrackerLeg(ink,q,-1.0,-.065-(.13+.37*flow)*rhythm);
     nutcrackerLeg(ink,q,1.0,.065+(.13+.37*flow)*rhythm);
-    nutcrackerArm(ink,q,-1.0,-.24-(.24+.50*flow)*(.5+.5*cos(cycle*2.0)),cycle);
-    nutcrackerArm(ink,q,1.0,.28+(.42+.77*flow)*(.5+.5*sin(cycle*2.0))+.29*bow,cycle);
+    nutcrackerArm(ink,q,-1.0,-.24-(.24+.50*flow)*(.5+.5*cos(cycle*2.0)),cycle,cutout);
+    nutcrackerArm(ink,q,1.0,.28+(.42+.77*flow)*(.5+.5*sin(cycle*2.0))+.29*bow,cycle,cutout);
     float coat=max(abs(q.x)-(.079-.014*clamp((q.y+.089)/.21,0.0,1.0)),max(-.098-q.y,q.y-.106));
     paper(ink,coat,cranberry);
     paper(ink,max(coat,q.x+.045),vec3(.82,.20,.22));
@@ -466,10 +530,18 @@ vec3 nutcrackerWaltz(vec2 p,vec2 extent,float turn,float cycle){
     cutDisc(ink,h-vec2(-.040,-.161),.014,cranberry);
     return ink;
 }
-vec3 christmasScene(vec2 p,vec2 extent,float turn){
+vec4 christmasIllustration(vec2 p,vec2 extent,float turn,bool cutout){
     float cycle=turn*christmasTau;
-    if(pattern==23)return northPoleExpress(p,extent,turn,cycle);
-    if(pattern==24)return evergreenOverture(p,extent,turn,cycle);
-    if(pattern==25)return clocktowerCarols(p,extent,turn,cycle);
-    return nutcrackerWaltz(p,extent,turn,cycle);
+    if(pattern==23)return northPoleExpress(p,extent,turn,cycle,cutout);
+    if(pattern==24)return evergreenOverture(p,extent,turn,cycle,cutout);
+    if(pattern==25)return clocktowerCarols(p,extent,turn,cycle,cutout);
+    return nutcrackerWaltz(p,extent,turn,cycle,cutout);
+}
+vec3 christmasScene(vec2 p,vec2 extent,float turn){
+    return christmasIllustration(p,extent,turn,false).rgb;
+}
+vec4 christmasCutout(vec2 p,vec2 extent,float turn){
+    vec4 ink=christmasIllustration(p,extent,turn,true);
+    if(ink.a<=0.0)return vec4(0.0);
+    return vec4(clamp(ink.rgb/ink.a,0.0,1.0),ink.a);
 }

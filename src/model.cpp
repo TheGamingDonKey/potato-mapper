@@ -18,6 +18,7 @@
 #include <QCryptographicHash>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 
 MediaSource::MediaSource(const QString &path, QObject *parent) : QObject(parent) {
     if (path.isEmpty()) {
@@ -124,13 +125,17 @@ QJsonObject Surface::json(const QString &base) const {
     QJsonArray cs,ms; for(auto p:corners)cs.append(pointJson(p));for(auto p:mesh)ms.append(pointJson(p));
     QString path=media;
     if(!path.isEmpty()&&!base.isEmpty())path=QDir(base).relativeFilePath(path);
-    return {{"id",id},{"routeUid",routeUid},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"fxDensity",fx.density},{"fxFlow",fx.flow},{"fxAngle",fx.angle},{"fxPalette",fx.palette},{"fxEdge",fx.edge},{"fxReverse",fx.reverse},{"brightness",brightness},{"opacity",opacity},{"blend",blend},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
+    QJsonObject result{{"id",id},{"routeUid",routeUid},{"name",name},{"media",path},{"pattern",pattern},{"patternSpeed",patternSpeed},{"patternSize",patternSize},{"patternPlaying",patternPlaying},{"fxDensity",fx.density},{"fxFlow",fx.flow},{"fxAngle",fx.angle},{"fxPalette",fx.palette},{"fxEdge",fx.edge},{"fxReverse",fx.reverse},{"brightness",brightness},{"opacity",opacity},{"blend",blend},{"corners",cs},{"cells",cells},{"mesh",ms},{"visible",visible},{"locked",locked},{"fit",fit}};
+    if(subjectOnly && hasChristmasScenery(pattern))result["subjectOnly"]=true;
+    return result;
 }
 bool Surface::fromJson(const QJsonObject &j,const QString &base,Surface &s){
     s.routeUid=j["routeUid"].toString(s.routeUid);s.id=j["id"].toString(s.id);s.name=j["name"].toString("Surface");s.media=j["media"].toString();
     if(!s.media.isEmpty())s.media=QDir::cleanPath(QDir::isAbsolutePath(s.media)?s.media:QDir(base).absoluteFilePath(s.media));
     s.cells=j["cells"].toInt(2);s.visible=j["visible"].toBool(true);s.locked=j["locked"].toBool();s.fit=std::clamp(j["fit"].toInt(),0,2);
     s.pattern=std::clamp(j["pattern"].toInt(),0,int(potatoPatterns().size())-1);s.patternSpeed=std::clamp(j["patternSpeed"].toInt(100),0,300);s.patternSize=std::clamp(j["patternSize"].toInt(18),5,45);s.patternPlaying=j["patternPlaying"].toBool(true);
+    s.subjectOnly=hasChristmasScenery(s.pattern) && j["subjectOnly"].toBool();
+    if(s.pattern==sleighFlightPattern)s.patternPhase=sleighOpeningPhase;
     s.blend=std::clamp(j["blend"].toInt(),0,2);
     s.fx.density=std::clamp(j["fxDensity"].toInt(potatoPatternDensity(s.pattern)),4,80);s.fx.flow=std::clamp(j["fxFlow"].toInt(potatoPatternDefaultFlow(s.pattern)),0,100);s.fx.angle=std::clamp(j["fxAngle"].toInt(),-180,180);
     s.fx.palette=std::clamp(j["fxPalette"].toInt(potatoPatternPalette(s.pattern)),0,5);s.fx.edge=std::clamp(j["fxEdge"].toInt(),0,25);s.fx.reverse=j["fxReverse"].toBool();
@@ -151,7 +156,10 @@ Scene::Scene(QObject *parent):QObject(parent){
             if(entranceElapsed>=PotatoEntrance::duration)entranceActive=false;
             animated=true;
         }
-        for(auto &s:surfaces)if(s.pattern&&s.visible&&s.patternPlaying&&s.patternSpeed){s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);if(!dynamicSurface(s.id))animated=true;}
+        for(auto &s:surfaces)if(s.pattern && (s.visible || s.pattern==sleighFlightPattern) && s.patternPlaying && s.patternSpeed){
+            s.patternPhase+=dt*s.patternSpeed/100.0*(s.fx.reverse?-1.0:1.0);
+            if(s.visible && !dynamicSurface(s.id))animated=true;
+        }
         if(dynamic.effect&&dynamic.playing&&!dynamicSurfaces.isEmpty()){
             dynamicElapsed+=dt*dynamic.speed/100.0;
             updateDynamicFrame();animated=true;
@@ -267,10 +275,24 @@ MediaSource *Scene::source(const QString &path){
     connect(s,&MediaSource::error,this,&Scene::message);return s;
 }
 void Scene::select(int i){selected=i;emit structureChanged();emit changed();}
+// Each panel clips a different part of one flight. Brightness, opacity and soft
+// edges still belong to the individual panel, including when a new panel joins.
+static void matchSleighFlight(Surface &panel,const Surface &flight){
+    panel.patternPhase=flight.patternPhase;
+    panel.patternPlaying=flight.patternPlaying;
+    panel.patternSpeed=flight.patternSpeed;
+    panel.patternSize=flight.patternSize;
+    const int edge=panel.fx.edge;
+    panel.fx=flight.fx;
+    panel.fx.edge=edge;
+}
 void Scene::touch(bool structure){
     QSet<QString> routes;
     for(auto &surface:surfaces){if(surface.routeUid.isEmpty()||routes.contains(surface.routeUid))surface.routeUid=QUuid::createUuid().toString(QUuid::WithoutBraces);routes.insert(surface.routeUid);}
     connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto &c){return !routes.contains(c.a)||!routes.contains(c.b);}),connections.end());
+    if(const Surface *flight=current();flight && flight->pattern==sleighFlightPattern){
+        for(auto &panel:surfaces)if(&panel!=flight && panel.pattern==sleighFlightPattern)matchSleighFlight(panel,*flight);
+    }
     if(selected>=0&&selected<surfaces.size()&&surfaces[selected].pattern==22){
         const auto master=surfaces[selected];QSet<QString> group{master.routeUid};bool more=true;
         while(more){more=false;for(const auto &c:connections)if(group.contains(c.a)||group.contains(c.b))for(auto &s:surfaces)if(s.pattern==22&&(s.routeUid==c.a||s.routeUid==c.b)&&!group.contains(s.routeUid)){group.insert(s.routeUid);more=true;}}
@@ -295,12 +317,12 @@ void Scene::add(){
 }
 void Scene::assignMedia(int i,const QString &path){
     if(i<0||i>=surfaces.size()||!QFileInfo::exists(path))return;
-    checkpoint();surfaces[i].pattern=0;surfaces[i].media=QFileInfo(path).absoluteFilePath();source(surfaces[i].media);touch(true);
+    checkpoint();surfaces[i].pattern=0;surfaces[i].subjectOnly=false;surfaces[i].media=QFileInfo(path).absoluteFilePath();source(surfaces[i].media);touch(true);
 }
 void Scene::clearMedia(int i){
     if(i<0||i>=surfaces.size())return;
     auto &s=surfaces[i];if(s.media.isEmpty()&&!s.pattern)return;
-    checkpoint();s.media.clear();s.pattern=0;s.patternPhase=0;touch(true);
+    checkpoint();s.media.clear();s.pattern=0;s.subjectOnly=false;s.patternPhase=0;touch(true);
 }
 void Scene::renameSurface(int i,const QString &name){
     const auto clean=name.trimmed().left(80);
@@ -327,10 +349,24 @@ void Scene::setPattern(int i,int pattern){
     if(i<0||i>=surfaces.size())return;
     pattern=std::clamp(pattern,0,int(potatoPatterns().size())-1);auto &s=surfaces[i];if(s.pattern==pattern)return;
     if(!pattern){clearMedia(i);return;}
-    checkpoint();s.pattern=pattern;s.media.clear();s.patternPhase=0;s.patternPlaying=true;
+    checkpoint();s.pattern=pattern;s.media.clear();s.subjectOnly=false;s.patternPhase=0;s.patternPlaying=true;
     s.fx.density=potatoPatternDensity(pattern);s.fx.palette=potatoPatternPalette(pattern);
     if(pattern>=16)s.fx.flow=potatoPatternDefaultFlow(pattern);
     if(pattern>=5)s.patternSize=potatoPatternDefaultSize(pattern);
+    if(pattern==sleighFlightPattern){
+        s.patternPhase=sleighOpeningPhase;
+        for(const auto &panel:std::as_const(surfaces)){
+            if(&panel!=&s && panel.pattern==sleighFlightPattern){matchSleighFlight(s,panel);break;}
+        }
+    }
+    touch(true);
+}
+void Scene::setSubjectOnly(int index,bool enabled){
+    if(index<0 || index>=surfaces.size())return;
+    auto &surface=surfaces[index];
+    if(!hasChristmasScenery(surface.pattern) || surface.subjectOnly==enabled)return;
+    checkpoint();
+    surface.subjectOnly=enabled;
     touch(true);
 }
 void Scene::setFxLook(int i,FxLook look){
@@ -343,13 +379,13 @@ QJsonObject Scene::json(const QString &base) const {
     QJsonArray links;for(const auto &c:connections)links.append(QJsonObject{{"a",c.a},{"b",c.b},{"edgeA",c.edgeA},{"edgeB",c.edgeB},{"beginB",c.beginB},{"endB",c.endB},{"tied",c.tied}});
     const bool modern=!actorsPlaying||actorSpeed!=100||actorSize!=100||wizardActors||boundaryActors||!connections.isEmpty()||std::any_of(surfaces.begin(),surfaces.end(),[](const Surface &s){return s.pattern>=19;});
     const bool actorControls=!actorsPlaying||actorSpeed!=100||actorSize!=100;
-    QJsonObject result{{"format","PotatoMapper"},{"version",actorControls?3:modern?2:1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items},{"dynamic",dynamic.json()}};
+    const bool needsCutouts=std::any_of(surfaces.cbegin(),surfaces.cend(),[](const Surface &s){return s.pattern==sleighFlightPattern || (s.subjectOnly && hasChristmasScenery(s.pattern));});
+    QJsonObject result{{"format","PotatoMapper"},{"version",needsCutouts?4:actorControls?3:modern?2:1},{"width",outputSize.width()},{"height",outputSize.height()},{"surfaces",items},{"dynamic",dynamic.json()}};
     if(modern){result["connections"]=links;result["boundaryActors"]=boundaryActors;result["wizardActors"]=wizardActors;result["actorsPlaying"]=actorsPlaying;result["actorSpeed"]=actorSpeed;result["actorSize"]=actorSize;}
     return result;
 }
 bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool restartDynamic){
     if(!PotatoProjects::validateDocument(j,error))return false;
-    if((j["format"].toString()!="PotatoMapper"&&j["format"].toString()!="HomeMapper")||(j["version"].toInt()!=1&&j["version"].toInt()!=2&&j["version"].toInt()!=3)){error="This is not a supported Potato Mapper project.";return false;}
     QSize size(j["width"].toInt(),j["height"].toInt());
     if(size.width()<1||size.height()<1||size.width()>16384||size.height()>16384){error="Invalid output size.";return false;}
     QVector<Surface> restored;
@@ -371,6 +407,11 @@ bool Scene::restore(const QJsonObject &j,const QString &base,QString &error,bool
         restoredConnections<<c;
     }
     surfaces=restored;connections=restoredConnections;boundaryActors=j["boundaryActors"].toBool();wizardActors=j["wizardActors"].toBool();actorsPlaying=j["actorsPlaying"].toBool(true);actorSpeed=std::clamp(j["actorSpeed"].toInt(100),10,300);actorSize=std::clamp(j["actorSize"].toInt(100),50,200);actorElapsed=0;outputSize=size;selected=surfaces.isEmpty()?-1:0;
+    const Surface *flight=nullptr;
+    for(auto &panel:surfaces)if(panel.pattern==sleighFlightPattern){
+        if(flight)matchSleighFlight(panel,*flight);
+        else flight=&panel;
+    }
     const auto restoredDynamic=PotatoDynamic::Settings::fromJson(j["dynamic"].toObject());
     if(restartDynamic||restoredDynamic.effect!=dynamic.effect||restoredDynamic.members!=dynamic.members)dynamicElapsed=0;
     dynamic=restoredDynamic;rebuildDynamic();

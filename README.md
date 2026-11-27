@@ -6,7 +6,7 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper 0.9.13 for Windows](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.exe)** · [Portable ZIP](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.zip) · [All releases](https://github.com/TheGamingDonKey/potato-mapper/releases)
+**[Download Potato Mapper 0.9.14 for Windows](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.14/PotatoMapper-0.9.14-windows-x64.exe)** · [Portable ZIP](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.14/PotatoMapper-0.9.14-windows-x64.zip) · [All releases](https://github.com/TheGamingDonKey/potato-mapper/releases)
 
 1. Double-click the Windows download in **Downloads**. It creates a complete app folder beside the file and opens Potato Mapper. For the ZIP, choose **Extract All**, then open **PotatoMapper.exe** in the extracted folder.
 2. Choose **File → Examples** for a ready-made Christmas scene. Edit the animation on the selected surface in **Potato FX**.
@@ -18,9 +18,11 @@ Supports 64-bit Intel/AMD Windows 10 (22H2) or Windows 11, with an OpenGL 3.3 Co
 
 ## Christmas studio
 
-Four original scenes join Shared Snowfall in the seasonal collection. Open **North Pole Express**, **Evergreen Overture**, **Clocktower Carols**, or **Nutcracker Waltz** in File → Examples. Each runs in the editor and projector output and can be adjusted on individual surfaces.
+Choose **File → Examples → Santa's Sleigh Ride** for one Santa and two reindeer flying across two mapped panels. Drag the panels onto the objects you want to light. To use your own mapping, apply the same animation in **Potato FX** to each participating surface. They share a 24-second flight and one set of motion controls. Santa follows changes in panel height, continues through gaps and appears again when he reaches the next surface. Stack panels vertically for a top-to-bottom flight or use **Reverse movement** to change direction.
 
-[See the four scenes and watch the projection preview](https://potato-mapper.batibandit.chatgpt.site) · [Download the 24-second H.264 preview](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-christmas-preview.mp4)
+**North Pole Express**, **Evergreen Overture**, **Clocktower Carols** and **Nutcracker Waltz** each offer **Potato FX → Subject only**. Turn it on to project the moving train, decorated tree, bell tower or dancer with open space around the artwork. Existing projects open with their original scenery. Transparent areas reveal any lower layer. With an empty stage, the projector receives black in those areas. A projector’s own black level and the room lighting determine how visible its footprint is on your wall.
+
+[Watch the native projection previews](https://potato-mapper.batibandit.chatgpt.site) · [Download Santa on black as a looping MP4](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.14/santa-flight.mp4)
 
 ## Why it exists
 
