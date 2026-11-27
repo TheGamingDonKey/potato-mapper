@@ -5,6 +5,7 @@
 - [x] Make the Windows download open from Downloads, ship the full portable ZIP, and check startup and repeat-open in a path with spaces and non-English characters.
 - [x] Add four editable Christmas scenes, embed their rendered picker thumbnails, and verify their motion, mapped output and save/reopen behavior.
 - [x] Check the 0.8.8 upgrade, interruption and rollback using synthetic saved work. Install 0.9.13 locally with the previous runtime retained.
+- [x] Publish v0.9.13 and the Christmas download site. Launch the publicly downloaded editor on a separate Windows machine and verify its packaged files and saved work. [Hosted Windows check](https://github.com/TheGamingDonKey/potato-mapper/actions/runs/45918471813).
 - [x] Verify visible desktop transmission in Lumen's default Clear desktop mode with an opaque mapping canvas.
 - [ ] Verify native frosted blur on the user's configuration and exercise the USB or HDMI playback on a physical projector.
 
