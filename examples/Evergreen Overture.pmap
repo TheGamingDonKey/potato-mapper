@@ -1,0 +1,37 @@
+{
+  "format": "PotatoMapper",
+  "version": 2,
+  "width": 1920,
+  "height": 1080,
+  "connections": [],
+  "boundaryActors": false,
+  "wizardActors": false,
+  "dynamic": { "effect": 0, "playing": true, "members": [] },
+  "surfaces": [
+    {
+      "id": "evergreen-overture",
+      "routeUid": "90f64538-4175-4068-a0d9-ed69dd2ee91e",
+      "name": "Evergreen Overture",
+      "media": "",
+      "pattern": 24,
+      "patternSpeed": 100,
+      "patternSize": 24,
+      "patternPlaying": true,
+      "fxDensity": 42,
+      "fxFlow": 72,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxReverse": false,
+      "fxEdge": 0,
+      "brightness": 100,
+      "opacity": 100,
+      "blend": 0,
+      "corners": [[0.025, 0.025], [0.975, 0.025], [0.975, 0.975], [0.025, 0.975]],
+      "cells": 2,
+      "mesh": [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [0.5, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]],
+      "visible": true,
+      "locked": false,
+      "fit": 0
+    }
+  ]
+}

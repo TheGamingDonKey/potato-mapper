@@ -22,10 +22,17 @@ inline bool versionValid(const std::string &version) {
     return std::regex_match(version, std::regex("[0-9]{1,5}\\.[0-9]{1,5}\\.[0-9]{1,5}"));
 }
 inline bool plainPath(const fs::path &path) {
-    // Reject junctions as well as symbolic links, including linked ancestors.
+    // A synced Downloads folder may contain Windows Cloud Files placeholders.
+    // They hydrate in place. Junctions, symlinks and unknown tags are rejected.
     for (auto p=fs::absolute(path); !p.empty(); p=p.parent_path()) {
         const auto attributes=GetFileAttributesW(p.c_str());
-        if(attributes!=INVALID_FILE_ATTRIBUTES && (attributes&FILE_ATTRIBUTE_REPARSE_POINT))return false;
+        if(attributes!=INVALID_FILE_ATTRIBUTES && (attributes&FILE_ATTRIBUTE_REPARSE_POINT)){
+            WIN32_FIND_DATAW data{};
+            const auto find=FindFirstFileW(p.c_str(),&data);
+            if(find==INVALID_HANDLE_VALUE)return false;
+            FindClose(find);
+            if((data.dwReserved0 & ~IO_REPARSE_TAG_CLOUD_MASK)!=IO_REPARSE_TAG_CLOUD)return false;
+        }
         if(p==p.parent_path())break;
     }
     return true;

@@ -1,6 +1,7 @@
 POTATO MAPPER
 
-1. Extract the whole ZIP to a folder on your computer.
+1. Open the downloaded Windows EXE to unpack the complete app beside it.
+   For the ZIP, right-click it and choose Extract All.
 2. Open PotatoMapper.exe inside that folder.
 3. Connect your projector. Press Windows + P and choose Extend.
 4. Add a surface, drop in an image/video, and move its corners or mesh points.
@@ -9,6 +10,10 @@ POTATO MAPPER
 Keep PotatoMapper.exe, installation.txt, current.txt and the versions folder
 together. The versions folder contains the editor and its runtime libraries.
 You do not need Visual Studio, Qt, Python, or a GitHub account to run this build.
+
+If Windows is showing a compressed folder, extract it before opening the
+launcher. Use a folder you can write to. GitHub's "Source code" downloads are
+for developers. The download page links to the ready-to-run Windows build.
 
 For 64-bit Intel/AMD Windows 10 (22H2) or Windows 11 with an OpenGL 3.3 Core
 graphics driver. This is not a macOS, Linux, or native Windows ARM build.
@@ -43,6 +48,10 @@ File > Examples > Maple Supper opens warm maple leaves, pumpkins and a potato
 in an autumn scarf. Harvest Lanterns is a quieter candle-and-amber scene.
 Use Potato FX > Animation to put either effect on your existing mapped surface.
 Start with Original colours, Speed 100%, Scene size 24% and Flow 70%.
+
+CHRISTMAS
+File > Examples includes North Pole Express, Evergreen Overture, Clocktower
+Carols and Nutcracker Waltz. Select a surface to adjust its Potato FX controls.
 
 UPDATES
 Use Help > Check for updates to download a newer stable Windows release.

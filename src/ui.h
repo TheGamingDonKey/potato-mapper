@@ -26,12 +26,13 @@ public:
     QWidget *body;
     QVBoxLayout *content;
     explicit InspectorSection(const QString &title,QWidget *parent=nullptr):QWidget(parent){
-        auto *layout=new QVBoxLayout(this);layout->setContentsMargins(0,0,0,0);layout->setSpacing(8);
+        auto *layout=new QVBoxLayout(this);layout->setContentsMargins(0,0,0,0);layout->setSpacing(10);
         heading=new QToolButton;heading->setObjectName("sectionHeading");heading->setText(title);
         heading->setCheckable(true);heading->setChecked(true);heading->setArrowType(Qt::DownArrow);
         heading->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);heading->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+        heading->setMinimumHeight(36);heading->setAccessibleName(title);
         heading->setToolTip("Expand or collapse "+title.toLower());layout->addWidget(heading);
-        body=new QWidget;content=new QVBoxLayout(body);content->setContentsMargins(2,0,2,4);content->setSpacing(8);layout->addWidget(body);
+        body=new QWidget;content=new QVBoxLayout(body);content->setContentsMargins(2,0,2,6);content->setSpacing(10);layout->addWidget(body);
         connect(heading,&QToolButton::toggled,this,[this](bool open){body->setVisible(open);heading->setArrowType(open?Qt::DownArrow:Qt::RightArrow);});
     }
 };

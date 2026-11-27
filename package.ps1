@@ -7,6 +7,7 @@ param(
     [switch]$SkipZip
 )
 $ErrorActionPreference = 'Stop'
+& (Join-Path $PSScriptRoot 'packaging\Check-Storage.ps1') -ReserveBytes 110000000
 if (-not $QtPath) { $QtPath = $env:QTDIR }
 if (-not $QtPath) { $QtPath = Join-Path $env:USERPROFILE '.cache\home-mapper-qt\6.10.3\msvc2022_64' }
 if (-not $CrtPath) {
@@ -28,15 +29,21 @@ foreach ($required in $exe, $launcher, $refresh, (Join-Path $QtPath 'bin\windepl
 $version = (Get-Item -LiteralPath $exe).VersionInfo.FileVersion
 if (-not $version) { throw 'Executable has no file version.' }
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Executable version must be X.Y.Z.' }
+$projectDefinition = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'CMakeLists.txt') -Raw
+if ($projectDefinition -notmatch 'project\(PotatoMapper VERSION ([0-9]+\.[0-9]+\.[0-9]+)') { throw 'Cannot determine the configured source version.' }
+if ($version -ne $Matches[1]) { throw "Executable metadata version $version does not match source version $($Matches[1]). Update the Windows resource and rebuild before packaging." }
 $name = "PotatoMapper-$version-windows-x64"
 # Always stage in a fresh directory; never package the developer's app folder.
 if ($DestinationDirectory) {
     $stage = [IO.Path]::GetFullPath($DestinationDirectory)
+    if(!$SkipZip -and [IO.Path]::GetFileName($stage.TrimEnd('\','/')) -cne $name){throw "The folder inside the Windows ZIP must be named $name. Use -OutputDirectory to choose where to put the downloads."}
     if (Test-Path -LiteralPath $stage) { throw "Destination already exists: $stage. Use a new folder; existing app data will not be replaced." }
 } else {
-    $stageRoot = Join-Path $OutputDirectory ('stage-' + [guid]::NewGuid().ToString('N'))
+    $stageRoot = [IO.Path]::GetFullPath((Join-Path $OutputDirectory ('stage-' + [guid]::NewGuid().ToString('N'))))
+    if(Test-Path -LiteralPath $stageRoot){throw "Temporary package folder already exists: $stageRoot"}
     $stage = Join-Path $stageRoot $name
 }
+try {
 $stage = [IO.Path]::GetFullPath($stage)
 $runtime = Join-Path $stage "versions\$version"
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
@@ -62,6 +69,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\START-HERE.txt') -Des
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\THIRD-PARTY.txt') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\THIRD-PARTY.txt') -Destination $runtime
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'packaging\licenses') -Destination $runtime -Recurse
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'assets\icons\LICENSE') -Destination (Join-Path $runtime 'licenses\Fluent-System-Icons-LICENSE.txt')
 foreach ($module in 'qtbase', 'qtmultimedia', 'qtsvg') {
     Copy-Item -LiteralPath (Join-Path $QtPath "sbom\$module-6.10.3.spdx.json") -Destination (Join-Path $runtime 'licenses')
 }
@@ -89,3 +97,14 @@ if (Test-Path -LiteralPath $zip) { throw "Package already exists: $zip. Choose a
 Compress-Archive -LiteralPath $stage -DestinationPath $zip -CompressionLevel Optimal
 Write-Output "Ready: $zip"
 Write-Output "SHA256: $((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash)"
+& (Join-Path $PSScriptRoot 'packaging\New-PortableDownload.ps1') -Archive $zip
+} finally {
+    # Keep explicitly requested app folders. Only remove the transient staging
+    # directory minted by this invocation after creating the release downloads.
+    if(!$SkipZip -and !$DestinationDirectory -and (Test-Path -LiteralPath $stageRoot)){
+        $resolved=(Resolve-Path -LiteralPath $stageRoot).Path
+        $outputRoot=(Resolve-Path -LiteralPath $OutputDirectory).Path
+        if([IO.Path]::GetDirectoryName($resolved) -ne $outputRoot -or [IO.Path]::GetFileName($resolved) -notmatch '^stage-[0-9a-f]{32}$'){throw "Unexpected staging path: $resolved"}
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}

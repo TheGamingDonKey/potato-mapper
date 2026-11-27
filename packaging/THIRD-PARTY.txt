@@ -38,3 +38,8 @@ These files are redistributed from Visual Studio's designated REDIST directory
 under the Visual Studio license. They are not covered by Potato Mapper's MIT
 license or by the LGPL licenses of Qt/FFmpeg.
 https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution
+
+Microsoft Fluent System Icons
+Copyright (c) 2020 Microsoft Corporation. MIT License.
+Selected regular SVG icons are embedded in the native editor. The complete license is included as licenses/Fluent-System-Icons-LICENSE.txt.
+Source: https://github.com/microsoft/fluentui-system-icons

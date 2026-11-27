@@ -1,0 +1,182 @@
+param(
+    [string]$PackageDirectory = (Join-Path $PSScriptRoot '..\out\releases\PotatoMapper-0.9.1-windows-x64'),
+    [string]$Archive = (Join-Path $PSScriptRoot '..\out\releases\PotatoMapper-0.9.1-windows-x64.zip'),
+    [string]$OldPackageDirectory = (Join-Path $PSScriptRoot '..\app'),
+    [string]$CheckExecutable = (Join-Path $PSScriptRoot '..\out\build-desktop\Release\PotatoUpdateChecks.exe'),
+    [string]$QtPath = (Join-Path $env:USERPROFILE '.cache\home-mapper-qt\6.10.3\msvc2022_64'),
+    [switch]$DiscardVerifiedRuntimes
+)
+$ErrorActionPreference='Stop'
+$repo=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$package=(Resolve-Path -LiteralPath $PackageDirectory).Path
+$archive=(Resolve-Path -LiteralPath $Archive).Path
+$oldPackage=(Resolve-Path -LiteralPath $OldPackageDirectory).Path
+$checker=(Resolve-Path -LiteralPath $CheckExecutable).Path
+function Read-PackageVersion([string]$directory){
+    $version=([IO.File]::ReadAllText((Join-Path $directory 'current.txt'))).Trim()
+    if($version -notmatch '^\d+\.\d+\.\d+$'){throw "Invalid current.txt version in $directory"}
+    return $version
+}
+$oldVersion=Read-PackageVersion $oldPackage
+$newVersion=Read-PackageVersion $package
+if([version]$newVersion -le [version]$oldVersion){throw "Candidate $newVersion must be newer than baseline $oldVersion."}
+$oldRuntime=Join-Path $oldPackage "versions\$oldVersion"
+foreach($path in (Join-Path $oldRuntime 'PotatoMapperApp.exe'),(Join-Path $oldPackage 'PotatoMapper.exe'),(Join-Path $package 'PotatoMapper.exe')){
+    if(-not(Test-Path -LiteralPath $path -PathType Leaf)){throw "Missing fixture input: $path"}
+}
+function Check-CombinedStorage([long]$reserve=0){
+    $result=& (Join-Path $PSScriptRoot 'Check-Storage.ps1') -ReserveBytes $reserve
+    $message=($result -join "`n")
+    if($message -notmatch 'Storage: (\d+) bytes used;'){throw 'Storage check did not report combined workspace and external preview usage.'}
+    Write-Host $message
+    return [long]$Matches[1]
+}
+# During handoff, the retained old runtime, downloaded ZIP, extracted package
+# and pending runtime copy coexist. Reserve their measured sizes plus headroom
+# for launcher backups, logs and the small synthetic projects.
+$newRuntime=Join-Path $package "versions\$newVersion"
+$oldRuntimeBytes=[long](Get-ChildItem -LiteralPath $oldRuntime -Recurse -File | Measure-Object Length -Sum).Sum
+$newRuntimeBytes=[long](Get-ChildItem -LiteralPath $newRuntime -Recurse -File | Measure-Object Length -Sum).Sum
+$archiveBytes=(Get-Item -LiteralPath $archive).Length
+$archiveReader=[IO.Compression.ZipFile]::OpenRead($archive)
+try{$extractedBytes=[long]($archiveReader.Entries | Measure-Object Length -Sum).Sum}finally{$archiveReader.Dispose()}
+$reservedBytes=$oldRuntimeBytes+$newRuntimeBytes+$archiveBytes+$extractedBytes+8000000L
+$beforeBytes=Check-CombinedStorage $reservedBytes
+$root=Join-Path $repo ('out\verification\upgrade-fixture-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,8))
+$allowed=Join-Path $repo 'out\verification'
+$root=[IO.Path]::GetFullPath($root)
+if(-not $root.StartsWith($allowed+'\',[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $root)){throw 'Fixture root must be a fresh child of out/verification.'}
+[IO.Directory]::CreateDirectory($root)|Out-Null
+$install=Join-Path $root 'install'
+$robustness=Join-Path $root 'robustness'
+[IO.Directory]::CreateDirectory((Join-Path $install 'versions'))|Out-Null
+[IO.Directory]::CreateDirectory($robustness)|Out-Null
+$priorPath=$env:PATH
+$priorSession=$env:POTATO_VERIFICATION_SESSION
+$env:PATH=(Join-Path $QtPath 'bin')+';'+$env:PATH
+$env:POTATO_VERIFICATION_SESSION='1'
+$report=[ordered]@{Status='running';FixtureRoot=$root;InstallRoot=$install;BaselineRoot=$oldPackage;OldVersion=$oldVersion;NewVersion=$newVersion;SourceArchive=$archive;ArchiveSha256=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash;StorageBeforeBytes=$beforeBytes;StorageScope='Repository plus design workspace and external concept previews';ReservedBytes=$reservedBytes;Processes=@();Checks=@();ProjectorActivated=$false;Network='Deterministic mock HTTPS metadata/archive; actual ZIP extraction and portable launcher/editor used.'}
+function Assert-Fixture([bool]$condition,[string]$label){
+    if(-not $condition){throw $label}
+    $report.Checks+= $label
+    Write-Output ('PASS '+$label)
+}
+function Hash-Tree([string]$path){
+    $lines=@(Get-ChildItem -LiteralPath $path -Recurse -File | Sort-Object FullName | ForEach-Object { $_.FullName.Substring($path.Length+1)+' '+(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash })
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{[Convert]::ToHexString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes(($lines -join "`n"))))}finally{$sha.Dispose()}
+}
+function Run-Checker([string]$destination,[string]$label,[bool]$handoff){
+    $arguments=@(('"'+$archive+'"'),('"'+$package+'"'),'--install-root',('"'+$destination+'"'),'--old-version',$oldVersion)
+    if($handoff){$arguments+=@('--handoff','--launcher',('"'+(Join-Path $oldPackage 'PotatoMapper.exe')+'"'))}
+    $process=Start-Process -FilePath $checker -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $root ($label+'.stdout.txt')) -RedirectStandardError (Join-Path $root ($label+'.stderr.txt'))
+    $report.Processes+=@{Role=$label;Id=$process.Id;Executable=$checker}
+    if(-not $process.WaitForExit(45000)){throw "$label checker timed out (PID $($process.Id))"}
+    Get-Content -LiteralPath (Join-Path $root ($label+'.stdout.txt'))
+    Get-Content -LiteralPath (Join-Path $root ($label+'.stderr.txt'))
+    Assert-Fixture ($process.ExitCode -eq 0) "$label update checker exit 0"
+}
+function Fixture-Editor([string]$version){
+    $expected=Join-Path $install "versions\$version\PotatoMapperApp.exe"
+    @(Get-Process PotatoMapperApp -ErrorAction SilentlyContinue | Where-Object {$_.Path -eq $expected})
+}
+function Await-Editor([string]$version){
+    for($attempt=0;$attempt -lt 80;$attempt++){
+        $editor=@(Fixture-Editor $version | Where-Object {$_.MainWindowTitle -like '*My mapping.pmap*'})
+        if($editor.Count -eq 1){return $editor[0]}
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Fixture editor $version did not reopen My mapping.pmap."
+}
+function Close-FixtureEditor($editor){
+    if(-not $editor.Path.StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Refusing to close a process outside the disposable fixture.'}
+    Assert-Fixture ($editor.CloseMainWindow()) "normal close requested for fixture editor PID $($editor.Id)"
+    Assert-Fixture ($editor.WaitForExit(12000)) "fixture editor PID $($editor.Id) closed normally"
+}
+try{
+    Run-Checker $robustness 'interruption-and-cancellation' $false
+    # Deliberately copy only the historical runtime. Its Projects directory and
+    # every original user mapping/media remain outside the test boundary.
+    Copy-Item -LiteralPath $oldRuntime -Destination (Join-Path $install 'versions') -Recurse
+    $oldTree=Hash-Tree (Join-Path $install "versions\$oldVersion")
+    $originalTree=Hash-Tree $oldRuntime
+    $oldLauncherHash=(Get-FileHash -LiteralPath (Join-Path $oldPackage 'PotatoMapper.exe') -Algorithm SHA256).Hash
+    $expectedLauncherHash=(Get-FileHash -LiteralPath (Join-Path $package 'PotatoMapper.exe') -Algorithm SHA256).Hash
+    Run-Checker $install 'handoff' $true
+    $projectBytes=[IO.File]::ReadAllBytes((Join-Path $install '.fixture-project.before'))
+    $mediaBytes=[IO.File]::ReadAllBytes((Join-Path $install '.fixture-media.before'))
+    $report.FixtureProjectSha256=(Get-FileHash -LiteralPath (Join-Path $install '.fixture-project.before') -Algorithm SHA256).Hash
+    $report.FixtureMediaSha256=(Get-FileHash -LiteralPath (Join-Path $install '.fixture-media.before') -Algorithm SHA256).Hash
+    $editor=Await-Editor $newVersion
+    $report.Processes+=@{Role='upgraded-editor';Id=$editor.Id;Executable=$editor.Path;WindowTitle=$editor.MainWindowTitle}
+    Assert-Fixture (([IO.File]::ReadAllText((Join-Path $install 'current.txt'))).Trim() -eq $newVersion) "current pointer selects $newVersion"
+    Assert-Fixture (([IO.File]::ReadAllText((Join-Path $install 'previous.txt'))).Trim() -eq $oldVersion) "previous pointer retains $oldVersion"
+    Assert-Fixture ((Hash-Tree (Join-Path $install "versions\$oldVersion")) -eq $oldTree) "entire retained $oldVersion runtime unchanged"
+    Assert-Fixture ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $install 'My mapping.pmap'))) -eq [Convert]::ToBase64String($projectBytes)) 'original synthetic mapping exact bytes retained'
+    Assert-Fixture ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $install 'media\fixture.png'))) -eq [Convert]::ToBase64String($mediaBytes)) 'original referenced PNG exact bytes retained'
+    $managed=@(Get-ChildItem -LiteralPath (Join-Path $install 'Projects') -Recurse -File -Filter '*.pmap')
+    Assert-Fixture ($managed.Count -gt 0) 'managed mapping collected into fixture Projects'
+    $report.ManagedProjects=@($managed.FullName)
+    foreach($mapping in $managed){
+        $document=Get-Content -LiteralPath $mapping.FullName -Raw | ConvertFrom-Json
+        Assert-Fixture ($document.surfaces.Count -eq 1 -and $document.surfaces[0].name -eq 'Saved PNG fixture') 'collected project retains saved image surface'
+        $reference=[string]$document.surfaces[0].media
+        Assert-Fixture (-not [IO.Path]::IsPathRooted($reference)) 'collected PNG reference stays relative'
+        $referencedImage=[IO.Path]::GetFullPath((Join-Path $mapping.DirectoryName $reference))
+        Assert-Fixture ($referencedImage.StartsWith($install+'\',[StringComparison]::OrdinalIgnoreCase)) 'collected PNG resolves inside disposable installation'
+        Assert-Fixture ((Get-FileHash -LiteralPath $referencedImage -Algorithm SHA256).Hash -eq $report.FixtureMediaSha256) 'collected project resolves the original PNG bytes'
+    }
+    for($attempt=0;$attempt -lt 40;$attempt++){
+        if((Get-FileHash -LiteralPath (Join-Path $install 'PotatoMapper.exe') -Algorithm SHA256).Hash -eq $expectedLauncherHash){break}
+        Start-Sleep -Milliseconds 250
+    }
+    Assert-Fixture ((Get-FileHash -LiteralPath (Join-Path $install 'PotatoMapper.exe') -Algorithm SHA256).Hash -eq $expectedLauncherHash) 'root launcher refreshed to final packaged launcher'
+    if($oldLauncherHash -ne $expectedLauncherHash){
+        $backup=@(Get-ChildItem -LiteralPath (Join-Path $install '.maintenance') -Recurse -File -Filter 'previous-PotatoMapper.exe')
+        Assert-Fixture (@($backup | Where-Object {(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash -eq $oldLauncherHash}).Count -gt 0) "original $oldVersion launcher retained in maintenance backup"
+    }else{Assert-Fixture $true 'identical baseline launcher already matches candidate; replacement backup unnecessary'}
+    Close-FixtureEditor $editor
+    $rollback=Start-Process -FilePath (Join-Path $install 'PotatoMapper.exe') -ArgumentList @('--rollback','--no-launch') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $root 'rollback.stdout.txt') -RedirectStandardError (Join-Path $root 'rollback.stderr.txt')
+    $report.Processes+=@{Role='rollback-launcher';Id=$rollback.Id;Executable=$rollback.Path}
+    Assert-Fixture ($rollback.WaitForExit(15000) -and $rollback.ExitCode -eq 0) 'rollback --no-launch completes successfully'
+    Assert-Fixture (([IO.File]::ReadAllText((Join-Path $install 'current.txt'))).Trim() -eq $oldVersion) "rollback current pointer selects $oldVersion"
+    Assert-Fixture (([IO.File]::ReadAllText((Join-Path $install 'previous.txt'))).Trim() -eq $newVersion) "rollback retains $newVersion as alternate runtime"
+    $legacyProject=Join-Path $install 'My mapping.pmap'
+    $reopen=Start-Process -FilePath (Join-Path $install 'PotatoMapper.exe') -ArgumentList @('--project',('"'+$legacyProject+'"'),'--no-splash') -WindowStyle Hidden -PassThru
+    $report.Processes+=@{Role='rollback-reopen-launcher';Id=$reopen.Id;Executable=(Join-Path $install 'PotatoMapper.exe')}
+    $oldEditor=Await-Editor $oldVersion
+    $report.Processes+=@{Role='rolled-back-editor';Id=$oldEditor.Id;Executable=$oldEditor.Path;WindowTitle=$oldEditor.MainWindowTitle}
+    Assert-Fixture ($oldEditor.MainWindowTitle -like '*My mapping.pmap*') "actual retained $oldVersion editor reopens safe v1 fixture"
+    Close-FixtureEditor $oldEditor
+    Assert-Fixture ((Hash-Tree $oldRuntime) -eq $originalTree -and (Hash-Tree (Join-Path $install "versions\$oldVersion")) -eq $oldTree) 'original old package and retained runtime remain unchanged after rollback reopen'
+    Assert-Fixture ((Get-FileHash -LiteralPath (Join-Path $oldPackage 'PotatoMapper.exe') -Algorithm SHA256).Hash -eq $oldLauncherHash) 'original old package launcher unchanged'
+    Assert-Fixture ([Convert]::ToBase64String([IO.File]::ReadAllBytes($legacyProject)) -eq [Convert]::ToBase64String($projectBytes) -and [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $install 'media\fixture.png'))) -eq [Convert]::ToBase64String($mediaBytes)) 'synthetic project and referenced PNG remain exact after rollback reopen'
+    $report.OldRuntimeTreeSha256=$oldTree
+    $report.FinalLauncherSha256=$expectedLauncherHash
+    $report.Status='pass'
+}catch{
+    $report.Status='fail';$report.Error=$_.Exception.Message
+    Write-Error $_ -ErrorAction Continue
+}finally{
+    foreach($version in $newVersion,$oldVersion){
+        foreach($process in @(Fixture-Editor $version)){if(-not $process.HasExited){$null=$process.CloseMainWindow();$null=$process.WaitForExit(10000)}}
+    }
+    $env:PATH=$priorPath
+    $env:POTATO_VERIFICATION_SESSION=$priorSession
+    if($DiscardVerifiedRuntimes -and $report.Status -eq 'pass'){
+        $fixtureVersions=(Resolve-Path -LiteralPath (Join-Path $install 'versions')).Path
+        if($fixtureVersions -ne (Join-Path $root 'install\versions') -or !$root.StartsWith($allowed+'\upgrade-fixture-',[StringComparison]::OrdinalIgnoreCase)){throw 'Unexpected upgrade test directory.'}
+        foreach($version in $oldVersion,$newVersion){
+            $copy=(Resolve-Path -LiteralPath (Join-Path $fixtureVersions $version)).Path
+            if([IO.Path]::GetDirectoryName($copy) -ne $fixtureVersions -or (Fixture-Editor $version)){throw 'Unexpected or running test runtime.'}
+            Remove-Item -LiteralPath $copy -Recurse -Force
+        }
+    }
+    try{$report.StorageAfterBytes=Check-CombinedStorage}catch{$report.Status='fail';$report.StorageCheckError=$_.Exception.Message}
+    $report.RemainingFixtureEditors=@(foreach($version in $newVersion,$oldVersion){Fixture-Editor $version | Select-Object Id,Path,MainWindowTitle})
+    [IO.File]::WriteAllText((Join-Path $root 'proof.json'),($report|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
+    $summary="Portable update verification: $($report.Status)`r`nVersions: $oldVersion -> $newVersion`r`nFixture: $root`r`nChecks: $($report.Checks.Count)`r`nRepository plus external preview bytes: $($report.StorageAfterBytes)`r`nProof: $(Join-Path $root 'proof.json')`r`n"
+    [IO.File]::WriteAllText((Join-Path $root 'report.txt'),$summary,[Text.UTF8Encoding]::new($false))
+    Write-Output $summary
+}
+if($report.Status -ne 'pass'){throw "Portable update verification failed. See $(Join-Path $root 'proof.json')"}

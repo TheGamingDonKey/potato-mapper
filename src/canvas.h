@@ -24,7 +24,10 @@ public:
     QString graphicsDescription;
     QRectF canvasRect() const;
     void resetView();
+    double viewZoom() const {return zoom;}
+    void setViewZoom(double value);
 signals:
+    void viewChanged(double zoom);
     void graphicsInitialized(const QString &description);
     void surfaceContextMenuRequested(int index, const QPoint &globalPosition);
 protected:
@@ -56,6 +59,10 @@ private:
     bool profilePending[4]{};
     int activeProfileQuery=-1;
     quint64 dynamicUploadedRevision=0;
+    QPainterPath gridEmptyClip;
+    QRectF gridViewRect;
+    QSize gridOutputSize;
+    quint64 gridRevision=0;
     void drawDynamic(const Surface &surface,int surfaceIndex);
     struct Texture {GLuint id=0,chroma=0;quint64 revision=0;QSize size;bool yuv=false;};
     QHash<QString,Texture> textures;

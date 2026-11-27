@@ -6,15 +6,21 @@ A small Windows projection mapper for one projector. Put images, videos, or buil
 
 ## Download and run
 
-**[Download Potato Mapper for Windows x64](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.8.8/PotatoMapper-0.8.8-windows-x64.zip)**
+**[Download Potato Mapper 0.9.13 for Windows](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.exe)** · [Portable ZIP](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.zip) · [All releases](https://github.com/TheGamingDonKey/potato-mapper/releases)
 
-1. Download the app ZIP above, right-click it, and choose **Extract All**.
-2. Open the extracted folder and double-click **PotatoMapper.exe**.
-3. Keep `PotatoMapper.exe`, `installation.txt`, `current.txt`, and the `versions` folder together.
+1. Double-click the Windows download in **Downloads**. It creates a complete app folder beside the file and opens Potato Mapper. For the ZIP, choose **Extract All**, then open **PotatoMapper.exe** in the extracted folder.
+2. Choose **File → Examples** for a ready-made Christmas scene. Edit the animation on the selected surface in **Potato FX**.
+3. Connect one projector, choose **Windows + P → Extend**, select the projector under **Projector Output**, and click **Start output**.
 
-No installation, Visual Studio, Qt setup, or GitHub account is required. This build targets **64-bit Intel/AMD Windows 10 (22H2) or Windows 11**, with an **OpenGL 3.3 Core** graphics driver. It has been checked locally on Windows 11; testing on other computers is still limited. It is not a macOS or Linux build.
+Keep the complete app folder together when moving it. **Projects** holds your saved work. Existing users can use **Help → Check for updates** in their installed app to retain their projects and previous runtime.
 
-Use the app ZIP under [Releases](https://github.com/TheGamingDonKey/potato-mapper/releases). GitHub's **Code → Download ZIP** and **Source code** downloads contain programming files, not the ready-to-run app. The other release archives provide library source code for developers; you only need the Windows app ZIP to run it.
+Supports 64-bit Intel/AMD Windows 10 (22H2) or Windows 11, with an OpenGL 3.3 Core graphics driver. The download includes the app's Qt and Visual C++ runtime libraries. GitHub's **Code → Download ZIP** contains the developer source. Use one of the app downloads above to run Potato Mapper.
+
+## Christmas studio
+
+Four original scenes join Shared Snowfall in the seasonal collection. Open **North Pole Express**, **Evergreen Overture**, **Clocktower Carols**, or **Nutcracker Waltz** in File → Examples. Each runs in the editor and projector output and can be adjusted on individual surfaces.
+
+[See the four scenes and watch the projection preview](https://potato-mapper.batibandit.chatgpt.site) · [Download the 24-second H.264 preview](https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-christmas-preview.mp4)
 
 ## Why it exists
 
@@ -29,7 +35,7 @@ This is an independent project, unaffiliated with MadMapper. It currently focuse
 - Multiple surfaces with draggable corners and a subdivided mesh.
 - Images and looping video, with stretch, fit, and crop options.
 - Transparent white alignment grids.
-- Potato FX: eighteen animations, including flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. **Maple Supper** and **Harvest Lanterns** add warm Thanksgiving scenes with drifting foliage, pumpkins and soft lantern light.
+- Potato FX includes flowing SquareWave cells, Diagonals, CubicCircles and SquareArray. Speed, size/line width, density, colour, angle, reverse and optional soft edges; Flow adds variation to the flowing effects. **Maple Supper** and **Harvest Lanterns** add warm Thanksgiving scenes with drifting foliage, pumpkins and soft lantern light.
 - Surface ordering, duplication, visibility, position locking, undo, and redo.
 - Save/open `.pmap` projects; earlier `.hmap` files still load.
 - Separate fullscreen projector output, display selection, and blackout.
@@ -61,9 +67,9 @@ Clone this repository and run in PowerShell, substituting your Qt installation p
 
 The script builds Release and deploys a fresh runnable folder under `out/dev-app-<timestamp>`. Existing app folders and personal files are preserved. Use `-AppDirectory` to choose a new destination; it must not already exist. It also accepts `-CMakePath` and `-BuildDirectory` overrides. `QT_ROOT_DIR` or `QTDIR` can supply the Qt path. The original development machine's cached tools remain a fallback.
 
-No Qt libraries, media files, or compiled binaries are committed to the source tree. Ready-to-run binaries and library sources are distributed through GitHub Releases.
+Ready-to-run Windows binaries and corresponding library sources are distributed through GitHub Releases. The website includes scenes captured from the native renderer. Personal mappings and media stay in the local app folder.
 
-To create a portable ZIP after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.3\msvc2022_64'`. Pass the same `-BuildDirectory` if you overrode it during the build. The packager finds the installed Visual C++ x64 redistributable DLLs, deploys Qt into a fresh folder, and includes the runtime notices. Output goes under `out/releases`. The current notices and source archives correspond to Qt 6.10.3 and FFmpeg 7.1.3; update them when upgrading dependencies.
+To create the portable ZIP and self-extracting Windows EXE after building, run `./package.ps1 -QtPath 'C:\Qt\6.10.3\msvc2022_64'`. Pass the same `-BuildDirectory` if you overrode it during the build. The packager finds the Visual C++ x64 redistributable DLLs, deploys Qt into a fresh folder, and includes the runtime notices. It embeds that exact ZIP in the portable EXE using the Windows .NET Framework compiler. Output goes under `out/releases`. The notices and source archives correspond to Qt 6.10.3 and FFmpeg 7.1.3.
 
 ## Use it
 

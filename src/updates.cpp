@@ -1,4 +1,7 @@
 #include "updates.h"
+#include "distribution.h"
+#include "appearance.h"
+#include "studio-themes.h"
 #include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -91,7 +94,8 @@ UpdateDialog::UpdateDialog(QWidget *parent,std::function<bool()> prepare,std::fu
     setWindowTitle("Potato Mapper — Updates");setAttribute(Qt::WA_DeleteOnClose);setMinimumWidth(460);setWindowModality(Qt::WindowModal);
     auto &s=*state;s.root=potatoInstallRoot();s.prepareRestart=std::move(prepare);s.projectPath=std::move(project);
     auto *layout=new QVBoxLayout(this);layout->setContentsMargins(24,24,24,24);layout->setSpacing(16);
-    auto *title=new QLabel("Potato Mapper updates");title->setStyleSheet("font-size:20px;font-weight:700;color:#f6d396");layout->addWidget(title);
+    const auto interfaceTheme=QCoreApplication::instance()->property("potatoInterfaceTheme").toString();
+    auto *title=new QLabel("Potato Mapper updates");title->setObjectName("updateDialogTitle");title->setStyleSheet(PotatoThemes::active()?QString("font-size:20px;font-weight:700;color:%1").arg(PotatoThemes::current().ink.name()):PotatoAppearance::clearGlass(interfaceTheme)?"font-size:20px;font-weight:700;color:#F7FAFF":interfaceTheme=="liquidglass1"?"font-size:20px;font-weight:700;color:#F2F3EF":"font-size:20px;font-weight:700;color:#f6d396");layout->addWidget(title);
     layout->addWidget(new QLabel("Installed version: "+QCoreApplication::applicationVersion()));
     s.status=new QLabel("Checking GitHub for a new release…");s.status->setWordWrap(true);s.status->setTextFormat(Qt::PlainText);layout->addWidget(s.status);
     s.progress=new QProgressBar;s.progress->setRange(0,0);layout->addWidget(s.progress);
@@ -109,6 +113,10 @@ void UpdateDialog::stop(){auto &s=*state;s.stopped=true;if(s.reply){s.reply->dis
 void UpdateDialog::fail(const QString &message){auto &s=*state;s.status->setText(message);s.progress->hide();s.install->setEnabled(false);s.retry->setEnabled(true);s.close->setText("Close");s.archive.close();}
 static QNetworkRequest request(const QUrl &url){QNetworkRequest r(url);r.setRawHeader("User-Agent","PotatoMapper/"+QCoreApplication::applicationVersion().toUtf8());r.setRawHeader("Accept","application/vnd.github+json");r.setTransferTimeout(30000);r.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::NoLessSafeRedirectPolicy);return r;}
 void UpdateDialog::check(){
+    if(PotatoDistribution::isStorePackage()){
+        auto &s=*state;s.status->setText("Microsoft Store manages updates for this installation. Open Microsoft Store, select Library, then check for updates. Your project library stays in Documents / Potato Mapper Projects.");
+        s.progress->hide();s.install->hide();s.retry->hide();return;
+    }
     auto &s=*state;s.stopped=false;s.temp.reset();s.install->setEnabled(false);s.retry->setEnabled(false);s.progress->show();s.progress->setRange(0,0);s.status->setText("Checking GitHub for a new release…");
     auto *reply=s.network->get(request(QUrl("https://api.github.com/repos/TheGamingDonKey/potato-mapper/releases/latest")));s.reply=reply;
     connect(reply,&QNetworkReply::readyRead,this,[reply]{if(reply->bytesAvailable()>2*1024*1024)reply->abort();});
@@ -126,6 +134,7 @@ void UpdateDialog::check(){
     });
 }
 void UpdateDialog::download(){
+    if(PotatoDistribution::isStorePackage())return;
     auto &s=*state;s.install->setEnabled(false);s.retry->setEnabled(false);s.progress->show();s.progress->setRange(0,100);s.close->setText("Cancel download");
     const auto updates=QDir(s.root).filePath(".updates");if(!QDir().mkpath(updates)){fail("This folder is not writable. Move the complete app folder to a location you can write to, then try again.");return;}
     s.temp=std::make_unique<QTemporaryDir>(updates+"/download-XXXXXX");if(!s.temp->isValid()){fail("Could not create the update folder. Check permissions and free space.");return;}
@@ -144,6 +153,7 @@ void UpdateDialog::download(){
     });
 }
 void UpdateDialog::extracted(){
+    if(PotatoDistribution::isStorePackage())return;
     auto &s=*state;QString error;if(!validatePotatoPayload(s.temp->filePath("payload"),s.release.version,error)){fail(error);return;}
     s.progress->hide();s.close->setText("Close");s.status->setText("The update is ready. Save your work before restarting.");
     if(!s.prepareRestart()){s.status->setText("Update cancelled. Your current app and project are still open.");s.retry->setEnabled(true);return;}

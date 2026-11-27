@@ -18,7 +18,7 @@ template<class Window> void runEntranceChecks(Window &window,QApplication &app,c
         auto *start=window.template findChild<QPushButton*>("outputStart");
         auto *stop=window.template findChild<QPushButton*>("outputStop");
         auto *displays=window.template findChild<QComboBox*>("outputDisplays");
-        QPushButton *blackoutToggle=nullptr;for(auto *button:window.template findChildren<QPushButton*>())if(button->text()=="Blackout  [B]")blackoutToggle=button;
+        auto *blackoutToggle=window.template findChild<QPushButton*>("blackoutButton");
         if(!play||!skip||!automatic||!start||!stop||!displays||!blackoutToggle){qInfo()<<"ENTRANCE FAIL replay, skip and output-start controls missing";app.exit(2);return;}
         struct State{QStringList errors;QTemporaryDir temp;QJsonObject saved;QImage content;};auto state=std::make_shared<State>();
         auto require=[state](bool good,const QString &label){if(!good)state->errors<<label;};
