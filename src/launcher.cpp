@@ -83,12 +83,23 @@ static DWORD launch(const fs::path &root,const std::vector<std::wstring> &args,b
     std::wstring command=quote(exe.wstring())+L" --install-root "+quote(root.wstring());
     for(const auto &a:args)command+=L" "+quote(a);
     STARTUPINFOW start{};start.cb=sizeof(start);PROCESS_INFORMATION child{};
-    if(!CreateProcessW(exe.c_str(),command.data(),nullptr,nullptr,FALSE,0,nullptr,root.c_str(),&start,&child))throw std::runtime_error("Windows could not start Potato Mapper. Check that the complete ZIP was extracted.");
+    if(!CreateProcessW(exe.c_str(),command.data(),nullptr,nullptr,FALSE,0,nullptr,root.c_str(),&start,&child)){
+        const DWORD error=GetLastError();
+        throw std::runtime_error("Windows could not start Potato Mapper (Windows error "+std::to_string(error)+"). Open the complete Windows x64 download from a writable folder. If it happens again, include this code in your report.");
+    }
     CloseHandle(child.hThread);DWORD code=0;
     const auto status=WaitForSingleObject(child.hProcess,wait?INFINITE:1500);
     if(status==WAIT_OBJECT_0)GetExitCodeProcess(child.hProcess,&code);
     CloseHandle(child.hProcess);
-    if(!wait&&status==WAIT_OBJECT_0&&code!=0)throw std::runtime_error("The editor could not start. A runtime library may be missing or damaged.");
+    if(!wait&&status==WAIT_OBJECT_0&&code!=0){
+        std::ostringstream message;
+        message<<"The editor closed during startup (0x"<<std::hex<<std::uppercase<<code<<"). ";
+        if(code==0xC0000135L||code==0xC000007BL)
+            message<<"A required Windows x64 library is missing or incompatible. Open the complete download in a fresh folder.";
+        else
+            message<<"Include this code and mapper.log from the app folder when reporting the problem.";
+        throw std::runtime_error(message.str());
+    }
     return code;
 }
 static void waitForEditor(DWORD pid){
@@ -106,11 +117,15 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     const bool apply=has(L"--apply-update"),rollback=has(L"--rollback"),noLaunch=has(L"--no-launch");bool editorClosed=false;
     HANDLE lock=INVALID_HANDLE_VALUE;fs::path pendingOwned,sessionOwned;std::string restoreVersion,priorPrevious;bool previousExisted=false,pointersTouched=false;
     try{
-        if(read(root/L"installation.txt")!="PotatoMapper/1\n")throw std::runtime_error("Extract the entire Potato Mapper package before starting it. Keep installation.txt and versions beside this launcher.");
+        if(read(root/L"installation.txt")!="PotatoMapper/1\n")throw std::runtime_error("This launcher needs the complete app folder. If you opened it inside a ZIP, choose Extract All first. You can also download the Windows .exe from Potato Mapper Releases and open it directly in Downloads.");
         prepareProjects(root);
         if(!apply&&!rollback){
             HANDLE busy=CreateFileW((root/L".update-lock").c_str(),GENERIC_READ|GENERIC_WRITE,0,nullptr,OPEN_ALWAYS,FILE_ATTRIBUTE_HIDDEN,nullptr);
-            if(busy==INVALID_HANDLE_VALUE)throw std::runtime_error("Potato Mapper is updating. Wait for the update to finish and open it again.");lock=busy;
+            if(busy==INVALID_HANDLE_VALUE){
+                if(GetLastError()==ERROR_ACCESS_DENIED)throw std::runtime_error("Potato Mapper needs a writable app folder. Open the Windows download in your Downloads folder or another folder you can write to.");
+                throw std::runtime_error("Potato Mapper could not lock its app folder. If an update is running, wait for it to finish, then open the app again.");
+            }
+            lock=busy;
             ensureCurrent(root);
             bool wait=false;for(const auto &a:args)if(a.rfind(L"--smoke",0)==0||a==L"--profile-media"||a.rfind(L"--test-",0)==0)wait=true;
             const int result=int(launch(root,args,wait));CloseHandle(lock);return result;

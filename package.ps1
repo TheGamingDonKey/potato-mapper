@@ -38,9 +38,11 @@ if ($DestinationDirectory) {
     $stage = [IO.Path]::GetFullPath($DestinationDirectory)
     if (Test-Path -LiteralPath $stage) { throw "Destination already exists: $stage. Use a new folder; existing app data will not be replaced." }
 } else {
-    $stageRoot = Join-Path $OutputDirectory ('stage-' + [guid]::NewGuid().ToString('N'))
+    $stageRoot = [IO.Path]::GetFullPath((Join-Path $OutputDirectory ('stage-' + [guid]::NewGuid().ToString('N'))))
+    if(Test-Path -LiteralPath $stageRoot){throw "Temporary package folder already exists: $stageRoot"}
     $stage = Join-Path $stageRoot $name
 }
+try {
 $stage = [IO.Path]::GetFullPath($stage)
 $runtime = Join-Path $stage "versions\$version"
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
@@ -94,3 +96,14 @@ if (Test-Path -LiteralPath $zip) { throw "Package already exists: $zip. Choose a
 Compress-Archive -LiteralPath $stage -DestinationPath $zip -CompressionLevel Optimal
 Write-Output "Ready: $zip"
 Write-Output "SHA256: $((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash)"
+& (Join-Path $PSScriptRoot 'packaging\New-PortableDownload.ps1') -Archive $zip
+} finally {
+    # Keep explicitly requested app folders. Only remove the transient staging
+    # directory minted by this invocation after creating the release downloads.
+    if(!$SkipZip -and !$DestinationDirectory -and (Test-Path -LiteralPath $stageRoot)){
+        $resolved=(Resolve-Path -LiteralPath $stageRoot).Path
+        $outputRoot=(Resolve-Path -LiteralPath $OutputDirectory).Path
+        if([IO.Path]::GetDirectoryName($resolved) -ne $outputRoot -or [IO.Path]::GetFileName($resolved) -notmatch '^stage-[0-9a-f]{32}$'){throw "Unexpected staging path: $resolved"}
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}
