@@ -1,5 +1,15 @@
 # Potato Mapper roadmap
 
+## Christmas Studio · 0.9.13
+
+- [x] Make the Windows download open from Downloads, ship the full portable ZIP, and check startup and repeat-open in a path with spaces and non-English characters.
+- [x] Add four editable Christmas scenes, embed their rendered picker thumbnails, and verify their motion, mapped output and save/reopen behavior.
+- [x] Check the 0.8.8 upgrade, interruption and rollback using synthetic saved work. Install 0.9.13 locally with the previous runtime retained.
+- [x] Verify visible desktop transmission in Lumen's default Clear desktop mode with an opaque mapping canvas.
+- [ ] Verify native frosted blur on the user's configuration and exercise the USB or HDMI playback on a physical projector.
+
+[Download release](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.13) · [Verification and build handoff](DEVELOPMENT.md) · [Christmas download site](https://potato-mapper.batibandit.chatgpt.site).
+
 - **November 17: desktop frost correction is a 0.9.12 candidate, not installed or accepted.** Installed runtime remains 0.9.11 with 0.9.10 rollback. The toolbar style-cache fix passes 54 packaged ambient checks. Visible GPU readback confirms chrome RGBA (13, 17, 25, 170), opaque canvas alpha 255 and an 8-bit native alpha channel; the clear-control configuration visibly transmits the desktop through Potato Mapper. Frost remains unresolved: system Acrylic, Accent 4/3 and exact native-controller/host-brush probes still captured solid or black. A direct-monitor answer is pending for the latest Accent 4 flags-0/no-layer/redirection-alpha-TRUE/full-region trial. All 22 protected hashes remain unchanged; latest measured storage is 1,449,856,207 bytes before minor proof additions, under 1.9 GB, with no new dependencies. The 0.8.8 arrangement, features, saved data and motion controls remain. [Current handoff](DEVELOPMENT.md), [evidence](out/desktop-frost), branch `codex/lumen-desktop-frost`; no installation or public-release claim.
 
 - **November 2: Lumen material correction installed locally as 0.9.11.** Reduced excess pale layering and aligned header/output/sidebar materials with the approved frost study while retaining the 0.8.8 arrangement, features, data and motion controls. Native DWM Acrylic was requested without extra dependencies. The earlier standalone-test response was later clarified as confusion about what was being viewed; it does not establish blur confirmation or acceptance, and integrated blur remains unresolved. Final packaged studio checks passed 254 assertions at both sizes, plus all-theme checks. Actual launcher 0.9.11 → 0.9.10 → 0.9.11 saved-work reopen, all 22 protected hashes and both 95-file runtime inventories passed. About 1.37 GB under 1.9 GB at that handoff. [Implementation and remaining visual gate](docs/0.9.11-lumen-material-match.md), branch `codex/lumen-material-match`; local only.

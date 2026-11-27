@@ -4,6 +4,7 @@
 #include <QCheckBox>
 #include <QSlider>
 #include <QVariantMap>
+#include <QWindow>
 
 namespace PotatoStudioCheck {
 inline double difference(const QImage &a,const QImage &b){
@@ -68,6 +69,12 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
         QTemporaryDir fixture;require(fixture.isValid(),"disposable fixture directory");
         if(!fixture.isValid()){finish();return;}
         const auto iniPath=fixture.filePath("preferences.ini");QSettings ini(iniPath,QSettings::IniFormat);
+        require(!PotatoAppearance::readLumenWindowsFrost(ini),"a fresh profile uses clear desktop glass");
+        for(bool frost:{true,false}){
+            PotatoAppearance::writeLumenWindowsFrost(ini,frost);ini.sync();
+            QSettings reopened(iniPath,QSettings::IniFormat);
+            require(reopened.status()==QSettings::NoError&&PotatoAppearance::readLumenWindowsFrost(reopened)==frost,"Lumen backdrop choice survives settings reopen");
+        }
         for(const auto &migration:QList<QPair<QString,QString>>{{"transparentglass1","lumenatelier1"},{"liquidglass1","nocturnecinema1"}}){
             ini.clear();ini.setValue("ui/interfaceTheme",migration.first);ini.setValue("ui/accent","autumn");
             const auto keys=ini.allKeys();const auto preference=PotatoAppearance::readPreferences(ini);
@@ -163,9 +170,25 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
             }
             if(id=="lumenatelier1"&&window.testAttribute(Qt::WA_TranslucentBackground)&&window.property("potatoDesktopGlassSystemAllowed").toBool()){
                 require(PotatoDesktopGlass::active(&window),"Lumen activates real desktop alpha composition on this host");
-                require(window.property("potatoDesktopGlassBackdropRequested").toBool()&&window.property("potatoDesktopGlassBackdropAccepted").toBool()&&
-                    window.property("potatoDesktopGlassBackdropReadback").toInt()==1&&window.property("potatoDesktopGlassAccentState").toInt()==4,
-                    "Windows accepted low-tint desktop Acrylic with the opaque system material disabled (not a visual blur assertion)");
+                auto *editorSurface=window.windowHandle();
+                auto *canvasSurface=window.canvas->windowHandle();
+                require(editorSurface&&editorSurface->surfaceType()==QSurface::RasterSurface&&
+                    canvasSurface&&canvasSurface->surfaceType()==QSurface::OpenGLSurface&&canvasSurface->parent()==editorSurface&&
+                    window.canvas->isValid(),"the editor has a raster backdrop host and a separate working OpenGL canvas");
+                auto *clearDesktop=window.template findChild<QAction*>("lumenClearDesktop");
+                auto *windowsFrost=window.template findChild<QAction*>("lumenWindowsFrost");
+                require(clearDesktop&&windowsFrost,"both Lumen backdrop actions are available");
+                if(!clearDesktop||!windowsFrost){finish();return;}
+                windowsFrost->trigger();settle(app,50);
+                require(windowsFrost->isChecked()&&!clearDesktop->isChecked()&&window.property("potatoDesktopGlassBackdropRequested").toBool()&&
+                    window.property("potatoDesktopGlassBackdropAccepted").toBool()&&window.property("potatoDesktopGlassBackdropReadback").toInt()==3,
+                    "selecting Windows frost requests the system Acrylic material");
+                clearDesktop->trigger();settle(app,50);
+                require(clearDesktop->isChecked()&&!windowsFrost->isChecked()&&PotatoDesktopGlass::active(&window)&&
+                    !window.property("potatoDesktopGlassBackdropRequested").toBool()&&window.property("potatoDesktopGlassBackdropReadback").toInt()==1&&
+                    window.property("potatoDesktopGlassMode").toString()=="clear-desktop",
+                    "selecting Clear desktop restores live client transparency");
+                unchanged("switching the Lumen backdrop");
                 const auto nativeFrame=window.grab().toImage();int translucentPixels=0,transmittingPixels=0,sampledPixels=0;
                 const auto band=QRect(projectBar->mapTo(&window,QPoint()),projectBar->size());
                 const auto scale=window.devicePixelRatioF();
@@ -175,7 +198,7 @@ template<class Window> void runStudioThemesChecks(Window &window,QApplication &a
                 }
                 require(translucentPixels>100,"Lumen chrome contains real translucent pixels, not an opaque painted background");
                 require(sampledPixels>0&&transmittingPixels>sampledPixels*.40,"Lumen broad chrome leaves meaningful desktop transmission instead of stacking opaque veils");
-                qInfo()<<"DESKTOP GLASS"<<window.property("potatoDesktopGlassMode")<<"tint"<<window.property("potatoDesktopGlassTintAlpha")<<"transmitting samples"<<transmittingPixels<<"of"<<sampledPixels;
+                qInfo()<<"DESKTOP GLASS"<<window.property("potatoDesktopGlassMode")<<"transmitting samples"<<transmittingPixels<<"of"<<sampledPixels;
                 auto checkLabelContrast=[&](QLabel *label,const QString &name){
                     const auto ink=label->palette().color(QPalette::WindowText);const auto style=label->styleSheet();
                     label->setStyleSheet(style+";color:transparent;");const auto bed=composedChrome(label);label->setStyleSheet(style);

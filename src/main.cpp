@@ -14,6 +14,7 @@
 #include "../tests/ambient-glass-check.h"
 #include "../tests/studio-themes-check.h"
 #include "../tests/seasonal-check.h"
+#include "../tests/christmas-check.h"
 #include "../tests/connections-check.h"
 #include "../tests/studio-check.h"
 #include "../tests/material-ui-check.h"
@@ -88,7 +89,6 @@ public:
     Canvas *canvas,*output;
     bool smoke=false;
     explicit MainWindow(){
-        PotatoDesktopGlass::prepare(this);
         setWindowTitle("Potato Mapper");setMinimumSize(760,540);
         const auto desktop=screen()->availableGeometry().size();resize(qMin(1280,desktop.width()-48),qMin(800,desktop.height()-48));
         canvas=new Canvas(&scene,true);canvas->setObjectName("editorCanvas");output=new Canvas(&scene,false);
@@ -254,6 +254,7 @@ public:
         detailLayout->addStretch();
         inspector=new QScrollArea;inspector->setObjectName("surfaceInspector");inspector->setWidget(details);inspector->setWidgetResizable(true);inspector->setFrameShape(QFrame::NoFrame);inspector->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);inspector->setMinimumHeight(90);layout->addWidget(inspector,3);
         split->addWidget(panel);split->addWidget(canvas);split->setStretchFactor(1,1);split->setSizes({310,970});
+        PotatoDesktopGlass::prepare(this,canvas);
         auto sidebarSize=QSettings().value("ui/sidebarWidth",310).toInt();split->setSizes({std::clamp(sidebarSize,260,600),qMax(320,width()-sidebarSize)});
         connect(split,&QSplitter::splitterMoved,this,[this,split]{if(!smoke)QSettings().setValue("ui/sidebarWidth",split->sizes().value(0));});
         animationBrowserDialog=new QDialog(this);animationBrowserDialog->setObjectName("animationBrowserDialog");animationBrowserDialog->setWindowTitle("Potato FX — Animation browser");animationBrowserDialog->setModal(false);animationBrowserDialog->setMinimumSize(640,420);animationBrowserDialog->resize(840,600);
@@ -286,7 +287,7 @@ public:
         auto *recentMenu=fileMenu->addMenu("Recent projects");
         connect(recentMenu,&QMenu::aboutToShow,this,[this,recentMenu]{recentMenu->clear();for(const auto &path:PotatoProjects::recent(potatoInstallRoot())){auto *a=recentMenu->addAction(QFileInfo(path).fileName());a->setToolTip(path);connect(a,&QAction::triggered,this,[this,path]{openProject(path);});}if(recentMenu->isEmpty())recentMenu->addAction("No recent projects")->setEnabled(false);});
         auto *examplesMenu=fileMenu->addMenu("Examples");
-        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
+        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall","North Pole Express","Evergreen Overture","Clocktower Carols","Nutcracker Waltz"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
         fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *settingsMenu=menuBar()->addMenu("Settings");
         auto *appearanceMenu=settingsMenu->addMenu("Appearance");
@@ -298,6 +299,22 @@ public:
             else if(entry.second=="auroraclear1")interfaceAction->setToolTip("Clear teal, azure and iris glass with rich colour icons. Keeps your familiar workspace and projected content.");
             else if(entry.second=="ambientglass1")interfaceAction->setToolTip("Original moving light behind clear or smoked glass. Adjust or pause it under Appearance → Ambient Glass.");
             connect(interfaceAction,&QAction::triggered,this,[this,id=entry.second]{applyAppearance({id,qApp->property("potatoTheme").toString()});});
+        }
+        if(testAttribute(Qt::WA_TranslucentBackground)){
+            auto *backdropMenu=appearanceMenu->addMenu("Lumen backdrop");
+            auto *backdrops=new QActionGroup(backdropMenu);
+            const bool savedFrost=qApp->property("potatoLumenWindowsFrost").toBool();
+            auto *clear=backdropMenu->addAction("Clear desktop");clear->setObjectName("lumenClearDesktop");
+            auto *frost=backdropMenu->addAction("Windows frost (system dependent)");frost->setObjectName("lumenWindowsFrost");
+            for(auto *choice:{clear,frost}){choice->setCheckable(true);backdrops->addAction(choice);}
+            clear->setChecked(!savedFrost);frost->setChecked(savedFrost);
+            frost->setToolTip("Ask Windows to blur what is behind Lumen. If it appears solid, choose Clear desktop.");
+            connect(backdrops,&QActionGroup::triggered,this,[this,frost](QAction *choice){
+                const bool enabled=choice==frost;
+                qApp->setProperty("potatoLumenWindowsFrost",enabled);
+                PotatoDesktopGlass::sync(this);
+                if(!smoke){QSettings settings;PotatoAppearance::writeLumenWindowsFrost(settings,enabled);}
+            });
         }
         auto *ambientMenu=appearanceMenu->addMenu("Ambient Glass");ambientMenu->setObjectName("ambientGlassMenu");
         auto *ambientGroup=new QActionGroup(this);ambientGroup->setExclusive(true);
@@ -726,6 +743,7 @@ int main(int argc,char **argv){
     QSettings appearanceSettings;auto appearance=PotatoAppearance::readPreferences(appearanceSettings);
     const auto startupArgs=app.arguments();const int themeArgument=startupArgs.indexOf("--interface-theme");
     if(themeArgument>=0&&themeArgument+1<startupArgs.size())appearance.interfaceTheme=PotatoAppearance::interfaceThemeId(startupArgs[themeArgument+1]);
+    app.setProperty("potatoLumenWindowsFrost",PotatoAppearance::readLumenWindowsFrost(appearanceSettings));
     app.setProperty("potatoReducedMotion",appearanceSettings.value("ui/reducedMotion",false).toBool());
     app.setProperty("potatoReducedTransparency",appearanceSettings.value("ui/reducedTransparency",false).toBool());
     app.setProperty("potatoIncreasedContrast",appearanceSettings.value("ui/increasedContrast",false).toBool());
@@ -774,6 +792,7 @@ int main(int argc,char **argv){
     if(args.contains("--smoke-studio")){window.smoke=true;runStudioChecks(window,app,args);}
     if(args.contains("--smoke-material")){window.smoke=true;runMaterialUiCheck(window,app,args);}
     if(args.contains("--seasonal-check")){window.smoke=true;runSeasonalChecks(window,app,args);}
+    if(args.contains("--test-christmas")){window.smoke=true;runChristmasChecks(window,app,args);}
     if(args.contains("--test-restart")){
         window.smoke=true;QTimer::singleShot(300,&window,[&window,&app]{
             auto answer=[](QMessageBox::StandardButton choice){QTimer::singleShot(0,[choice]{for(auto *w:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox*>(w))if(auto *b=box->button(choice))b->click();});};

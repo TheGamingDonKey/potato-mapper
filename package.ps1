@@ -36,6 +36,7 @@ $name = "PotatoMapper-$version-windows-x64"
 # Always stage in a fresh directory; never package the developer's app folder.
 if ($DestinationDirectory) {
     $stage = [IO.Path]::GetFullPath($DestinationDirectory)
+    if(!$SkipZip -and [IO.Path]::GetFileName($stage.TrimEnd('\','/')) -cne $name){throw "The folder inside the Windows ZIP must be named $name. Use -OutputDirectory to choose where to put the downloads."}
     if (Test-Path -LiteralPath $stage) { throw "Destination already exists: $stage. Use a new folder; existing app data will not be replaced." }
 } else {
     $stageRoot = [IO.Path]::GetFullPath((Join-Path $OutputDirectory ('stage-' + [guid]::NewGuid().ToString('N'))))

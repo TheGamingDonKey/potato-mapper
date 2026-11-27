@@ -47,7 +47,9 @@ void main(){vec3 p=mapping*vec3(position,1.0);gl_Position=vec4(2.0*p.x-p.z,p.z-2
 )GLSL";
     QFile shaderFile(":/assets/patterns.frag");
     if(!shaderFile.open(QIODevice::ReadOnly)){graphicsError="The built-in pattern shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
-    const auto fragment=shaderFile.readAll();
+    QFile christmasFile(":/assets/christmas.glsl");
+    if(!christmasFile.open(QIODevice::ReadOnly)){graphicsError="The Christmas scene shader could not be loaded.";emit graphicsInitialized(graphicsError);return;}
+    const auto fragment=shaderFile.readAll()+'\n'+christmasFile.readAll();
     if(!program.addShaderFromSourceCode(QOpenGLShader::Vertex,vertex)||!program.addShaderFromSourceCode(QOpenGLShader::Fragment,fragment.constData())||!program.link()){
         graphicsError=program.log();emit graphicsInitialized(graphicsError);return;
     }

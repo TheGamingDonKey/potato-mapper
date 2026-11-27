@@ -1,8 +1,9 @@
 #pragma once
 class QWidget;
+class QOpenGLWidget;
 namespace PotatoDesktopGlass {
-// Call before the editor gets a native handle; never change its window flags.
-void prepare(QWidget *editor);
+// Call after parenting the canvas and before showing the editor.
+void prepare(QWidget *editor,QOpenGLWidget *canvas);
 void sync(QWidget *editor);
 bool active(const QWidget *window);
 }

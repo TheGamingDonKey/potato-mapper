@@ -17,6 +17,20 @@ internal static class PortableDownload
 {
     const string Launcher = "PotatoMapper.exe";
 
+    static bool HasEditor(string runtime)
+    {
+        return File.Exists(Path.Combine(runtime, "PotatoMapperApp.exe")) &&
+            File.Exists(Path.Combine(runtime, "Qt6Core.dll")) &&
+            File.Exists(Path.Combine(runtime, "platforms", "qwindows.dll"));
+    }
+
+    static bool SameLauncher(Stream reference, string launcher)
+    {
+        using (var sha = SHA256.Create())
+        using (var present = File.OpenRead(launcher))
+            return BitConverter.ToString(sha.ComputeHash(reference)) == BitConverter.ToString(sha.ComputeHash(present));
+    }
+
     static string GetLauncher(string folder, ZipArchive package, string name)
     {
         string launcher = Path.Combine(folder, Launcher);
@@ -26,13 +40,32 @@ internal static class PortableDownload
         if (File.Exists(launcher) && File.Exists(Path.Combine(folder, "installation.txt")) &&
             File.ReadAllText(Path.Combine(folder, "installation.txt")) == "PotatoMapper/1\n")
         {
-            using (var sha = SHA256.Create())
+            string originalVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+            string original = Path.Combine(folder, "versions", originalVersion);
+            string pointer = Path.Combine(folder, "current.txt");
+            string selected = File.Exists(pointer) ? File.ReadAllText(pointer).Trim() : "";
+            Version version;
+            string active = Version.TryParse(selected, out version) && version.Build >= 0 &&
+                version.Revision == -1 && version.ToString() == selected
+                ? Path.Combine(folder, "versions", selected) : null;
+            // The root launcher can repair a broken pointer using the original runtime.
             using (var bundled = entry.Open())
-            using (var present = File.OpenRead(launcher))
-                if (BitConverter.ToString(sha.ComputeHash(bundled)) == BitConverter.ToString(sha.ComputeHash(present)))
+                if ((HasEditor(original) || (active != null && HasEditor(active))) && SameLauncher(bundled, launcher))
                     return launcher;
+            // A successful app update refreshes the root launcher. Establish
+            // continuity with the embedded release before opening that replacement.
+            string retained = Path.Combine(original, "launcher", Launcher);
+            if (active != null && HasEditor(active) && File.Exists(retained))
+            {
+                string refreshed = Path.Combine(active, "launcher", Launcher);
+                if (File.Exists(refreshed))
+                    using (var bundled = entry.Open())
+                    using (var replacement = File.OpenRead(refreshed))
+                        if (SameLauncher(bundled, retained) && SameLauncher(replacement, launcher))
+                            return launcher;
+            }
         }
-        throw new IOException("That folder already contains other files or a different launcher. " +
+        throw new IOException("That folder contains other files or an incomplete app. " +
             "Open the existing app from its folder, or move this download to another location and run it there.\n\n" + folder);
     }
 

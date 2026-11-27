@@ -16,6 +16,12 @@ inline QString interfaceThemeId(const QString &id){
     return QStringLiteral("material");
 }
 inline bool clearGlass(const QString &id){return id=="auroraclear1"||id=="transparentglass1"||id=="ambientglass1";}
+inline bool readLumenWindowsFrost(const QSettings &settings){
+    return settings.value("ui/lumenWindowsFrost",false).toBool();
+}
+inline void writeLumenWindowsFrost(QSettings &settings,bool enabled){
+    settings.setValue("ui/lumenWindowsFrost",enabled);
+}
 struct AmbientPreferences {
     QString glass=QStringLiteral("smoked");
     bool paused=false;
@@ -58,7 +64,7 @@ inline void writePreferences(QSettings &settings,const Preferences &preferences)
 inline QString category(int pattern){
     if(pattern==16||pattern==17||pattern==19)return QStringLiteral("halloween");
     if(pattern==14||pattern==15||pattern==18||pattern==20)return QStringLiteral("autumn");
-    if(pattern==21||pattern==22)return QStringLiteral("christmas");
+    if(pattern>=21&&pattern<=26)return QStringLiteral("christmas");
     return QStringLiteral("patterns");
 }
 inline bool matches(int pattern,const QString &name,const QString &categoryId,const QString &search){

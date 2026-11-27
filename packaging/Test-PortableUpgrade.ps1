@@ -3,7 +3,8 @@ param(
     [string]$Archive = (Join-Path $PSScriptRoot '..\out\releases\PotatoMapper-0.9.1-windows-x64.zip'),
     [string]$OldPackageDirectory = (Join-Path $PSScriptRoot '..\app'),
     [string]$CheckExecutable = (Join-Path $PSScriptRoot '..\out\build-desktop\Release\PotatoUpdateChecks.exe'),
-    [string]$QtPath = (Join-Path $env:USERPROFILE '.cache\home-mapper-qt\6.10.3\msvc2022_64')
+    [string]$QtPath = (Join-Path $env:USERPROFILE '.cache\home-mapper-qt\6.10.3\msvc2022_64'),
+    [switch]$DiscardVerifiedRuntimes
 )
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -162,6 +163,15 @@ try{
     }
     $env:PATH=$priorPath
     $env:POTATO_VERIFICATION_SESSION=$priorSession
+    if($DiscardVerifiedRuntimes -and $report.Status -eq 'pass'){
+        $fixtureVersions=(Resolve-Path -LiteralPath (Join-Path $install 'versions')).Path
+        if($fixtureVersions -ne (Join-Path $root 'install\versions') -or !$root.StartsWith($allowed+'\upgrade-fixture-',[StringComparison]::OrdinalIgnoreCase)){throw 'Unexpected upgrade test directory.'}
+        foreach($version in $oldVersion,$newVersion){
+            $copy=(Resolve-Path -LiteralPath (Join-Path $fixtureVersions $version)).Path
+            if([IO.Path]::GetDirectoryName($copy) -ne $fixtureVersions -or (Fixture-Editor $version)){throw 'Unexpected or running test runtime.'}
+            Remove-Item -LiteralPath $copy -Recurse -Force
+        }
+    }
     try{$report.StorageAfterBytes=Check-CombinedStorage}catch{$report.Status='fail';$report.StorageCheckError=$_.Exception.Message}
     $report.RemainingFixtureEditors=@(foreach($version in $newVersion,$oldVersion){Fixture-Editor $version | Select-Object Id,Path,MainWindowTitle})
     [IO.File]::WriteAllText((Join-Path $root 'proof.json'),($report|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))

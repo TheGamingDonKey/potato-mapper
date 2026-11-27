@@ -1,3 +1,4 @@
+#requires -Version 7.2
 param([Parameter(Mandatory)][string]$Archive)
 $ErrorActionPreference='Stop'
 $zip=Get-Item -LiteralPath $Archive
@@ -8,15 +9,14 @@ $folder=Join-Path $zip.DirectoryName $zip.BaseName
 if(Test-Path -LiteralPath $folder){throw 'Run this first-launch check beside fresh downloads.'}
 $editorPath=Join-Path $folder "versions\$version\PotatoMapperApp.exe"
 $launcher=Join-Path $folder 'PotatoMapper.exe'
-$env:PATH="$env:SystemRoot\System32;$env:SystemRoot"
-foreach($key in 'QT_PLUGIN_PATH','QT_QPA_PLATFORM_PLUGIN_PATH','QT_QPA_PLATFORM','QML2_IMPORT_PATH','QT_OPENGL','QT_SCALE_FACTOR'){
-    [Environment]::SetEnvironmentVariable($key,$null,'Process')
-}
-$env:POTATO_VERIFICATION_SESSION='1'
 function Run-DownloadProcess([string]$exe,[string[]]$arguments=@()){
     $info=[Diagnostics.ProcessStartInfo]::new($exe)
     $info.WorkingDirectory=$env:TEMP
     $info.UseShellExecute=$false
+    $info.Environment['PATH']="$env:SystemRoot\System32;$env:SystemRoot"
+    foreach($key in 'QT_PLUGIN_PATH','QT_QPA_PLATFORM_PLUGIN_PATH','QT_QPA_PLATFORM','QML2_IMPORT_PATH','QT_OPENGL','QT_SCALE_FACTOR','POTATO_VERIFICATION_SESSION'){
+        $null=$info.Environment.Remove($key)
+    }
     foreach($arg in $arguments){$info.ArgumentList.Add($arg)}
     $process=[Diagnostics.Process]::Start($info)
     try{
@@ -28,7 +28,7 @@ Run-DownloadProcess $download
 $deadline=[DateTime]::UtcNow.AddSeconds(40)
 do{
     $editor=Get-Process PotatoMapperApp -ErrorAction SilentlyContinue |
-        Where-Object {$_.Path -eq $editorPath -and $_.MainWindowTitle -like '*Potato Mapper*'} | Select-Object -First 1
+        Where-Object {$_.Path -eq $editorPath -and $_.MainWindowTitle.Trim() -eq 'Potato Mapper'} | Select-Object -First 1
     if(-not $editor){Start-Sleep -Milliseconds 250}
 }until($editor -or [DateTime]::UtcNow -ge $deadline)
 if(-not $editor){throw 'Double-click path did not open the extracted Potato Mapper editor.'}

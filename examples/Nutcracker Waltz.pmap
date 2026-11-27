@@ -1,0 +1,37 @@
+{
+  "format": "PotatoMapper",
+  "version": 2,
+  "width": 1920,
+  "height": 1080,
+  "connections": [],
+  "boundaryActors": false,
+  "wizardActors": false,
+  "dynamic": { "effect": 0, "playing": true, "members": [] },
+  "surfaces": [
+    {
+      "id": "nutcracker-waltz",
+      "routeUid": "580331cf-9423-44b3-93d3-ea075e204bf0",
+      "name": "Nutcracker Waltz",
+      "media": "",
+      "pattern": 26,
+      "patternSpeed": 100,
+      "patternSize": 24,
+      "patternPlaying": true,
+      "fxDensity": 32,
+      "fxFlow": 70,
+      "fxAngle": 0,
+      "fxPalette": 0,
+      "fxReverse": false,
+      "fxEdge": 0,
+      "brightness": 100,
+      "opacity": 100,
+      "blend": 0,
+      "corners": [[0.025, 0.025], [0.975, 0.025], [0.975, 0.975], [0.025, 0.975]],
+      "cells": 2,
+      "mesh": [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [0.5, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]],
+      "visible": true,
+      "locked": false,
+      "fit": 0
+    }
+  ]
+}

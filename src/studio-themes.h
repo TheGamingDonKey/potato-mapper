@@ -148,8 +148,7 @@ inline void paintSurface(QPainter &p,const QRectF &rect,Role role,const QPointF 
     const bool inkDeck=toolbar&&(role==Role::Shell||(role==Role::Button&&!primary));
     const bool seeThrough=desktopGlass&&lumen&&!solid;
     if(seeThrough){
-        // Windows supplies the live desktop blur. This is only a neutral tint;
-        // never substitute the cached decorative environment for the desktop.
+        // Paint the neutral tint over the backdrop supplied by Windows.
         if(role==Role::Foundation){
             QLinearGradient veil(QPointF(-origin.x(),-origin.y()),QPointF(scene.width()-origin.x(),scene.height()*.30-origin.y()));
             veil.setColorAt(0,QColor(16,24,34,166));

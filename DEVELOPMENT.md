@@ -1,6 +1,18 @@
 # Development handoff
 
-## Current handoff — November 17 desktop frost correction, 0.9.12 candidate
+## Current handoff — Christmas Studio 0.9.13, November 26
+
+The direct-download build installs locally under `app/versions/0.9.13`. Open `app/PotatoMapper.exe`. The verified local rollback is 0.9.11. All 23 protected project, index and media file hashes matched before and after the update. The development branch is `codex/christmas-studio`. Reuse the existing Qt kit and `out/build-desktop`, then run `package.ps1` to produce both Windows downloads.
+
+The Windows EXE unpacks the same ZIP that the in-app updater consumes into a sibling folder. The clean-path test launched the actual editor from a Unicode Downloads path, matched all 107 packaged files and checked repeat-open preservation. A downloaded public 0.8.8 installation upgraded, reopened a synthetic saved mapping with linked media, rolled back and reopened the mapping. The upgrade suite passed 25 checks including its interruption/cancellation cases. The original second PC's OS, error message and physical projector remain unverified.
+
+Four built-in Christmas scenes use existing mesh and projector rendering, with stable IDs 23–26 and examples in the File menu. The extracted Christmas suite passed 82 checks. Thirteen regression runs covered mapping, clearing surfaces, attachments, existing FX, older seasonal scenes, the output entrance, themes and appearance. The studio suite passed 254 checks at both normal and 2× scale and Ambient passed 52. The public preview uses 288 native projector frames.
+
+On supported Windows 11 builds Lumen defaults to Clear desktop. Settings → Appearance → Lumen backdrop also offers Windows frost. A change in the actual window behind the editor produced changes of 45–46 RGB levels through two chrome panels and zero on the canvas. Windows Acrylic still appeared solid on this machine. Keep this open as a native frosting issue. The Microsoft Store package and physical projector remain separate milestones.
+
+Local verification files are in `out/christmas-check` and `out/desktop-frost/checked-extracted-0913`. The native executable and both download assets use the same version metadata. [Release](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.13) · [Download site](https://potato-mapper.batibandit.chatgpt.site).
+
+## Historical handoff — November 17 desktop frost correction, 0.9.12 candidate
 
 Source: `C:\Users\mrbos\Downloads\Potato Mapper`, branch `codex/lumen-desktop-frost`. Normal launcher: `app/PotatoMapper.exe`; installed runtime remains **0.9.11**, with **0.9.10** retained. The **0.9.12 candidate is not installed or accepted**. Its Lumen shell removes the pale wash and requests a low-tint Windows accent Acrylic material through a dynamically resolved API, with a clear-transparency fallback. The 0.8.8 arrangement, features, other themes, saved projects/media and motion controls are preserved; the recorded speed is 50 (0.5×), unpaused.
 
