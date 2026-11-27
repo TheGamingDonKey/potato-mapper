@@ -3,7 +3,8 @@
 ## Christmas cutouts · 0.9.14
 
 - [x] Build Santa's shared flight and the optional foreground artwork for the four existing Christmas scenes. Verify mapped seams, unlit gaps, staggered panels and transparent overlay compositing in the extracted projector framebuffer. [Native checks](tests/cutout-check.h).
-- [ ] Publish the verified Windows downloads and the standalone Santa loop. Preserve older mappings and their media when updating.
+- [x] Publish the verified Windows downloads and standalone 720p Santa loop, install 0.9.14 with 0.9.13 retained, and verify 23 protected files. [Release](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.14) · [Independent Windows launch](https://github.com/TheGamingDonKey/potato-mapper/actions/runs/45939887265) · [Watch Santa](https://potato-mapper.batibandit.chatgpt.site/).
+- [ ] Check the projected black level and the apparent crossing on a physical wall with Shane's projector.
 
 ## Christmas Studio · 0.9.13
 

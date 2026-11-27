@@ -10,6 +10,8 @@ On the extracted Windows build, `--test-cutouts` passed 79 checks including blac
 
 The 0.9.13 launcher failed on a 268-character staged filename and recovered its previous editor and saved mapping. Version 0.9.14 uses extended Windows paths during installation. The packaged updater completed the same 268-character fixture and verified all 101 runtime files. A real 0.9.13 → 0.9.14 upgrade and rollback reopened the same synthetic mapping with its linked PNG intact.
 
+Version 0.9.14 is installed and published as the latest stable release. All 23 protected project, library and media hashes match. The installed rollback is 0.9.13. A separate Windows machine opened the public download, compared all 108 files with the ZIP and verified that reopening the download preserved saved work. Both films play and seek on the public site. [Windows release](https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.14) · [Windows verification](https://github.com/TheGamingDonKey/potato-mapper/actions/runs/45939887265) · [Christmas previews](https://potato-mapper.batibandit.chatgpt.site/).
+
 ## Previous handoff — Christmas Studio 0.9.13, November 26
 
 The direct-download build installs locally under `app/versions/0.9.13`. Open `app/PotatoMapper.exe`. The verified local rollback is 0.9.11. All 23 protected project, index and media file hashes matched before and after the update. The development branch is `codex/christmas-studio`. Reuse the existing Qt kit and `out/build-desktop`, then run `package.ps1` to produce both Windows downloads.
