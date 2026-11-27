@@ -8,6 +8,8 @@ The new Christmas pattern (ID 27) draws one Santa in the shared projector coordi
 
 On the extracted Windows build, `--test-cutouts` passed 79 checks including black gaps, coloured underlayers, staggered and stacked layouts, actual inspector controls and file compatibility. The earlier Christmas suite passed 82. The portable download verified all 108 files and repeated launches. The site offers the native 24-second Santa loop as 720p H.264 at 24 fps. Physical wall and projector black-level acceptance remain open. Verification logs are in `out/cutout-check`.
 
+The 0.9.13 launcher failed on a 268-character staged filename and recovered its previous editor and saved mapping. Version 0.9.14 uses extended Windows paths during installation. The packaged updater completed the same 268-character fixture and verified all 101 runtime files. A real 0.9.13 → 0.9.14 upgrade and rollback reopened the same synthetic mapping with its linked PNG intact.
+
 ## Previous handoff — Christmas Studio 0.9.13, November 26
 
 The direct-download build installs locally under `app/versions/0.9.13`. Open `app/PotatoMapper.exe`. The verified local rollback is 0.9.11. All 23 protected project, index and media file hashes matched before and after the update. The development branch is `codex/christmas-studio`. Reuse the existing Qt kit and `out/build-desktop`, then run `package.ps1` to produce both Windows downloads.

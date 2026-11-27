@@ -29,7 +29,7 @@ static void showProgress(){
     progressBar=CreateWindowW(PROGRESS_CLASSW,nullptr,WS_CHILD|WS_VISIBLE,24,76,420,20,progressWindow,nullptr,nullptr,nullptr);
     SendMessageW(progressBar,PBM_SETRANGE,0,MAKELPARAM(0,100));pump();
 }
-static std::string read(const fs::path &path){std::ifstream in(path,std::ios::binary);return {std::istreambuf_iterator<char>(in),{}};}
+using potatoLauncher::read;
 static bool versionValid(const std::string &s){return std::regex_match(s,std::regex("[0-9]{1,5}\\.[0-9]{1,5}\\.[0-9]{1,5}"));}
 static std::string selected(const fs::path &root,const wchar_t *name){auto s=read(root/name);while(!s.empty()&&(s.back()=='\n'||s.back()=='\r'))s.pop_back();if(!versionValid(s))throw std::runtime_error("The installed version pointer is missing or invalid. Extract the complete Potato Mapper ZIP again.");return s;}
 static void writeAtomic(const fs::path &root,const wchar_t *name,const std::string &bytes){
@@ -68,7 +68,13 @@ static void prepareProjects(const fs::path &root){
     if(!fs::exists(projects))fs::create_directory(projects);
 }
 static bool inside(const fs::path &child,const fs::path &parent){
-    auto c=fs::weakly_canonical(child),p=fs::weakly_canonical(parent);auto ci=c.begin();
+    if(!potatoLauncher::plainPath(child))return false;
+    std::error_code error;
+    const auto c=fs::canonical(potatoLauncher::filePath(child),error);
+    if(error)return false;
+    const auto p=fs::canonical(potatoLauncher::filePath(parent),error);
+    if(error)return false;
+    auto ci=c.begin();
     for(auto pi=p.begin();pi!=p.end();++pi,++ci){if(ci==c.end()||_wcsicmp(ci->c_str(),pi->c_str())!=0)return false;}
     return ci!=c.end();
 }
@@ -134,7 +140,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
         if(lock==INVALID_HANDLE_VALUE)throw std::runtime_error("Another update is already in progress.");
         ensureCurrent(root);
         if(apply){
-            const auto session=fs::path(value(L"--apply-update"));
+            const auto session=potatoLauncher::filePath(value(L"--apply-update"));
             if(!inside(session,root/L".updates")||!fs::is_directory(session)||fs::is_symlink(session))throw std::runtime_error("Update staging folder is outside this installation.");
             sessionOwned=session;
         }
@@ -146,12 +152,14 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
         if(rollback){next=selected(root,L"previous.txt");if(next==old||!fs::is_regular_file(root/L"versions"/next/L"PotatoMapperApp.exe"))throw std::runtime_error("There is no previous application version to restore.");}
         else{
             const auto text=value(L"--version");next.clear();for(auto c:text){if(c>127)throw std::runtime_error("Invalid update version.");next.push_back(char(c));}if(!versionValid(next)||next==old)throw std::runtime_error("Invalid update version.");
-            const auto session=fs::path(value(L"--apply-update"));
+            const auto &session=sessionOwned;
             if(!inside(session,root/L".updates")||!fs::is_directory(session))throw std::runtime_error("Update staging folder is outside this installation.");
             const auto source=session/L"payload"/L"versions"/next;
             if(!inside(source,session)||!fs::is_regular_file(source/L"PotatoMapperApp.exe")||read(source/L"runtime-version.txt")!=next+"\n")throw std::runtime_error("The prepared update is incomplete.");
-            const auto destination=root/L"versions"/next;
-            const auto pending=root/L"versions"/(".installing-"+next+"-"+std::to_string(GetCurrentProcessId()));
+            const auto versions=potatoLauncher::filePath(root/L"versions");
+            const auto destination=versions/next;
+            const auto pending=versions/(".installing-"+next+"-"+std::to_string(GetCurrentProcessId()));
+            if(!potatoLauncher::plainPath(destination)||!potatoLauncher::plainPath(pending))throw std::runtime_error("Invalid runtime installation folder.");
             std::vector<fs::path> files;
             for(const auto &entry:fs::recursive_directory_iterator(source)){
                 if(entry.is_symlink()||!inside(entry.path(),source))throw std::runtime_error("Invalid file in prepared update.");
@@ -160,7 +168,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
             if(fs::exists(destination)){
                 // A retained version may be selected again after rollback. Reuse it
                 // only when every runtime file matches the verified download.
-                if(!inside(destination,root/L"versions")||fs::is_symlink(destination))throw std::runtime_error("Invalid retained version folder.");
+                if(!inside(destination,versions)||fs::is_symlink(destination))throw std::runtime_error("Invalid retained version folder.");
                 size_t count=0;for(const auto &e:fs::recursive_directory_iterator(destination)){
                     if(e.is_symlink()||!inside(e.path(),destination))throw std::runtime_error("Invalid retained runtime file.");
                     if(e.is_regular_file())++count;
