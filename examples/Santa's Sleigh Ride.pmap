@@ -1,0 +1,35 @@
+{
+  "format": "PotatoMapper",
+  "version": 4,
+  "width": 1920,
+  "height": 1080,
+  "connections": [
+    { "a": "84eb1313-fddc-4ece-9e70-c9ae8a459e75", "b": "716127f2-2b8a-4b59-8b81-d5baa909e9a5", "edgeA": 1, "edgeB": 3, "beginB": 0, "endB": 1, "tied": false }
+  ],
+  "surfaces": [
+    {
+      "id": "sleigh-left",
+      "routeUid": "84eb1313-fddc-4ece-9e70-c9ae8a459e75",
+      "name": "Flight · left wall",
+      "pattern": 27,
+      "patternSize": 24,
+      "fxDensity": 32,
+      "fxFlow": 65,
+      "corners": [[0.04, 0.09], [0.50, 0.09], [0.50, 0.91], [0.04, 0.91]],
+      "cells": 1,
+      "mesh": [[0, 0], [1, 0], [0, 1], [1, 1]]
+    },
+    {
+      "id": "sleigh-right",
+      "routeUid": "716127f2-2b8a-4b59-8b81-d5baa909e9a5",
+      "name": "Flight · right wall",
+      "pattern": 27,
+      "patternSize": 24,
+      "fxDensity": 32,
+      "fxFlow": 65,
+      "corners": [[0.50, 0.09], [0.96, 0.09], [0.96, 0.91], [0.50, 0.91]],
+      "cells": 1,
+      "mesh": [[0, 0], [1, 0], [0, 1], [1, 1]]
+    }
+  ]
+}

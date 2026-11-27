@@ -101,12 +101,19 @@ const Scene::WorldGeometry &Scene::worldGeometry() const {
     cache={};cache.revision=mappingRevision;cache.outputSize=outputSize;++worldGeometryBuilds;
     if(outputSize.isEmpty())return cache;
     QVector<std::array<Edge,4>> edges(surfaces.size());QVector<bool> active(surfaces.size(),false);
+    QVector<QPointF> flightCentres;
+    const Surface *flight=nullptr;
     for(int i=0;i<surfaces.size();++i){const auto &s=surfaces[i];if(!s.visible||s.opacity<=0||!s.valid())continue;
         WorldGeometry::Panel panel;panel.surfaceIndex=i;const auto transform=s.transform();bool finite=true;
         for(int side=0;side<4;++side){auto &e=edges[i][side];e=edge(s,side,outputSize);
             finite=finite&&std::isfinite(e.length);
             for(int k=0;k<s.cells;++k){const auto point=e.points[k],output=pixels(point,outputSize);finite=finite&&std::isfinite(point.x())&&std::isfinite(point.y())&&std::isfinite(output.x())&&std::isfinite(output.y());panel.normalizedOutline<<point;panel.outputOutline<<output;}}
         if(!finite)continue;active[i]=true;
+        if(s.pattern==sleighFlightPattern && !dynamicSurface(s.id)){
+            flight=&s;
+            cache.sleighRoute.bounds=cache.sleighRoute.bounds.united(panel.normalizedOutline.boundingRect());
+            flightCentres.append(transform.map(s.sample(.5,.5)));
+        }
         QPainterPath normalized;normalized.addPolygon(panel.normalizedOutline);normalized.closeSubpath();
         panel.outputClip.addPolygon(panel.outputOutline);panel.outputClip.closeSubpath();
         cache.normalizedClip=cache.normalizedClip.united(normalized);cache.outputClip=cache.outputClip.united(panel.outputClip);
@@ -116,6 +123,7 @@ const Scene::WorldGeometry &Scene::worldGeometry() const {
         const double width=QLineF(mapped(.1,.5),mapped(.9,.5)).length(),height=QLineF(mapped(.5,.1),mapped(.5,.9)).length();
         panel.wizardRadius=std::clamp(std::min(width,height)*.19,9.0,44.0);cache.panels<<panel;
     }
+    if(flight)cache.sleighRoute.prepare(flightCentres,double(outputSize.width())/outputSize.height(),flight->fx.angle,flight->patternSize);
     // Resolve each seam once per edit, including visibility and opacity. A
     // transparent neighbor must leave the other panel's entire boundary intact.
     struct Seam {int a,b,edgeA,edgeB;double begin,end;QPointF start,finish;};QVector<Seam> seams;

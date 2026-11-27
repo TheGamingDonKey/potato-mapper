@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <QSettings>
+#include "patterns.h"
 
 // Editor preferences and catalogue categories never change a saved scene.
 namespace PotatoAppearance {
@@ -64,7 +65,7 @@ inline void writePreferences(QSettings &settings,const Preferences &preferences)
 inline QString category(int pattern){
     if(pattern==16||pattern==17||pattern==19)return QStringLiteral("halloween");
     if(pattern==14||pattern==15||pattern==18||pattern==20)return QStringLiteral("autumn");
-    if(pattern>=21&&pattern<=26)return QStringLiteral("christmas");
+    if(pattern>=21&&pattern<=sleighFlightPattern)return QStringLiteral("christmas");
     return QStringLiteral("patterns");
 }
 inline bool matches(int pattern,const QString &name,const QString &categoryId,const QString &search){

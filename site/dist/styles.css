@@ -108,8 +108,9 @@ h1 em { display: inline-block; color: var(--mint); font-size: 1.18em; line-heigh
 
 .gallery { min-inline-size: 0; margin: 0; padding: 0; border: 0; position: relative; container-type: inline-size; scroll-margin-top: 1.25rem; }
 .gallery-heading, .scene figcaption, .frame-count { display: flex; align-items: center; }
-.gallery-heading { justify-content: space-between; gap: 1rem; margin-bottom: .7rem; font-size: .8rem; color: var(--dim); }
+.gallery-heading { justify-content: space-between; flex-wrap: wrap; gap: .45rem .7rem; margin-bottom: .7rem; font-size: .8rem; color: var(--dim); }
 .gallery-heading > :first-child { display: inline-flex; align-items: center; gap: .55rem; text-transform: uppercase; letter-spacing: .08em; color: var(--paper); }
+.film-links { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
 .frame-icon { width: .95rem; height: .67rem; border: 1px solid var(--mint); box-shadow: 2px 2px 0 -1px var(--pine), 2px 2px 0 var(--mint); }
 .watch-preview { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 2.1rem; padding-inline: .6rem; border: 1px solid #688073; border-radius: .25rem; color: var(--mint); text-decoration: none; font-family: "Bricolage Grotesque", "Segoe UI", sans-serif; font-size: .9rem; }
 .watch-preview:hover { background: #304b3c; }
@@ -121,26 +122,34 @@ h1 em { display: inline-block; color: var(--mint); font-size: 1.18em; line-heigh
 .scene figcaption > :first-child { font-size: clamp(1.25rem, 2.25vw, 1.85rem); line-height: 1.1; font-weight: 600; letter-spacing: -.045em; }
 .frame-count { gap: .42rem; flex: none; color: var(--dim); font-size: .81rem; }
 .frame-count b { color: var(--mint); font-weight: 700; }
-.scene-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; margin-top: .65rem; }
+.scene-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; margin-top: .65rem; }
 .scene-picker label { display: flex; align-items: center; gap: .5rem; min-height: 3.35rem; padding: .36rem; border: 1px solid #4b6154; border-radius: .25rem; background: #192b23; color: #e0e7dc; font-size: .88rem; line-height: 1.12; cursor: pointer; }
 .scene-picker label:hover { background: #294033; }
 .scene-picker img { width: 2.85rem; height: 2rem; flex: none; object-fit: cover; border-radius: .13rem; }
+.film-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .7rem; margin-top: .7rem; font-size: .9rem; color: var(--dim); }
+.film-file a { color: var(--mint); font-weight: 650; text-underline-offset: .22em; }
+#santa:checked ~ .screen .scene-santa,
 #north:checked ~ .screen .scene-north,
 #evergreen:checked ~ .screen .scene-evergreen,
 #clocktower:checked ~ .screen .scene-clocktower,
 #nutcracker:checked ~ .screen .scene-nutcracker { display: block; }
+#santa:checked ~ .scene-picker [for="santa"],
 #north:checked ~ .scene-picker [for="north"],
 #evergreen:checked ~ .scene-picker [for="evergreen"],
 #clocktower:checked ~ .scene-picker [for="clocktower"],
 #nutcracker:checked ~ .scene-picker [for="nutcracker"] { border-color: var(--mint); background: #314b3a; color: white; font-weight: 650; }
+#santa:focus-visible ~ .scene-picker [for="santa"],
 #north:focus-visible ~ .scene-picker [for="north"],
 #evergreen:focus-visible ~ .scene-picker [for="evergreen"],
 #clocktower:focus-visible ~ .scene-picker [for="clocktower"],
 #nutcracker:focus-visible ~ .scene-picker [for="nutcracker"] { outline: 3px solid var(--mint); outline-offset: 3px; }
-@container (max-width: 37rem) {
+@container (max-width: 44rem) {
   .scene-picker label { align-items: stretch; flex-direction: column; gap: .33rem; padding: .32rem; }
   .scene-picker img { width: 100%; height: auto; aspect-ratio: 3.4 / 1; }
   .scene-picker span { padding: .05rem .12rem .14rem; }
+}
+@container (max-width: 28rem) {
+  .scene-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .setup { padding-block: clamp(3rem, 5.8vw, 5.5rem); color: #182a22; background: var(--paper); }
@@ -151,8 +160,11 @@ h2 em { color: #315b45; font-size: 1.15em; letter-spacing: -.035em; }
 .steps li { counter-increment: start-step; border-top: 1px solid #aeb9a7; padding-top: .9rem; }
 .steps li::before { content: counter(start-step, decimal-leading-zero); display: block; margin-bottom: .65rem; font-size: .9rem; font-weight: 700; color: #55705d; }
 h3 { font-size: clamp(1.28rem, 2.2vw, 1.7rem); line-height: 1.15; font-weight: 650; letter-spacing: -.045em; }
-.steps p, .help p { margin-top: .6rem; color: #3e5144; font-size: 1rem; line-height: 1.55; }
-.steps strong, .help strong { color: #263c2f; font-weight: 700; }
+.steps p, .help p, .cutout-tip p { margin-top: .6rem; color: #3e5144; font-size: 1rem; line-height: 1.55; }
+.steps strong, .help strong, .cutout-tip strong { color: #263c2f; font-weight: 700; }
+.cutout-tip { margin-top: clamp(1.7rem, 3.2vw, 2.8rem); padding: .85rem 1.1rem; border-left: 2px solid #5b826b; background: #e8ebdf; }
+.cutout-tip h3 { font-size: 1.15rem; }
+.cutout-tip p { max-width: 56rem; margin-top: .3rem; }
 kbd { padding: .04rem .24rem; border: 1px solid #afb9aa; border-bottom-width: 2px; border-radius: .2rem; color: #344a3c; font-family: inherit; font-size: .9em; white-space: nowrap; }
 .help { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 5rem); margin-top: clamp(2.25rem, 4.5vw, 4rem); padding-top: 1.4rem; border-top: 1px solid #aeb9a7; }
 .requirements h3, summary { font-size: 1.1rem; font-weight: 700; letter-spacing: -.025em; }
@@ -224,6 +236,7 @@ dialog video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; 
 @media (forced-colors: active) {
   .scene-picker label { border-color: ButtonText; }
   input:checked ~ .scene-picker label { forced-color-adjust: auto; }
+  #santa:checked ~ .scene-picker [for="santa"],
   #north:checked ~ .scene-picker [for="north"],
   #evergreen:checked ~ .scene-picker [for="evergreen"],
   #clocktower:checked ~ .scene-picker [for="clocktower"],

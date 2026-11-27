@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101d19">
   <meta name="description" content="Download Potato Mapper for Windows. Fit animated Christmas scenes, photos and looping video to your walls with one projector.">
   <meta property="og:title" content="Potato Mapper — Christmas in lights">
-  <meta property="og:description" content="Four new Christmas scenes for your home projector. Download the Windows app and set up your first projection.">
+  <meta property="og:description" content="Project Santa’s sleigh across your walls or open four more Christmas scenes. Download Potato Mapper for Windows.">
   <meta property="og:type" content="website">
   <title>Potato Mapper — Christmas projection mapping for Windows</title>
   <link rel="icon" type="image/png" href="./assets/potato-mark.png">
@@ -24,7 +24,7 @@
       <nav aria-label="Main navigation">
         <a href="#scenes">Scenes</a>
         <a href="#quick-start">Quick start</a>
-        <a class="release-link" href="https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.13">Release notes</a>
+        <a class="release-link" href="https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.14">Release notes</a>
       </nav>
     </div>
   </header>
@@ -33,52 +33,62 @@
     <div class="show">
       <div class="wrap hero">
         <section class="intro" aria-labelledby="headline">
-          <p class="eyebrow"><span class="rule" aria-hidden="true"></span>Christmas edition <a class="edition-version" href="https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.13" aria-label="Release notes for version 0.9.13">v0.9.13</a></p>
+          <p class="eyebrow"><span class="rule" aria-hidden="true"></span>Christmas edition <a class="edition-version" href="https://github.com/TheGamingDonKey/potato-mapper/releases/tag/v0.9.14" aria-label="Release notes for version 0.9.14">v0.9.14</a></p>
           <h1 id="headline">Christmas<br> <em>in lights.</em><span class="glints" aria-hidden="true"></span></h1>
-          <p class="lede">Fit four new Christmas animations, your own photos or looping video to the shape of your wall with one projector.</p>
+          <p class="lede">Send Santa and his reindeer across your walls with one projector. Map four more Christmas scenes, your own photos or looping video.</p>
           <div class="download-choices">
-            <a class="download" href="https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.exe">
+            <a class="download" href="https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.14/PotatoMapper-0.9.14-windows-x64.exe">
               <span class="windows-mark" aria-hidden="true"></span>Download for Windows
             </a>
-            <a class="zip-link" href="https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.13/PotatoMapper-0.9.13-windows-x64.zip">Portable ZIP</a>
+            <a class="zip-link" href="https://github.com/TheGamingDonKey/potato-mapper/releases/download/v0.9.14/PotatoMapper-0.9.14-windows-x64.zip">Portable ZIP</a>
           </div>
           <p class="download-meta">Windows x64 <span>·</span> Self-extracting EXE <span>·</span> Watermark-free</p>
         </section>
 
         <fieldset class="gallery" id="scenes">
           <legend class="sr-only">Choose a Christmas scene to preview</legend>
-          <input class="scene-radio" type="radio" name="scene" id="north" checked>
+          <input class="scene-radio" type="radio" name="scene" id="santa" checked>
+          <input class="scene-radio" type="radio" name="scene" id="north">
           <input class="scene-radio" type="radio" name="scene" id="evergreen">
           <input class="scene-radio" type="radio" name="scene" id="clocktower">
           <input class="scene-radio" type="radio" name="scene" id="nutcracker">
           <div class="gallery-heading">
-            <span><i class="frame-icon" aria-hidden="true"></i>Projection preview</span>
-            <a class="watch-preview" href="./assets/PotatoMapper-0.9.13-christmas-preview.mp4"><i aria-hidden="true"></i>Watch in motion</a>
+            <span><i class="frame-icon" aria-hidden="true"></i>Scene previews</span>
+            <div class="film-links">
+              <a class="watch-preview" href="./assets/santa-flight.mp4" data-player="santa-preview"><i aria-hidden="true"></i>Watch Santa</a>
+              <a class="watch-preview" href="./assets/PotatoMapper-0.9.13-christmas-preview.mp4" data-player="motion-preview"><i aria-hidden="true"></i>Four-scene film</a>
+            </div>
           </div>
           <div class="screen">
+            <figure class="scene scene-santa">
+              <img src="./assets/santa-flight.png" width="960" height="540" fetchpriority="high" alt="Santa waves from a red-and-gold sleigh pulled by two reindeer, the leader’s nose glowing red against black.">
+              <figcaption><span>Santa’s Sleigh Ride</span><span class="frame-count"><b>01</b> / 05</span></figcaption>
+            </figure>
             <figure class="scene scene-north">
-              <img src="./assets/north-pole-express.webp" width="960" height="540" fetchpriority="high" alt="A red locomotive pulls two lit carriages across an arched bridge under a full moon.">
-              <figcaption><span>North Pole Express</span><span class="frame-count"><b>01</b> / 04</span></figcaption>
+              <img src="./assets/north-pole-express.webp" width="960" height="540" alt="A red locomotive pulls two lit carriages across an arched bridge under a full moon.">
+              <figcaption><span>North Pole Express</span><span class="frame-count"><b>02</b> / 05</span></figcaption>
             </figure>
             <figure class="scene scene-evergreen">
               <img src="./assets/evergreen-overture.webp" width="960" height="540" alt="A glowing star tops a Christmas tree wrapped in lights, with presents in the snow below.">
-              <figcaption><span>Evergreen Overture</span><span class="frame-count"><b>02</b> / 04</span></figcaption>
+              <figcaption><span>Evergreen Overture</span><span class="frame-count"><b>03</b> / 05</span></figcaption>
             </figure>
             <figure class="scene scene-clocktower">
               <img src="./assets/clocktower-carols.webp" width="960" height="540" alt="A lamplighter carries a lantern through a snow-covered village beneath a brick clocktower.">
-              <figcaption><span>Clocktower Carols</span><span class="frame-count"><b>03</b> / 04</span></figcaption>
+              <figcaption><span>Clocktower Carols</span><span class="frame-count"><b>04</b> / 05</span></figcaption>
             </figure>
             <figure class="scene scene-nutcracker">
               <img src="./assets/nutcracker-waltz.webp" width="960" height="540" alt="A red-uniformed nutcracker holds up a baton on a wind-up music box framed by red stage curtains.">
-              <figcaption><span>Nutcracker Waltz</span><span class="frame-count"><b>04</b> / 04</span></figcaption>
+              <figcaption><span>Nutcracker Waltz</span><span class="frame-count"><b>05</b> / 05</span></figcaption>
             </figure>
           </div>
           <div class="scene-picker">
+            <label for="santa"><img src="./assets/santa-flight.png" alt="" width="96" height="54"><span>Santa’s Sleigh Ride</span></label>
             <label for="north"><img src="./assets/north-pole-express.webp" alt="" width="96" height="54"><span>North Pole Express</span></label>
             <label for="evergreen"><img src="./assets/evergreen-overture.webp" alt="" width="96" height="54"><span>Evergreen Overture</span></label>
             <label for="clocktower"><img src="./assets/clocktower-carols.webp" alt="" width="96" height="54"><span>Clocktower Carols</span></label>
             <label for="nutcracker"><img src="./assets/nutcracker-waltz.webp" alt="" width="96" height="54"><span>Nutcracker Waltz</span></label>
           </div>
+          <p class="film-file"><a href="./assets/santa-flight.mp4" download>Download Santa’s flight as MP4</a><span>24 seconds · H.264</span></p>
         </fieldset>
       </div>
     </div>
@@ -98,9 +108,13 @@
           </li>
           <li>
             <h3>Map a Christmas scene</h3>
-            <p>Open <strong>File</strong> → <strong>Examples</strong> and pick a scene. Click <strong>Start output</strong>, then drag the corners in the editor until the projection fits your wall.</p>
+            <p>Open <strong>File</strong> → <strong>Examples</strong> → <strong>Santa's Sleigh Ride</strong>. Click <strong>Start output</strong>, then drag the surface corners in the editor to fit the projection.</p>
           </li>
         </ol>
+        <aside class="cutout-tip" aria-labelledby="cutout-heading">
+          <h3 id="cutout-heading">Project the subject by itself</h3>
+          <p>For the train, tree, clocktower or nutcracker, select its surface and turn on <strong>Potato FX</strong> → <strong>Subject only</strong>. A lower layer can show through the empty space. With nothing underneath, the projector output is black there.</p>
+        </aside>
         <div class="help">
           <div class="requirements">
             <h3>Windows requirements</h3>
@@ -116,6 +130,21 @@
       </div>
     </section>
   </main>
+
+  <dialog id="santa-preview" aria-labelledby="santa-title" aria-describedby="santa-description">
+    <div class="movie-heading">
+      <h2 id="santa-title">Santa’s Sleigh Ride</h2>
+      <form method="dialog"><button autofocus>Close</button></form>
+    </div>
+    <video controls playsinline preload="none" width="640" height="360" poster="./assets/santa-flight.png" aria-label="Santa and his reindeer flying across the projection">
+      <source src="./assets/santa-flight.mp4" type="video/mp4">
+      <a href="./assets/santa-flight.mp4">Open the sleigh video</a>
+    </video>
+    <div class="movie-caption">
+      <p id="santa-description">A 24-second silent flight captured from Potato Mapper. The downloadable H.264 video plays against pure black.</p>
+      <a href="./assets/santa-flight.mp4" download>Download Santa MP4</a>
+    </div>
+  </dialog>
 
   <dialog id="motion-preview" aria-labelledby="movie-title" aria-describedby="movie-description">
     <div class="movie-heading">

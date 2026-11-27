@@ -15,6 +15,7 @@
 #include "../tests/studio-themes-check.h"
 #include "../tests/seasonal-check.h"
 #include "../tests/christmas-check.h"
+#include "../tests/cutout-check.h"
 #include "../tests/connections-check.h"
 #include "../tests/studio-check.h"
 #include "../tests/material-ui-check.h"
@@ -209,6 +210,12 @@ public:
         patternPalette=new QComboBox;patternPalette->setObjectName("patternPalette");patternPalette->addItems({"Original palette","White","Cyan","Purple","Amber","Mint"});patternForm->addRow("Colour",patternPalette);
         patternEdge=fxSpin("Soft edge","patternEdge",0,25);patternEdge->setSuffix(" %");patternEdge->setToolTip("Optional fade near the mapped boundary. 0% keeps the whole surface active.");
         patternReverse=new QCheckBox("Reverse movement");patternReverse->setObjectName("patternReverse");patternForm->addRow(patternReverse);
+        subjectOnly=new QCheckBox("Subject only");subjectOnly->setObjectName("subjectOnly");
+        subjectOnly->setToolTip("Remove the scenery and project just the animated subject. Layers underneath show through.");
+        patternForm->addRow(subjectOnly);
+        connect(subjectOnly,&QCheckBox::toggled,this,[this](bool enabled){scene.setSubjectOnly(scene.selected,enabled);});
+        flightHint=new QLabel("Apply this flight to each surface Santa should cross. Speed, size and direction follow the same sleigh.");
+        flightHint->setWordWrap(true);patternForm->addRow(flightHint);
         auto updateLook=[this]{if(auto *s=scene.current();s&&s->pattern){auto look=s->fx;look.density=patternDensity->value();look.flow=patternFlow->value();look.angle=patternAngle->value();look.palette=patternPalette->currentIndex();look.edge=patternEdge->value();look.reverse=patternReverse->isChecked();scene.setFxLook(scene.selected,look);}};
         for(auto *spin:{patternDensity,patternFlow,patternAngle,patternEdge})connect(spin,qOverload<int>(&QSpinBox::valueChanged),this,[updateLook](int){updateLook();});
         connect(patternPalette,&QComboBox::currentIndexChanged,this,[updateLook](int){updateLook();});connect(patternReverse,&QCheckBox::toggled,this,[updateLook](bool){updateLook();});
@@ -287,7 +294,7 @@ public:
         auto *recentMenu=fileMenu->addMenu("Recent projects");
         connect(recentMenu,&QMenu::aboutToShow,this,[this,recentMenu]{recentMenu->clear();for(const auto &path:PotatoProjects::recent(potatoInstallRoot())){auto *a=recentMenu->addAction(QFileInfo(path).fileName());a->setToolTip(path);connect(a,&QAction::triggered,this,[this,path]{openProject(path);});}if(recentMenu->isEmpty())recentMenu->addAction("No recent projects")->setEnabled(false);});
         auto *examplesMenu=fileMenu->addMenu("Examples");
-        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall","North Pole Express","Evergreen Overture","Clocktower Carols","Nutcracker Waltz"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
+        for(const auto &name:QStringList{"Hot-Ass Potato","Potato Focus","Maple Supper","Harvest Lanterns","Pumpkin Mischief","Ghost Parade","Rainlit Window","October Porch","Seasonal Studio","Connected Skeleton","Wizard Duel","Shared Snowfall","North Pole Express","Evergreen Overture","Clocktower Carols","Nutcracker Waltz","Santa's Sleigh Ride"}){auto *example=examplesMenu->addAction(name);connect(example,&QAction::triggered,this,[this,name]{if(!openProject(QDir(QCoreApplication::applicationDirPath()).filePath("examples/"+name+".pmap")))return;if(name=="Hot-Ass Potato"||name=="Potato Focus")showDynamicControls();else if(name=="Connected Skeleton"||name=="Wizard Duel")showSidebarSection(connectionsSection);else{fxSection->heading->setChecked(true);inspector->ensureWidgetVisible(fxSection);}});}
         fileMenu->addSeparator();fileMenu->addAction("Exit",this,&QWidget::close);
         auto *settingsMenu=menuBar()->addMenu("Settings");
         auto *appearanceMenu=settingsMenu->addMenu("Appearance");
@@ -566,7 +573,8 @@ private:
     QSpinBox *patternDensity,*patternFlow,*patternAngle,*patternEdge;
     QComboBox *patternPalette;
     QCheckBox *patternReverse;
-    QCheckBox *patternPause;
+    QCheckBox *patternPause,*subjectOnly;
+    QLabel *flightHint;
     QCheckBox *visible,*locked,*mute;
     ElidedLabel *mediaLabel;
     QSlider *seek,*brightness,*opacity;
@@ -718,6 +726,10 @@ private:
         connectButton->setEnabled(s&&scene.surfaces.size()>1);disconnectButton->setEnabled(s&&scene.hasConnections(scene.selected));tieConnections->setEnabled(s&&scene.hasConnections(scene.selected));fitConnection->setEnabled(s&&!s->locked);if(s&&s->locked)fitConnection->setChecked(false);applyAnimation->setEnabled(s&&animationList->currentItem());
         patternPicker->setEnabled(s);if(s&&s->pattern&&patternPicker->currentData().toInt()!=s->pattern)fxSection->heading->setChecked(true);patternPicker->setCurrentIndex(patternPicker->findData(s?s->pattern:0));patternControls->setVisible(s&&s->pattern);
         brightness->setEnabled(s);opacity->setEnabled(s);blendPicker->setEnabled(s);blendPicker->setCurrentIndex(s?s->blend:0);patternSizeLabel->setText(potatoPatternSizeLabel(s?s->pattern:0));resetAppearance->setEnabled(s&&(s->brightness!=100||s->opacity!=100||s->blend));
+        const QSignalBlocker blockSubjectOnly(subjectOnly);
+        subjectOnly->setVisible(s && hasChristmasScenery(s->pattern));
+        subjectOnly->setChecked(s && s->subjectOnly);
+        flightHint->setVisible(s && s->pattern==sleighFlightPattern);
         if(auto *patternForm=patternDensity->parentWidget()->findChild<QFormLayout*>()){
             if(auto *label=qobject_cast<QLabel*>(patternForm->labelForField(patternDensity)))label->setText(s&&s->pattern==17?"Ghost count":potatoPatternDensityLabel(s?s->pattern:0));
             if(auto *label=qobject_cast<QLabel*>(patternForm->labelForField(patternFlow)))label->setText(s&&s->pattern==17?"Flutter":potatoPatternFlowLabel(s?s->pattern:0));
@@ -793,6 +805,7 @@ int main(int argc,char **argv){
     if(args.contains("--smoke-material")){window.smoke=true;runMaterialUiCheck(window,app,args);}
     if(args.contains("--seasonal-check")){window.smoke=true;runSeasonalChecks(window,app,args);}
     if(args.contains("--test-christmas")){window.smoke=true;runChristmasChecks(window,app,args);}
+    if(args.contains("--test-cutouts")){window.smoke=true;runCutoutChecks(window,app,args);}
     if(args.contains("--test-restart")){
         window.smoke=true;QTimer::singleShot(300,&window,[&window,&app]{
             auto answer=[](QMessageBox::StandardButton choice){QTimer::singleShot(0,[choice]{for(auto *w:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox*>(w))if(auto *b=box->button(choice))b->click();});};

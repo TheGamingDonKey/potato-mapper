@@ -1,6 +1,14 @@
 # Development handoff
 
-## Current handoff — Christmas Studio 0.9.13, November 26
+## Current handoff — Christmas cutouts 0.9.14
+
+The portable Windows editor builds from this checkout using the existing Qt kit and `out/build-desktop`. Run `package.ps1 -BuildDirectory out/build-desktop` for the Windows EXE and ZIP. Use `app/PotatoMapper.exe` for the installed copy. The release branch is `codex/christmas-cutouts`.
+
+The new Christmas pattern (ID 27) draws one Santa in the shared projector coordinate system. Participating panels set the flight path and clip the same image. Their clocks and flight controls stay synchronized when panels are added or hidden. IDs 23–26 optionally draw just their foreground through **Potato FX → Subject only**. Enabling these features saves format 4 and preserves an earlier-format recovery copy on conversion. Existing mappings keep their scenery. All 26 earlier animated picker thumbnails rendered identically.
+
+On the extracted Windows build, `--test-cutouts` passed 79 checks including black gaps, coloured underlayers, staggered and stacked layouts, actual inspector controls and file compatibility. The earlier Christmas suite passed 82. The portable download verified all 108 files and repeated launches. The site offers the native 24-second Santa loop as 720p H.264 at 24 fps. Physical wall and projector black-level acceptance remain open. Verification logs are in `out/cutout-check`.
+
+## Previous handoff — Christmas Studio 0.9.13, November 26
 
 The direct-download build installs locally under `app/versions/0.9.13`. Open `app/PotatoMapper.exe`. The verified local rollback is 0.9.11. All 23 protected project, index and media file hashes matched before and after the update. The development branch is `codex/christmas-studio`. Reuse the existing Qt kit and `out/build-desktop`, then run `package.ps1` to produce both Windows downloads.
 

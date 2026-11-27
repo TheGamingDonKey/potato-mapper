@@ -13,6 +13,7 @@
 #include <QElapsedTimer>
 #include <QPainterPath>
 #include "patterns.h"
+#include "sleigh-route.h"
 #include "dynamic.h"
 
 class MediaSource : public QObject {
@@ -42,6 +43,7 @@ struct Surface {
     int patternSpeed = 100;
     int patternSize = 18;
     bool patternPlaying = true;
+    bool subjectOnly = false;
     double patternPhase = 0;
     FxLook fx;
     int brightness = 100;
@@ -122,6 +124,7 @@ public:
         QVector<QPolygonF> normalizedContours;
         QVector<Contour> contours;
         QPainterPath normalizedClip,outputClip;
+        SleighRoute sleighRoute;
         QSize outputSize;
         quint64 revision=0;
     };
@@ -155,6 +158,7 @@ public:
     void setBlend(int index, int blend);
     void resetAppearance(int index);
     void setPattern(int index, int pattern);
+    void setSubjectOnly(int index, bool enabled);
     void setFxLook(int index, FxLook look);
     void select(int index);
     void touch(bool structure = false);
